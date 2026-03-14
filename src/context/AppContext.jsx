@@ -1,28 +1,20 @@
-import { createContext, useContext, useReducer, useCallback } from "react";
+import { createContext, useContext, useReducer, useCallback, useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
 import { generateDocumentURLs } from "../utils/generateDocument";
+import * as orderService from "../services/orderService";
+import * as collateralService from "../services/collateralService";
 
 const AppContext = createContext(null);
 
-const initialState = {
+// ─── Fallback local data (used when Supabase is not configured) ───
+const localFallback = {
   orders: [
     {
-      id: "BF-2026-0001",
-      type: "direct",
-      lpName: "Fontaine Élise",
-      societe: "Fontaine Capital",
-      shareClass: 1,
-      montant: 800000,
-      date: "2025-10-12",
-      status: "pending",
-      kycStatus: "Validé",
-      paymentStatus: "Reçu",
-      personType: "morale",
-      pays: "France",
-      typeInvestisseur: "Professionnel",
-      signatureDate: "2025-10-12 14:22:00",
-      origineFonds: "Cession d'actifs financiers / entreprise",
-      adresse: "15 rue de la Paix, 75002 Paris",
-      pepStatus: "non",
+      id: "BF-2026-0001", type: "direct", lpName: "Fontaine Élise", societe: "Fontaine Capital",
+      shareClass: 1, montant: 800000, date: "2025-10-12", status: "pending", kycStatus: "Validé",
+      paymentStatus: "Reçu", personType: "morale", pays: "France", typeInvestisseur: "Professionnel",
+      signatureDate: "2025-10-12 14:22:00", origineFonds: "Cession d'actifs financiers / entreprise",
+      adresse: "15 rue de la Paix, 75002 Paris", pepStatus: "non",
       documents: [
         { name: "kbis_fontaine_capital.pdf", type: "K-bis", size: "1.8 Mo", date: "2025-10-10" },
         { name: "passeport_fontaine.pdf", type: "Pièce d'identité", size: "2.3 Mo", date: "2025-10-10" },
@@ -30,24 +22,11 @@ const initialState = {
       ],
     },
     {
-      id: "BF-2026-0002",
-      type: "intermediated",
-      intermediaire: "SwissLife Banque Privée",
-      lpName: "Martin Olivier",
-      societe: null,
-      shareClass: 2,
-      montant: 100000,
-      date: "2025-12-15",
-      status: "pending",
-      kycStatus: "Validé",
-      paymentStatus: "Reçu",
-      personType: "physique",
-      pays: "France",
-      typeInvestisseur: "Averti (well-informed)",
-      signatureDate: "2025-12-15 09:45:00",
-      origineFonds: "Épargne accumulée",
-      adresse: "8 boulevard Haussmann, 75009 Paris",
-      pepStatus: "non",
+      id: "BF-2026-0002", type: "intermediated", intermediaire: "SwissLife Banque Privée",
+      lpName: "Martin Olivier", societe: null, shareClass: 2, montant: 100000, date: "2025-12-15",
+      status: "pending", kycStatus: "Validé", paymentStatus: "Reçu", personType: "physique",
+      pays: "France", typeInvestisseur: "Averti (well-informed)", signatureDate: "2025-12-15 09:45:00",
+      origineFonds: "Épargne accumulée", adresse: "8 boulevard Haussmann, 75009 Paris", pepStatus: "non",
       documents: [
         { name: "cni_martin_olivier.pdf", type: "Pièce d'identité", size: "1.5 Mo", date: "2025-12-14" },
         { name: "justificatif_domicile_martin.pdf", type: "Justificatif de domicile", size: "720 Ko", date: "2025-12-14" },
@@ -55,24 +34,12 @@ const initialState = {
       ],
     },
     {
-      id: "BF-2026-0003",
-      type: "intermediated",
-      intermediaire: "SwissLife Banque Privée",
-      lpName: "Weber Thomas",
-      societe: "Weber Holding AG",
-      shareClass: 1,
-      montant: 500000,
-      date: "2026-01-20",
-      status: "pending",
-      kycStatus: "Validé",
-      paymentStatus: "Reçu",
-      personType: "morale",
-      pays: "Suisse",
-      typeInvestisseur: "Professionnel",
-      signatureDate: "2026-01-20 11:10:00",
-      origineFonds: "Revenus d'activité professionnelle",
-      adresse: "Bahnhofstrasse 42, 8001 Zürich",
-      pepStatus: "non",
+      id: "BF-2026-0003", type: "intermediated", intermediaire: "SwissLife Banque Privée",
+      lpName: "Weber Thomas", societe: "Weber Holding AG", shareClass: 1, montant: 500000,
+      date: "2026-01-20", status: "pending", kycStatus: "Validé", paymentStatus: "Reçu",
+      personType: "morale", pays: "Suisse", typeInvestisseur: "Professionnel",
+      signatureDate: "2026-01-20 11:10:00", origineFonds: "Revenus d'activité professionnelle",
+      adresse: "Bahnhofstrasse 42, 8001 Zürich", pepStatus: "non",
       documents: [
         { name: "handelsregister_weber.pdf", type: "Registre de commerce", size: "2.1 Mo", date: "2026-01-18" },
         { name: "passeport_weber.pdf", type: "Pièce d'identité", size: "1.9 Mo", date: "2026-01-18" },
@@ -89,15 +56,21 @@ const initialState = {
   ],
 };
 
+// ─── Reducer (same logic, works for both local and Supabase modes) ───
+
 function reducer(state, action) {
   switch (action.type) {
+    case "SET_DATA":
+      return { ...state, ...action.payload, loading: false };
     case "SUBMIT_ORDER":
       return { ...state, orders: [...state.orders, action.payload] };
     case "VALIDATE_ORDER":
       return {
         ...state,
         orders: state.orders.map((o) =>
-          o.id === action.payload ? { ...o, status: "validated", validatedAt: new Date().toISOString() } : o
+          o.id === action.payload.id
+            ? { ...o, status: "validated", validatedAt: action.payload.validatedAt }
+            : o
         ),
       };
     case "REJECT_ORDER":
@@ -105,7 +78,7 @@ function reducer(state, action) {
         ...state,
         orders: state.orders.map((o) =>
           o.id === action.payload.id
-            ? { ...o, status: "rejected", rejectedAt: new Date().toISOString(), rejectReason: action.payload.reason }
+            ? { ...o, status: "rejected", rejectedAt: action.payload.rejectedAt, rejectReason: action.payload.reason }
             : o
         ),
       };
@@ -125,38 +98,129 @@ function reducer(state, action) {
   }
 }
 
-function initState() {
-  return {
-    ...initialState,
-    orders: initialState.orders.map((order) => ({
-      ...order,
-      documents: order.documents ? generateDocumentURLs(order.documents, order.lpName, order.id) : [],
-    })),
-  };
-}
+const emptyState = { orders: [], collateralPositions: [], loading: true };
 
 export function AppProvider({ children }) {
-  const [state, dispatch] = useReducer(reducer, null, initState);
+  const [state, dispatch] = useReducer(reducer, emptyState);
+  const isSupabase = !!supabase;
 
-  const submitOrder = useCallback((order) => {
+  // ─── Load data on mount ───
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFromSupabase() {
+      try {
+        const [orders, positions] = await Promise.all([
+          orderService.fetchOrders(),
+          collateralService.fetchCollateralPositions(),
+        ]);
+        if (!cancelled) {
+          // Generate placeholder doc URLs for documents without storage paths
+          const enrichedOrders = orders.map((order) => ({
+            ...order,
+            documents: order.documents?.map((d) => ({
+              ...d,
+              url: d.storagePath ? null : generateDocumentURLs([d], order.lpName, order.id)[0]?.url,
+            })) || [],
+          }));
+          dispatch({ type: "SET_DATA", payload: { orders: enrichedOrders, collateralPositions: positions } });
+        }
+      } catch (err) {
+        console.error("Supabase load failed, using fallback:", err);
+        if (!cancelled) loadLocal();
+      }
+    }
+
+    function loadLocal() {
+      const orders = localFallback.orders.map((order) => ({
+        ...order,
+        documents: order.documents ? generateDocumentURLs(order.documents, order.lpName, order.id) : [],
+      }));
+      dispatch({ type: "SET_DATA", payload: { orders, collateralPositions: localFallback.collateralPositions } });
+    }
+
+    if (isSupabase) {
+      loadFromSupabase();
+    } else {
+      loadLocal();
+    }
+
+    return () => { cancelled = true; };
+  }, [isSupabase]);
+
+  // ─── Actions ───
+
+  const submitOrder = useCallback(async (order) => {
+    if (isSupabase) {
+      try {
+        await orderService.createOrder(order);
+      } catch (err) {
+        console.error("Failed to persist order:", err);
+      }
+    }
     dispatch({ type: "SUBMIT_ORDER", payload: order });
-  }, []);
+  }, [isSupabase]);
 
-  const validateOrder = useCallback((orderId) => {
-    dispatch({ type: "VALIDATE_ORDER", payload: orderId });
-  }, []);
+  const validateOrder = useCallback(async (orderId) => {
+    let validatedAt = new Date().toISOString();
+    if (isSupabase) {
+      try {
+        const result = await orderService.validateOrder(orderId);
+        validatedAt = result.validatedAt;
+      } catch (err) {
+        console.error("Failed to validate order:", err);
+      }
+    }
+    dispatch({ type: "VALIDATE_ORDER", payload: { id: orderId, validatedAt } });
+  }, [isSupabase]);
 
-  const rejectOrder = useCallback((orderId, reason) => {
-    dispatch({ type: "REJECT_ORDER", payload: { id: orderId, reason } });
-  }, []);
+  const rejectOrder = useCallback(async (orderId, reason) => {
+    let rejectedAt = new Date().toISOString();
+    if (isSupabase) {
+      try {
+        const result = await orderService.rejectOrder(orderId, reason);
+        rejectedAt = result.rejectedAt;
+      } catch (err) {
+        console.error("Failed to reject order:", err);
+      }
+    }
+    dispatch({ type: "REJECT_ORDER", payload: { id: orderId, reason, rejectedAt } });
+  }, [isSupabase]);
 
-  const addCollateral = useCallback((position) => {
-    dispatch({ type: "ADD_COLLATERAL", payload: { ...position, id: Date.now() } });
-  }, []);
+  const addCollateral = useCallback(async (position) => {
+    let finalPosition = { ...position, id: Date.now() };
+    if (isSupabase) {
+      try {
+        finalPosition = await collateralService.addCollateralPosition(position);
+      } catch (err) {
+        console.error("Failed to persist collateral:", err);
+      }
+    }
+    dispatch({ type: "ADD_COLLATERAL", payload: finalPosition });
+  }, [isSupabase]);
 
-  const removeCollateral = useCallback((positionId) => {
+  const removeCollateral = useCallback(async (positionId) => {
+    if (isSupabase) {
+      try {
+        await collateralService.removeCollateralPosition(positionId);
+      } catch (err) {
+        console.error("Failed to remove collateral:", err);
+      }
+    }
     dispatch({ type: "REMOVE_COLLATERAL", payload: positionId });
-  }, []);
+  }, [isSupabase]);
+
+  // ─── Loading screen ───
+  if (state.loading) {
+    return (
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-navy/20 border-t-gold rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-navy/60 text-sm font-medium">Chargement des données…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AppContext.Provider value={{ ...state, submitOrder, validateOrder, rejectOrder, addCollateral, removeCollateral }}>
