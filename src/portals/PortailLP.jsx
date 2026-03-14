@@ -1,8 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-} from "recharts";
-import { NAV_PER_PART, priceHistory, defiHistory } from "../data";
+import { NAV_PER_PART } from "../data";
 import { generateBulletinPDF } from "../generateBulletin";
 import { useAppContext } from "../context/AppContext";
 import { supabase } from "../lib/supabase";
@@ -843,59 +840,17 @@ function Collateral({ toast }) {
         </div>
       </div>
 
-      {/* Price Chart */}
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
+      {/* Price info */}
+      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
+        <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold text-navy">Prix BF / ADA</h3>
-            <p className="text-xs text-gray-400">30 derniers jours</p>
+            <p className="text-xs text-gray-400">Cours actuel</p>
           </div>
           <div className="text-right">
             <p className="text-xl font-semibold text-navy">{bfPrice} ADA</p>
-            <p className="text-xs text-emerald-600">+5.2%</p>
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={200}>
-          <AreaChart data={priceHistory}>
-            <defs>
-              <linearGradient id="colorPrix" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#1a2332" stopOpacity={0.15} />
-                <stop offset="95%" stopColor="#1a2332" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <XAxis dataKey="jour" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#9ca3af" }} />
-            <YAxis domain={["auto", "auto"]} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: "#9ca3af" }} />
-            <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }} />
-            <Area type="monotone" dataKey="prix" stroke="#1a2332" strokeWidth={2} fill="url(#colorPrix)" />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* DeFi History */}
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
-        <h3 className="text-sm font-semibold text-navy mb-4">Historique DeFi</h3>
-        <table className="w-full text-sm text-left">
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
-              <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Type</th>
-              <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Montant</th>
-              <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Tx Hash</th>
-            </tr>
-          </thead>
-          <tbody>
-            {defiHistory.map((op, i) => (
-              <tr key={i} className="border-b border-gray-50">
-                <td className="py-2.5 text-gray-500">{op.date}</td>
-                <td className="py-2.5">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${op.type === "Stake" ? "bg-navy/10 text-navy" : op.type === "Swap" ? "bg-gold/10 text-gold" : "bg-gray-100 text-gray-600"}`}>{op.type}</span>
-                </td>
-                <td className="py-2.5 text-navy">{op.montant}</td>
-                <td className="py-2.5 text-right font-mono text-xs text-gold">{op.hash}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
     </div>
   );

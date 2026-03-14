@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   PieChart, Pie, Cell,
 } from "recharts";
-import { LPs, NAV_PER_PART, TOTAL_AUM, capitalCalls } from "../data";
+import { NAV_PER_PART } from "../data";
 import { useAppContext } from "../context/AppContext";
 import { KPICard, Badge, fmt, fmtFull } from "../components/shared";
 
@@ -234,52 +234,29 @@ function RegistreFonds({ toast }) {
   const [filterClass, setFilterClass] = useState("all");
   const [filterKyc, setFilterKyc] = useState("all");
 
-  // Merge static LPs with validated orders from context
-  const validatedOrders = orders.filter((o) => o.status === "validated");
-  const orderLPs = validatedOrders.map((o) => {
-    const parts = +(o.montant / NAV_PER_PART).toFixed(2);
+  // Build LP list from real orders
+  const allOrders = orders.filter((o) => o.status !== "rejected");
+  const totalAUMAll = allOrders.filter((o) => o.status === "validated").reduce((s, o) => s + o.montant, 0);
+  const mergedLPs = allOrders.map((o) => {
+    const parts = o.status === "validated" ? +(o.montant / NAV_PER_PART).toFixed(2) : 0;
     return {
       id: o.id,
-      nom: o.lpName.split(" ").slice(-1)[0],
-      prenom: o.lpName.split(" ").slice(0, -1).join(" "),
+      nom: o.nom || o.lpName.split(" ").slice(-1)[0],
+      prenom: o.prenom || o.lpName.split(" ").slice(0, -1).join(" "),
       societe: o.societe,
       pays: o.pays,
       type: o.personType === "morale" ? "Personne morale" : "Personne physique",
       shareClass: o.shareClass,
       montant: o.montant,
       dateSouscription: o.date,
-      kycStatus: "Validé",
-      paiementStatus: "Reçu",
+      kycStatus: o.kycStatus || "Validé",
+      paiementStatus: o.status === "validated" ? "Reçu" : "En attente",
       parts,
-      pctFonds: 0,
-      wallet: null,
-      fromOrder: true,
+      pctFonds: totalAUMAll > 0 ? +((o.montant / totalAUMAll) * 100).toFixed(2) : 0,
       intermediaire: o.intermediaire || null,
     };
   });
-  const allLPs = [...LPs, ...orderLPs];
-
-  // Also include pending orders as "En attente" rows
   const pendingOrders = orders.filter((o) => o.status === "pending");
-  const pendingLPs = pendingOrders.map((o) => ({
-    id: o.id,
-    nom: o.lpName.split(" ").slice(-1)[0],
-    prenom: o.lpName.split(" ").slice(0, -1).join(" "),
-    societe: o.societe,
-    pays: o.pays,
-    type: o.personType === "morale" ? "Personne morale" : "Personne physique",
-    shareClass: o.shareClass,
-    montant: o.montant,
-    dateSouscription: o.date,
-    kycStatus: "Validé",
-    paiementStatus: "En attente",
-    parts: 0,
-    pctFonds: 0,
-    wallet: null,
-    fromOrder: true,
-    intermediaire: o.intermediaire || null,
-  }));
-  const mergedLPs = [...allLPs, ...pendingLPs];
 
   const activeLPs = mergedLPs.filter((lp) => lp.paiementStatus === "Reçu");
   const class1 = activeLPs.filter((lp) => lp.shareClass === 1);
@@ -311,7 +288,7 @@ function RegistreFonds({ toast }) {
       <div className="grid grid-cols-4 gap-4 mb-6">
         <KPICard label="Total AUM" value={fmt(totalAUM)} />
         <KPICard label="Nombre de LP" value={mergedLPs.length} />
-        <KPICard label="Capital appelé" value={fmt(capitalAppele)} sub={`${((capitalAppele / capitalEngage) * 100).toFixed(1)}% du capital engagé`} />
+        <KPICard label="Capital appelé" value={fmt(capitalAppele)} sub={capitalEngage > 0 ? `${((capitalAppele / capitalEngage) * 100).toFixed(1)}% du capital engagé` : "—"} />
         <KPICard label="NAV / part" value={fmtFull(NAV_PER_PART)} />
       </div>
 
@@ -339,9 +316,9 @@ function RegistreFonds({ toast }) {
               <span>Engagé : {fmt(capitalEngage)}</span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-3">
-              <div className="bg-linear-to-r from-navy to-gold h-3 rounded-full transition-all duration-700" style={{ width: `${(capitalAppele / capitalEngage) * 100}%` }} />
+              <div className="bg-linear-to-r from-navy to-gold h-3 rounded-full transition-all duration-700" style={{ width: `${capitalEngage > 0 ? (capitalAppele / capitalEngage) * 100 : 0}%` }} />
             </div>
-            <p className="text-xs text-gray-400 mt-2">{((capitalAppele / capitalEngage) * 100).toFixed(1)}% appelé</p>
+            <p className="text-xs text-gray-400 mt-2">{capitalEngage > 0 ? ((capitalAppele / capitalEngage) * 100).toFixed(1) : 0}% appelé</p>
           </div>
         </div>
       </div>
@@ -383,7 +360,6 @@ function RegistreFonds({ toast }) {
                     <p className="font-medium text-navy">{lp.nom} {lp.prenom}</p>
                     {lp.societe && <p className="text-xs text-gray-400">{lp.societe}</p>}
                     {lp.intermediaire && <p className="text-xs text-blue-500">via {lp.intermediaire}</p>}
-                    {lp.fromOrder && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gold/15 text-gold ml-1">NOUVEAU</span>}
                   </td>
                   <td className="px-4 py-3"><span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${lp.shareClass === 1 ? "bg-navy text-white" : "bg-gold/20 text-gold"}`}>{lp.shareClass}</span></td>
                   <td className="px-4 py-3 text-right font-medium">{fmt(lp.montant)}</td>
@@ -399,29 +375,11 @@ function RegistreFonds({ toast }) {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
-        <h3 className="text-sm font-semibold text-navy mb-4">Capital Calls</h3>
-        <table className="w-full text-sm text-left">
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Description</th>
-              <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
-              <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Montant</th>
-              <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Statut</th>
-            </tr>
-          </thead>
-          <tbody>
-            {capitalCalls.map((cc) => (
-              <tr key={cc.id} className="border-b border-gray-50">
-                <td className="py-2.5 text-navy">{cc.description}</td>
-                <td className="py-2.5 text-gray-500">{cc.date}</td>
-                <td className="py-2.5 text-right font-medium">{fmt(cc.montant)}</td>
-                <td className="py-2.5"><Badge status={cc.statut} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {mergedLPs.length === 0 && (
+        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-8 text-center">
+          <p className="text-sm text-gray-400">Aucune souscription enregistrée — les données apparaîtront ici après validation des ordres</p>
+        </div>
+      )}
     </div>
   );
 }

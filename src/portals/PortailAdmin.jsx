@@ -1,9 +1,6 @@
 import { useState } from "react";
-import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell,
-} from "recharts";
-import { LPs, NAV_PER_PART, capitalCalls, custodyClients, priceHistory } from "../data";
+import { PieChart, Pie, Cell } from "recharts";
+import { NAV_PER_PART } from "../data";
 import { useAppContext } from "../context/AppContext";
 import { KPICard, Badge, fmt, fmtFull } from "../components/shared";
 
@@ -11,29 +8,23 @@ export default function PortailAdmin({ toast }) {
   const { orders, collateralPositions } = useAppContext();
   const [docModal, setDocModal] = useState(null);
 
-  // Merge validated orders into LP list for accurate KPIs
-  const validatedOrderLPs = orders.filter((o) => o.status === "validated").map((o) => ({
-    shareClass: o.shareClass, montant: o.montant, pays: o.pays, kycStatus: "Validé",
-  }));
-  const allLPData = [...LPs, ...validatedOrderLPs];
-  const activeLPs = allLPData.filter((lp) => lp.kycStatus === "Validé");
-  const totalAUM = activeLPs.reduce((s, lp) => s + lp.montant, 0);
-
-  const totalTokensCustody = custodyClients.reduce((s, c) => s + c.tokens, 0);
-  const totalNavCustody = custodyClients.reduce((s, c) => s + c.nav, 0);
+  // Compute KPIs from real orders
   const pendingOrders = orders.filter((o) => o.status === "pending");
   const validatedOrders = orders.filter((o) => o.status === "validated");
+  const totalAUM = orders.filter((o) => o.status !== "rejected").reduce((s, o) => s + o.montant, 0);
   const totalCollateral = collateralPositions.reduce((s, p) => s + p.tokens, 0);
 
-  const class1 = activeLPs.filter((lp) => lp.shareClass === 1);
-  const class2 = activeLPs.filter((lp) => lp.shareClass === 2);
+  // Share class distribution from orders
+  const class1Total = orders.filter((o) => o.shareClass === 1 && o.status !== "rejected").reduce((s, o) => s + o.montant, 0);
+  const class2Total = orders.filter((o) => o.shareClass === 2 && o.status !== "rejected").reduce((s, o) => s + o.montant, 0);
   const pieData = [
-    { name: "Classe 1", value: class1.reduce((s, lp) => s + lp.montant, 0) },
-    { name: "Classe 2", value: class2.reduce((s, lp) => s + lp.montant, 0) },
+    { name: "Classe 1", value: class1Total },
+    { name: "Classe 2", value: class2Total },
   ];
 
+  // Country distribution from orders
   const countryData = {};
-  allLPData.forEach((lp) => { if (lp.pays) countryData[lp.pays] = (countryData[lp.pays] || 0) + lp.montant; });
+  orders.filter((o) => o.status !== "rejected").forEach((o) => { if (o.pays) countryData[o.pays] = (countryData[o.pays] || 0) + o.montant; });
   const countryPie = Object.entries(countryData).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   const countryColors = ["#1a2332", "#c9a84c", "#3b82f6", "#10b981", "#8b5cf6", "#f59e0b"];
 
@@ -42,9 +33,9 @@ export default function PortailAdmin({ toast }) {
       {/* Overview KPIs */}
       <div className="grid grid-cols-5 gap-4 mb-8">
         <KPICard label="AUM Total" value={fmt(totalAUM)} sub="Bridge Fund SCSp" />
-        <KPICard label="LP inscrits" value={allLPData.length} sub={`${activeLPs.length} actifs`} />
-        <KPICard label="NAV / part" value={fmtFull(NAV_PER_PART)} sub="+4.3% depuis lancement" />
-        <KPICard label="Tokens custody" value={totalTokensCustody.toLocaleString("fr-FR")} sub={fmt(totalNavCustody)} />
+        <KPICard label="Souscriptions" value={orders.length} sub={`${validatedOrders.length} validées`} />
+        <KPICard label="NAV / part" value={fmtFull(NAV_PER_PART)} sub="Bridge Fund SCSp" />
+        <KPICard label="En attente" value={pendingOrders.length} sub={pendingOrders.length > 0 ? fmt(pendingOrders.reduce((s, o) => s + o.montant, 0)) : "—"} />
         <KPICard label="Collatéral total" value={totalCollateral + " BF"} sub={collateralPositions.length + " positions"} />
       </div>
 
@@ -123,26 +114,14 @@ export default function PortailAdmin({ toast }) {
           </div>
         </div>
 
-        {/* Price chart */}
+        {/* Summary */}
         <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-5">
-          <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-4">Prix BF / ADA (30j)</p>
-          <ResponsiveContainer width="100%" height={120}>
-            <AreaChart data={priceHistory}>
-              <defs>
-                <linearGradient id="colorPrixAdmin" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#1a2332" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#1a2332" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="jour" hide />
-              <YAxis domain={["auto", "auto"]} hide />
-              <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 11 }} />
-              <Area type="monotone" dataKey="prix" stroke="#1a2332" strokeWidth={2} fill="url(#colorPrixAdmin)" />
-            </AreaChart>
-          </ResponsiveContainer>
-          <div className="flex justify-between text-xs text-gray-400 mt-2">
-            <span>2.12 ADA</span>
-            <span className="text-emerald-600 font-medium">2.44 ADA (+5.2%)</span>
+          <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-4">Résumé du fonds</p>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between"><span className="text-gray-500">NAV / part</span><span className="font-medium text-navy">{fmtFull(NAV_PER_PART)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Total souscriptions</span><span className="font-medium text-navy">{orders.length}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Montant total</span><span className="font-medium text-navy">{fmt(totalAUM)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Positions collatérales</span><span className="font-medium text-navy">{collateralPositions.length}</span></div>
           </div>
         </div>
       </div>
@@ -199,25 +178,29 @@ export default function PortailAdmin({ toast }) {
       {/* Capital calls + Collateral side by side */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
-          <h3 className="text-sm font-semibold text-navy mb-4">Capital Calls</h3>
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Tranche</th>
-                <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Montant</th>
-                <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Statut</th>
-              </tr>
-            </thead>
-            <tbody>
-              {capitalCalls.map((cc) => (
-                <tr key={cc.id} className="border-b border-gray-50">
-                  <td className="py-2 text-navy text-xs">{cc.description}</td>
-                  <td className="py-2 text-right font-medium text-xs">{fmt(cc.montant)}</td>
-                  <td className="py-2"><Badge status={cc.statut} /></td>
+          <h3 className="text-sm font-semibold text-navy mb-4">Registre des souscriptions</h3>
+          {orders.length === 0 ? (
+            <p className="text-sm text-gray-400 py-4 text-center">Aucune souscription enregistrée</p>
+          ) : (
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Souscripteur</th>
+                  <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Montant</th>
+                  <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Statut</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {orders.map((o) => (
+                  <tr key={o.id} className="border-b border-gray-50">
+                    <td className="py-2 text-navy text-xs font-medium">{o.lpName}</td>
+                    <td className="py-2 text-right font-medium text-xs">{fmt(o.montant)}</td>
+                    <td className="py-2"><Badge status={o.status === "pending" ? "En attente" : o.status === "validated" ? "Approuvé" : "Rejeté"} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">

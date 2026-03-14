@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { custodyClients, NAV_PER_PART, swisslifeClients } from "../data";
+import { NAV_PER_PART } from "../data";
 import { generateBulletinPDF } from "../generateBulletin";
 import { useAppContext } from "../context/AppContext";
 import { uploadGeneratedPDF } from "../utils/generateDocument";
@@ -432,83 +432,47 @@ function SouscriptionIntermediee({ toast }) {
 
 /* ─── Sub-tab: Custody ─── */
 function Custody({ toast }) {
-  const [expandedId, setExpandedId] = useState(null);
-  const totalTokens = custodyClients.reduce((s, c) => s + c.tokens, 0);
-  const totalNav = custodyClients.reduce((s, c) => s + c.nav, 0);
+  const { orders } = useAppContext();
+  const validatedOrders = orders.filter((o) => o.status === "validated" && o.intermediaire);
+  const totalTokens = validatedOrders.reduce((s, o) => s + Math.floor(o.montant / NAV_PER_PART), 0);
+  const totalNav = validatedOrders.reduce((s, o) => s + o.montant, 0);
 
   return (
     <div className="animate-fade-in">
       <div className="grid grid-cols-4 gap-4 mb-8">
         <KPICard label="Tokens sous custody" value={totalTokens.toLocaleString("fr-FR")} />
         <KPICard label="Valeur totale AUM" value={fmt(totalNav)} />
-        <KPICard label="Clients" value={custodyClients.length} />
-        <KPICard label="Dernière NAV" value={fmtFull(NAV_PER_PART)} sub="14 mars 2026" />
-      </div>
-
-      <div className="flex gap-3 mb-6">
-        <button onClick={() => toast("Émission initiée — 500 nouveaux tokens BF en cours de mint sur Cardano")} className="bg-navy text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-navy-light transition-colors">+ Émettre nouveau token</button>
-        <button onClick={() => toast("Rapport custody Q1 2026 généré")} className="bg-white text-navy border border-gray-200 px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-cream transition-colors">Générer rapport custody</button>
+        <KPICard label="Clients" value={validatedOrders.length} />
+        <KPICard label="Dernière NAV" value={fmtFull(NAV_PER_PART)} />
       </div>
 
       <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm text-left">
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Client</th>
-              <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Tokens</th>
-              <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Valeur NAV</th>
-              <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date émission</th>
-              <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Statut</th>
-              <th className="px-5 py-3.5"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {custodyClients.map((c) => (
-              <tbody key={c.id}>
-                <tr className="border-b border-gray-50 hover:bg-cream/50 transition-colors cursor-pointer" onClick={() => setExpandedId(expandedId === c.id ? null : c.id)}>
-                  <td className="px-5 py-3.5 font-medium text-navy">{c.nom}</td>
-                  <td className="px-5 py-3.5 text-right font-mono">{c.tokens.toLocaleString("fr-FR")}</td>
-                  <td className="px-5 py-3.5 text-right">{fmt(c.nav)}</td>
-                  <td className="px-5 py-3.5 text-gray-500">{c.dateEmission}</td>
-                  <td className="px-5 py-3.5"><Badge status={c.statut} /></td>
-                  <td className="px-5 py-3.5 text-gray-400">{expandedId === c.id ? "▲" : "▼"}</td>
+        {validatedOrders.length === 0 ? (
+          <p className="text-sm text-gray-400 py-8 text-center">Aucun client en custody — les souscriptions validées apparaîtront ici</p>
+        ) : (
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Client</th>
+                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Tokens</th>
+                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Valeur NAV</th>
+                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
+                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              {validatedOrders.map((o) => (
+                <tr key={o.id} className="border-b border-gray-50 hover:bg-cream/50 transition-colors">
+                  <td className="px-5 py-3.5 font-medium text-navy">{o.lpName}</td>
+                  <td className="px-5 py-3.5 text-right font-mono">{Math.floor(o.montant / NAV_PER_PART).toLocaleString("fr-FR")}</td>
+                  <td className="px-5 py-3.5 text-right">{fmt(o.montant)}</td>
+                  <td className="px-5 py-3.5 text-gray-500">{o.date}</td>
+                  <td className="px-5 py-3.5"><Badge status="Actif" /></td>
                 </tr>
-                {expandedId === c.id && (
-                  <tr>
-                    <td colSpan={6} className="px-5 py-4 bg-cream/50">
-                      <div className="animate-fade-in text-xs space-y-3">
-                        <div>
-                          <span className="text-gray-400">Wallet : </span>
-                          <span className="font-mono text-navy">{c.wallet}</span>
-                        </div>
-                        <table className="w-full">
-                          <thead>
-                            <tr>
-                              <th className="text-left text-gray-400 font-medium pb-1">Type</th>
-                              <th className="text-left text-gray-400 font-medium pb-1">Date</th>
-                              <th className="text-right text-gray-400 font-medium pb-1">Tokens</th>
-                              <th className="text-right text-gray-400 font-medium pb-1">Tx Hash</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {c.mouvements.map((m, i) => (
-                              <tr key={i} className="border-t border-gray-200">
-                                <td className="py-1.5 text-navy">{m.type}</td>
-                                <td className="py-1.5 text-gray-500">{m.date}</td>
-                                <td className="py-1.5 text-right font-mono">{m.tokens > 0 ? "+" : ""}{m.tokens}</td>
-                                <td className="py-1.5 text-right font-mono text-gold">{m.hash}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            ))}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
@@ -516,11 +480,11 @@ function Custody({ toast }) {
 
 /* ─── Sub-tab: Collatéral clients ─── */
 function CollateralClients({ toast }) {
-  const { collateralPositions, addCollateral } = useAppContext();
+  const { orders, collateralPositions, addCollateral } = useAppContext();
   const [selectedClient, setSelectedClient] = useState("");
   const [stakeAmount, setStakeAmount] = useState(100);
 
-  const clientsWithTokens = swisslifeClients.filter((c) => c.tokens > 0);
+  const validatedClients = orders.filter((o) => o.status === "validated");
 
   return (
     <div className="animate-fade-in">
@@ -567,7 +531,7 @@ function CollateralClients({ toast }) {
             <label className={labelCls}>Client</label>
             <select value={selectedClient} onChange={(e) => setSelectedClient(e.target.value)} className={selectCls}>
               <option value="">Sélectionnez un client...</option>
-              {clientsWithTokens.map((c) => <option key={c.id} value={c.nom}>{c.nom} ({c.tokens} BF)</option>)}
+              {validatedClients.map((c) => <option key={c.id} value={c.lpName}>{c.lpName} ({Math.floor(c.montant / NAV_PER_PART)} BF)</option>)}
             </select>
           </div>
           <div>
