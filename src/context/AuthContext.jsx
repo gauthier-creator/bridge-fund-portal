@@ -38,6 +38,9 @@ export function AuthProvider({ children }) {
         setProfile(p);
       }
       setLoading(false);
+    }).catch((err) => {
+      console.error("Auth init failed:", err);
+      setLoading(false);
     });
 
     // Listen for auth changes
