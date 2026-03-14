@@ -25,6 +25,20 @@ create table if not exists orders (
   validated_at timestamptz,
   rejected_at timestamptz,
   reject_reason text,
+  -- Extended subscriber fields
+  nom text,
+  prenom text,
+  date_naissance text,
+  nationalite text,
+  forme_juridique text,
+  rcs text,
+  lei text,
+  code_postal text,
+  ville text,
+  pep_detail text,
+  beneficiaire_nom text,
+  beneficiaire_pct text,
+  payment_method text default 'fiat',
   created_at timestamptz default now()
 );
 

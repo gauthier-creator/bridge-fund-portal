@@ -25,11 +25,43 @@ function dbToOrder(row, docs = []) {
     validatedAt: row.validated_at,
     rejectedAt: row.rejected_at,
     rejectReason: row.reject_reason,
+    // Extended fields
+    nom: row.nom,
+    prenom: row.prenom,
+    dateNaissance: row.date_naissance,
+    nationalite: row.nationalite,
+    formeJuridique: row.forme_juridique,
+    rcs: row.rcs,
+    lei: row.lei,
+    codePostal: row.code_postal,
+    ville: row.ville,
+    pepDetail: row.pep_detail,
+    beneficiaireNom: row.beneficiaire_nom,
+    beneficiairePct: row.beneficiaire_pct,
+    paymentMethod: row.payment_method,
     documents: docs.map(dbToDocument),
   };
 }
 
+function parseSignatureDate(raw) {
+  if (!raw) return null;
+  // Already ISO or valid date string
+  if (!isNaN(Date.parse(raw))) return new Date(raw).toISOString();
+  // French format "14/03/2026 16:50:46" → ISO
+  const match = raw.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):?(\d{2})?/);
+  if (match) {
+    const [, dd, mm, yyyy, hh, mi, ss = "00"] = match;
+    return new Date(`${yyyy}-${mm}-${dd}T${hh}:${mi}:${ss}`).toISOString();
+  }
+  return null;
+}
+
 function orderToDb(order) {
+  // Extract nom/prenom from lpName if not provided separately
+  const parts = (order.lpName || "").split(" ");
+  const nom = order.nom || parts.slice(-1)[0] || null;
+  const prenom = order.prenom || parts.slice(0, -1).join(" ") || null;
+
   return {
     id: order.id,
     type: order.type,
@@ -47,7 +79,21 @@ function orderToDb(order) {
     pep_status: order.pepStatus || "non",
     kyc_status: order.kycStatus || "En attente",
     payment_status: order.paymentStatus || "En attente",
-    signature_date: order.signatureDate || null,
+    signature_date: parseSignatureDate(order.signatureDate),
+    // Extended fields
+    nom,
+    prenom,
+    date_naissance: order.dateNaissance || null,
+    nationalite: order.nationalite || null,
+    forme_juridique: order.formeJuridique || null,
+    rcs: order.rcs || null,
+    lei: order.lei || null,
+    code_postal: order.codePostal || null,
+    ville: order.ville || null,
+    pep_detail: order.pepDetail || null,
+    beneficiaire_nom: order.beneficiaireNom || null,
+    beneficiaire_pct: order.beneficiairePct || null,
+    payment_method: order.paymentMethod || "fiat",
   };
 }
 
