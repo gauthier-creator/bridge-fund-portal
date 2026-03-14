@@ -1,11 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts";
 import { NAV_PER_PART, priceHistory, defiHistory } from "../data";
 import { generateBulletinPDF } from "../generateBulletin";
 import { useAppContext } from "../context/AppContext";
-import { uploadGeneratedPDF } from "../utils/generateDocument";
+import { supabase } from "../lib/supabase";
 import {
   KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls,
   Checkbox, ComplianceAlert, SignaturePad,
@@ -33,7 +33,8 @@ function Souscription({ toast }) {
   const [paymentReceived, setPaymentReceived] = useState(false);
   const [subRef] = useState(() => "BF-2026-" + String(Math.floor(Math.random() * 9000) + 1000));
   const [consents, setConsents] = useState({ prospectus: false, dici: false, risques: false, illiquidite: false, donnees: false, fiscalite: false });
-  const [idUploaded, setIdUploaded] = useState(false);
+  const [documents, setDocuments] = useState([]);
+  const fileRefs = { id: useRef(null), domicile: useRef(null), fonds: useRef(null), statuts: useRef(null) };
   const [kycSubStep, setKycSubStep] = useState(0);
   const [signatureData, setSignatureData] = useState(null);
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -42,6 +43,28 @@ function Souscription({ toast }) {
   const allConsentsChecked = Object.values(consents).every(Boolean);
   const canSign = allConsentsChecked && signatureData;
   const set = (key, val) => setFormData((prev) => ({ ...prev, [key]: val }));
+
+  const handleFileSelect = (docType) => async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const date = new Date().toISOString().split("T")[0];
+    const size = file.size > 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} Mo` : `${(file.size / 1024).toFixed(0)} Ko`;
+
+    if (supabase) {
+      const path = `${subRef}/${Date.now()}_${file.name}`;
+      const { error } = await supabase.storage.from("documents").upload(path, file, { contentType: file.type });
+      if (!error) {
+        const { data } = await supabase.storage.from("documents").createSignedUrl(path, 7 * 24 * 3600);
+        setDocuments((prev) => [...prev, { name: file.name, type: docType, size, date, url: data?.signedUrl, storagePath: path }]);
+      } else {
+        console.error("Upload failed:", error.message);
+        setDocuments((prev) => [...prev, { name: file.name, type: docType, size, date, url: URL.createObjectURL(file) }]);
+      }
+    } else {
+      setDocuments((prev) => [...prev, { name: file.name, type: docType, size, date, url: URL.createObjectURL(file) }]);
+    }
+    toast(`Document uploadé — ${file.name}`);
+  };
 
   const handleKycSubmit = () => {
     setKycStatus("En attente");
@@ -70,16 +93,6 @@ function Souscription({ toast }) {
     setPdfUrl(url);
     setSigned(true);
     toast("Bulletin de souscription signé électroniquement via eIDAS");
-
-    // Build documents with Storage upload
-    const docs = [];
-    if (idUploaded) {
-      const docName = `passeport_${formData.nom.toLowerCase() || "souscripteur"}.pdf`;
-      const docDate = new Date().toISOString().split("T")[0];
-      const ownerName = (formData.prenom + " " + formData.nom).trim();
-      const result = await uploadGeneratedPDF({ docType: "Pièce d'identité", docName, ownerName, orderRef: subRef, date: docDate });
-      docs.push({ name: docName, type: "Pièce d'identité", size: "2.1 Mo", date: docDate, url: result.url, storagePath: result.storagePath });
-    }
 
     submitOrder({
       id: subRef,
@@ -112,7 +125,7 @@ function Souscription({ toast }) {
       beneficiaireNom: formData.beneficiaireNom || null,
       beneficiairePct: formData.beneficiairePct || null,
       paymentMethod: formData.paymentMethod || "fiat",
-      documents: docs,
+      documents,
     });
   };
 
@@ -251,26 +264,89 @@ function Souscription({ toast }) {
 
                   <div className="col-span-2 space-y-3">
                     <label className={labelCls}>Documents justificatifs <span className="text-red-400">*</span></label>
-                    <div
-                      className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors cursor-pointer ${idUploaded ? "border-emerald-300 bg-emerald-50/50" : "border-gray-200 hover:border-navy/30"}`}
-                      onClick={() => { setIdUploaded(true); toast("Document uploadé — passeport_dupont.pdf"); }}
-                    >
-                      {idUploaded ? (
-                        <div className="flex items-center justify-center gap-2 text-emerald-700 text-sm">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                          passeport_dupont.pdf <span className="text-xs text-emerald-500">· 2.1 Mo</span>
+
+                    {/* Pièce d'identité */}
+                    {documents.find((d) => d.type === "Pièce d'identité") ? (
+                      <div className="flex items-center gap-2 border border-emerald-200 bg-emerald-50/50 rounded-xl p-3 text-sm">
+                        <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        <span className="text-emerald-700 font-medium flex-1">{documents.find((d) => d.type === "Pièce d'identité").name}</span>
+                        <span className="text-xs text-emerald-500">{documents.find((d) => d.type === "Pièce d'identité").size}</span>
+                        <button onClick={() => window.open(documents.find((d) => d.type === "Pièce d'identité").url, "_blank")} className="text-xs font-medium text-navy hover:text-gold transition-colors">Consulter</button>
+                      </div>
+                    ) : (
+                      <>
+                        <input type="file" ref={fileRefs.id} onChange={handleFileSelect("Pièce d'identité")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
+                        <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
+                          onClick={() => fileRefs.id.current?.click()}>
+                          <p className="text-sm text-gray-400">{personType === "physique" ? "Passeport ou carte d'identité" : "Extrait K-bis / Registre de commerce"}</p>
+                          <p className="text-xs text-gray-300 mt-0.5">Cliquez pour sélectionner · PDF, JPG, PNG — max 10 Mo</p>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Justificatif de domicile */}
+                    {documents.find((d) => d.type === "Justificatif de domicile") ? (
+                      <div className="flex items-center gap-2 border border-emerald-200 bg-emerald-50/50 rounded-xl p-3 text-sm">
+                        <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        <span className="text-emerald-700 font-medium flex-1">{documents.find((d) => d.type === "Justificatif de domicile").name}</span>
+                        <span className="text-xs text-emerald-500">{documents.find((d) => d.type === "Justificatif de domicile").size}</span>
+                        <button onClick={() => window.open(documents.find((d) => d.type === "Justificatif de domicile").url, "_blank")} className="text-xs font-medium text-navy hover:text-gold transition-colors">Consulter</button>
+                      </div>
+                    ) : (
+                      <>
+                        <input type="file" ref={fileRefs.domicile} onChange={handleFileSelect("Justificatif de domicile")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
+                        <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
+                          onClick={() => fileRefs.domicile.current?.click()}>
+                          <p className="text-sm text-gray-400">Justificatif de domicile (moins de 3 mois)</p>
+                          <p className="text-xs text-gray-300 mt-0.5">Facture énergie, téléphone, avis d'imposition</p>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Justificatif origine des fonds */}
+                    {documents.find((d) => d.type === "Justificatif origine des fonds") ? (
+                      <div className="flex items-center gap-2 border border-emerald-200 bg-emerald-50/50 rounded-xl p-3 text-sm">
+                        <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        <span className="text-emerald-700 font-medium flex-1">{documents.find((d) => d.type === "Justificatif origine des fonds").name}</span>
+                        <span className="text-xs text-emerald-500">{documents.find((d) => d.type === "Justificatif origine des fonds").size}</span>
+                        <button onClick={() => window.open(documents.find((d) => d.type === "Justificatif origine des fonds").url, "_blank")} className="text-xs font-medium text-navy hover:text-gold transition-colors">Consulter</button>
+                      </div>
+                    ) : (
+                      <>
+                        <input type="file" ref={fileRefs.fonds} onChange={handleFileSelect("Justificatif origine des fonds")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
+                        <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
+                          onClick={() => fileRefs.fonds.current?.click()}>
+                          <p className="text-sm text-gray-400">Justificatif d'origine des fonds</p>
+                          <p className="text-xs text-gray-300 mt-0.5">Relevé bancaire, acte de cession, attestation employeur</p>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Statuts (personne morale) */}
+                    {personType === "morale" && (
+                      documents.find((d) => d.type === "Statuts société") ? (
+                        <div className="flex items-center gap-2 border border-emerald-200 bg-emerald-50/50 rounded-xl p-3 text-sm">
+                          <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                          <span className="text-emerald-700 font-medium flex-1">{documents.find((d) => d.type === "Statuts société").name}</span>
+                          <span className="text-xs text-emerald-500">{documents.find((d) => d.type === "Statuts société").size}</span>
+                          <button onClick={() => window.open(documents.find((d) => d.type === "Statuts société").url, "_blank")} className="text-xs font-medium text-navy hover:text-gold transition-colors">Consulter</button>
                         </div>
                       ) : (
                         <>
-                          <p className="text-sm text-gray-400">{personType === "physique" ? "Passeport ou carte d'identité" : "Extrait K-bis / Registre de commerce"}</p>
-                          <p className="text-xs text-gray-300 mt-1">PDF, JPG ou PNG — max 10 Mo</p>
+                          <input type="file" ref={fileRefs.statuts} onChange={handleFileSelect("Statuts société")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
+                          <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
+                            onClick={() => fileRefs.statuts.current?.click()}>
+                            <p className="text-sm text-gray-400">Statuts à jour + liste des bénéficiaires effectifs</p>
+                            <p className="text-xs text-gray-300 mt-0.5">PDF — max 10 Mo</p>
+                          </div>
                         </>
-                      )}
-                    </div>
-                    {personType === "morale" && (
-                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-navy/30 transition-colors cursor-pointer" onClick={() => toast("Document uploadé — statuts_dupont_patrimoine.pdf")}>
-                        <p className="text-sm text-gray-400">Statuts à jour + liste des bénéficiaires effectifs</p>
-                        <p className="text-xs text-gray-300 mt-1">PDF — max 10 Mo</p>
+                      )
+                    )}
+
+                    {documents.length > 0 && (
+                      <div className="flex items-center gap-2 text-xs text-emerald-600 font-medium">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        {documents.length} document{documents.length > 1 ? "s" : ""} déposé{documents.length > 1 ? "s" : ""}
                       </div>
                     )}
                   </div>

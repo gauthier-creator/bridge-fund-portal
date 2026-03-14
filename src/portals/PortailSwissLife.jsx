@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { custodyClients, NAV_PER_PART, swisslifeClients } from "../data";
 import { generateBulletinPDF } from "../generateBulletin";
 import { useAppContext } from "../context/AppContext";
 import { uploadGeneratedPDF } from "../utils/generateDocument";
+import { supabase } from "../lib/supabase";
 import {
   KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls,
   Checkbox, ComplianceAlert, SignaturePad,
@@ -30,13 +31,28 @@ function SouscriptionIntermediee({ toast }) {
   const [subRef] = useState(() => "BF-SL-2026-" + String(Math.floor(Math.random() * 9000) + 1000));
   const [consents, setConsents] = useState({ prospectus: false, dici: false, risques: false, illiquidite: false, donnees: false, fiscalite: false });
   const [documents, setDocuments] = useState([]);
+  const fileRefs = { id: useRef(null), domicile: useRef(null), fonds: useRef(null), statuts: useRef(null), ubo: useRef(null) };
 
-  const addDoc = async (name, type, size) => {
+  const handleFileSelect = (docType) => async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     const date = new Date().toISOString().split("T")[0];
-    const ownerName = (formData.prenom + " " + formData.nom).trim() || "Client";
-    const result = await uploadGeneratedPDF({ docType: type, docName: name, ownerName, orderRef: subRef, date });
-    setDocuments((prev) => [...prev, { name, type, size, date, url: result.url, storagePath: result.storagePath }]);
-    toast(`Document uploadé — ${name}`);
+    const size = file.size > 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} Mo` : `${(file.size / 1024).toFixed(0)} Ko`;
+
+    if (supabase) {
+      const path = `${subRef}/${Date.now()}_${file.name}`;
+      const { error } = await supabase.storage.from("documents").upload(path, file, { contentType: file.type });
+      if (!error) {
+        const { data } = await supabase.storage.from("documents").createSignedUrl(path, 7 * 24 * 3600);
+        setDocuments((prev) => [...prev, { name: file.name, type: docType, size, date, url: data?.signedUrl, storagePath: path }]);
+      } else {
+        console.error("Upload failed:", error.message);
+        setDocuments((prev) => [...prev, { name: file.name, type: docType, size, date, url: URL.createObjectURL(file) }]);
+      }
+    } else {
+      setDocuments((prev) => [...prev, { name: file.name, type: docType, size, date, url: URL.createObjectURL(file) }]);
+    }
+    toast(`Document uploadé — ${file.name}`);
   };
 
   const allConsentsChecked = Object.values(consents).every(Boolean);
@@ -183,11 +199,14 @@ function SouscriptionIntermediee({ toast }) {
                     <button onClick={() => window.open(documents.find((d) => d.type === "Pièce d'identité").url, "_blank")} className="text-xs font-medium text-navy hover:text-gold transition-colors">Consulter</button>
                   </div>
                 ) : (
-                  <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
-                    onClick={() => addDoc(personType === "physique" ? `cni_${formData.nom.toLowerCase() || "client"}.pdf` : `kbis_${(formData.societe || formData.nom).toLowerCase().replace(/\s/g, "_")}.pdf`, "Pièce d'identité", "1.8 Mo")}>
-                    <p className="text-sm text-gray-400">{personType === "physique" ? "Passeport ou carte d'identité" : "K-bis / Registre de commerce"}</p>
-                    <p className="text-xs text-gray-300 mt-0.5">Cliquez pour simuler l'upload · PDF, JPG, PNG — max 10 Mo</p>
-                  </div>
+                  <>
+                    <input type="file" ref={fileRefs.id} onChange={handleFileSelect("Pièce d'identité")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
+                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
+                      onClick={() => fileRefs.id.current?.click()}>
+                      <p className="text-sm text-gray-400">{personType === "physique" ? "Passeport ou carte d'identité" : "K-bis / Registre de commerce"}</p>
+                      <p className="text-xs text-gray-300 mt-0.5">Cliquez pour sélectionner · PDF, JPG, PNG — max 10 Mo</p>
+                    </div>
+                  </>
                 )}
 
                 {/* Justificatif de domicile */}
@@ -199,11 +218,14 @@ function SouscriptionIntermediee({ toast }) {
                     <button onClick={() => window.open(documents.find((d) => d.type === "Justificatif de domicile").url, "_blank")} className="text-xs font-medium text-navy hover:text-gold transition-colors">Consulter</button>
                   </div>
                 ) : (
-                  <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
-                    onClick={() => addDoc(`justificatif_domicile_${formData.nom.toLowerCase() || "client"}.pdf`, "Justificatif de domicile", "920 Ko")}>
-                    <p className="text-sm text-gray-400">Justificatif de domicile (moins de 3 mois)</p>
-                    <p className="text-xs text-gray-300 mt-0.5">Facture énergie, téléphone, avis d'imposition</p>
-                  </div>
+                  <>
+                    <input type="file" ref={fileRefs.domicile} onChange={handleFileSelect("Justificatif de domicile")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
+                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
+                      onClick={() => fileRefs.domicile.current?.click()}>
+                      <p className="text-sm text-gray-400">Justificatif de domicile (moins de 3 mois)</p>
+                      <p className="text-xs text-gray-300 mt-0.5">Facture énergie, téléphone, avis d'imposition</p>
+                    </div>
+                  </>
                 )}
 
                 {/* Justificatif origine des fonds */}
@@ -215,11 +237,14 @@ function SouscriptionIntermediee({ toast }) {
                     <button onClick={() => window.open(documents.find((d) => d.type === "Justificatif origine des fonds").url, "_blank")} className="text-xs font-medium text-navy hover:text-gold transition-colors">Consulter</button>
                   </div>
                 ) : (
-                  <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
-                    onClick={() => addDoc(`origine_fonds_${formData.nom.toLowerCase() || "client"}.pdf`, "Justificatif origine des fonds", "1.4 Mo")}>
-                    <p className="text-sm text-gray-400">Justificatif d'origine des fonds</p>
-                    <p className="text-xs text-gray-300 mt-0.5">Relevé bancaire, acte de cession, attestation employeur</p>
-                  </div>
+                  <>
+                    <input type="file" ref={fileRefs.fonds} onChange={handleFileSelect("Justificatif origine des fonds")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
+                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
+                      onClick={() => fileRefs.fonds.current?.click()}>
+                      <p className="text-sm text-gray-400">Justificatif d'origine des fonds</p>
+                      <p className="text-xs text-gray-300 mt-0.5">Relevé bancaire, acte de cession, attestation employeur</p>
+                    </div>
+                  </>
                 )}
 
                 {/* Statuts / UBO (personne morale) */}
@@ -233,11 +258,14 @@ function SouscriptionIntermediee({ toast }) {
                         <button onClick={() => window.open(documents.find((d) => d.type === "Statuts société").url, "_blank")} className="text-xs font-medium text-navy hover:text-gold transition-colors">Consulter</button>
                       </div>
                     ) : (
-                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
-                        onClick={() => addDoc(`statuts_${(formData.societe || formData.nom).toLowerCase().replace(/\s/g, "_")}.pdf`, "Statuts société", "2.8 Mo")}>
-                        <p className="text-sm text-gray-400">Statuts à jour de la société</p>
-                        <p className="text-xs text-gray-300 mt-0.5">Dernière version certifiée conforme</p>
-                      </div>
+                      <>
+                        <input type="file" ref={fileRefs.statuts} onChange={handleFileSelect("Statuts société")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
+                        <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
+                          onClick={() => fileRefs.statuts.current?.click()}>
+                          <p className="text-sm text-gray-400">Statuts à jour de la société</p>
+                          <p className="text-xs text-gray-300 mt-0.5">Dernière version certifiée conforme</p>
+                        </div>
+                      </>
                     )}
                     {documents.find((d) => d.type === "Déclaration UBO") ? (
                       <div className="flex items-center gap-2 border border-emerald-200 bg-emerald-50/50 rounded-xl p-3 text-sm">
@@ -247,11 +275,14 @@ function SouscriptionIntermediee({ toast }) {
                         <button onClick={() => window.open(documents.find((d) => d.type === "Déclaration UBO").url, "_blank")} className="text-xs font-medium text-navy hover:text-gold transition-colors">Consulter</button>
                       </div>
                     ) : (
-                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
-                        onClick={() => addDoc(`ubo_${(formData.societe || formData.nom).toLowerCase().replace(/\s/g, "_")}.pdf`, "Déclaration UBO", "680 Ko")}>
-                        <p className="text-sm text-gray-400">Déclaration des bénéficiaires effectifs (UBO)</p>
-                        <p className="text-xs text-gray-300 mt-0.5">Formulaire UBO + pièces d'identité des UBO &gt; 25%</p>
-                      </div>
+                      <>
+                        <input type="file" ref={fileRefs.ubo} onChange={handleFileSelect("Déclaration UBO")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
+                        <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
+                          onClick={() => fileRefs.ubo.current?.click()}>
+                          <p className="text-sm text-gray-400">Déclaration des bénéficiaires effectifs (UBO)</p>
+                          <p className="text-xs text-gray-300 mt-0.5">Formulaire UBO + pièces d'identité des UBO &gt; 25%</p>
+                        </div>
+                      </>
                     )}
                   </>
                 )}
