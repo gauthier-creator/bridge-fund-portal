@@ -126,7 +126,7 @@ export function AppProvider({ children }) {
           dispatch({ type: "SET_DATA", payload: { orders: enrichedOrders, collateralPositions: positions } });
         }
       } catch (err) {
-        console.error("Supabase load failed, using fallback:", err);
+        console.error("Supabase load failed, using fallback:", err?.message || err?.code || JSON.stringify(err));
         if (!cancelled) loadLocal();
       }
     }
