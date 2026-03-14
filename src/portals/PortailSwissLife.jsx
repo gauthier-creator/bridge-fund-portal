@@ -1,9 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { NAV_PER_PART } from "../data";
 import { generateBulletinPDF } from "../generateBulletin";
 import { useAppContext } from "../context/AppContext";
+import { useAuth } from "../context/AuthContext";
 import { uploadGeneratedPDF } from "../utils/generateDocument";
 import { supabase } from "../lib/supabase";
+import { listMyClients, createClientAccount } from "../services/profileService";
 import {
   KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls,
   Checkbox, ComplianceAlert, SignaturePad,
@@ -12,6 +14,8 @@ import {
 /* ─── Sub-tab: Souscription intermédiée ─── */
 function SouscriptionIntermediee({ toast }) {
   const { submitOrder } = useAppContext();
+  const { profile, user } = useAuth();
+  const intermediaireName = profile?.company || profile?.full_name || "Intermédiaire";
   const [step, setStep] = useState(0);
   const [personType, setPersonType] = useState("physique");
   const [formData, setFormData] = useState({
@@ -75,11 +79,12 @@ function SouscriptionIntermediee({ toast }) {
     const blob = doc.output("blob");
     setPdfUrl(URL.createObjectURL(blob));
     setSigned(true);
-    toast("Bulletin signé — souscription intermédiée par SwissLife");
+    toast(`Bulletin signé — souscription intermédiée par ${intermediaireName}`);
     submitOrder({
       id: subRef,
       type: "intermediated",
-      intermediaire: "SwissLife Banque Privée",
+      intermediaire: intermediaireName,
+      intermediaryId: user?.id || null,
       lpName: (formData.prenom + " " + formData.nom).trim(),
       nom: formData.nom,
       prenom: formData.prenom,
@@ -555,6 +560,115 @@ function CollateralClients({ toast }) {
 }
 
 /* ─── Main SwissLife Portal ─── */
+/* ─── Mes Clients tab ─── */
+function MesClients({ toast }) {
+  const { profile, user } = useAuth();
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [newClient, setNewClient] = useState({ email: "", fullName: "", company: "", password: "" });
+  const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    if (supabase && user) {
+      listMyClients()
+        .then(setClients)
+        .catch((err) => console.error("Failed to load clients:", err))
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
+
+  const handleCreateClient = async () => {
+    if (!newClient.email || !newClient.fullName || !newClient.password) {
+      toast("Veuillez remplir tous les champs obligatoires");
+      return;
+    }
+    setCreating(true);
+    try {
+      await createClientAccount(newClient);
+      toast(`Compte client créé pour ${newClient.fullName}`);
+      setNewClient({ email: "", fullName: "", company: "", password: "" });
+      setShowForm(false);
+      // Refresh client list
+      const updated = await listMyClients();
+      setClients(updated);
+    } catch (err) {
+      toast("Erreur : " + err.message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <div className="animate-fade-in">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-sm font-semibold text-navy">Clients liés à votre compte</h3>
+        <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-navy text-white text-xs rounded-xl hover:bg-navy-light transition-colors">
+          {showForm ? "Annuler" : "+ Nouveau client"}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6 mb-6">
+          <h4 className="text-sm font-semibold text-navy mb-4">Créer un compte client</h4>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Nom complet *</label>
+              <input value={newClient.fullName} onChange={(e) => setNewClient((p) => ({ ...p, fullName: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20" placeholder="Jean Dupont" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Email *</label>
+              <input type="email" value={newClient.email} onChange={(e) => setNewClient((p) => ({ ...p, email: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20" placeholder="client@email.com" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Mot de passe *</label>
+              <input type="password" value={newClient.password} onChange={(e) => setNewClient((p) => ({ ...p, password: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20" placeholder="Min. 6 caractères" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Société</label>
+              <input value={newClient.company} onChange={(e) => setNewClient((p) => ({ ...p, company: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20" placeholder="Optionnel" />
+            </div>
+          </div>
+          <button onClick={handleCreateClient} disabled={creating} className="px-6 py-2 bg-navy text-white text-sm rounded-xl hover:bg-navy-light transition-colors disabled:opacity-50">
+            {creating ? "Création…" : "Créer le compte"}
+          </button>
+        </div>
+      )}
+
+      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center text-gray-400 text-sm">Chargement…</div>
+        ) : clients.length === 0 ? (
+          <div className="p-8 text-center text-gray-400 text-sm">Aucun client enregistré — créez votre premier compte client</div>
+        ) : (
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Nom</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Email</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Société</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Créé le</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clients.map((c) => (
+                <tr key={c.id} className="border-b border-gray-50 hover:bg-cream/50">
+                  <td className="px-5 py-3 font-medium text-navy">{c.full_name}</td>
+                  <td className="px-5 py-3 text-gray-500">{c.email}</td>
+                  <td className="px-5 py-3 text-gray-500">{c.company || "—"}</td>
+                  <td className="px-5 py-3 text-gray-400">{c.created_at?.split("T")[0]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function PortailSwissLife({ toast }) {
   const [subTab, setSubTab] = useState("souscription");
 
@@ -563,6 +677,7 @@ export default function PortailSwissLife({ toast }) {
       <div className="flex border-b border-gray-100 mb-8">
         {[
           { id: "souscription", label: "Souscription intermédiée" },
+          { id: "clients", label: "Mes clients" },
           { id: "custody", label: "Custody" },
           { id: "collateral", label: "Collatéral clients" },
         ].map((tab) => (
@@ -574,6 +689,7 @@ export default function PortailSwissLife({ toast }) {
       </div>
 
       {subTab === "souscription" && <SouscriptionIntermediee toast={toast} />}
+      {subTab === "clients" && <MesClients toast={toast} />}
       {subTab === "custody" && <Custody toast={toast} />}
       {subTab === "collateral" && <CollateralClients toast={toast} />}
     </div>

@@ -1,11 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PieChart, Pie, Cell } from "recharts";
 import { NAV_PER_PART } from "../data";
 import { useAppContext } from "../context/AppContext";
-import { KPICard, Badge, fmt, fmtFull } from "../components/shared";
+import { KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls } from "../components/shared";
+import { supabase } from "../lib/supabase";
+import { listProfiles, createUser, updateUserProfile } from "../services/profileService";
+
+const ROLE_LABELS = { investor: "Investisseur", intermediary: "Intermédiaire", aifm: "AIFM", admin: "Admin" };
 
 export default function PortailAdmin({ toast }) {
   const { orders, collateralPositions } = useAppContext();
+  const [adminTab, setAdminTab] = useState("dashboard");
   const [docModal, setDocModal] = useState(null);
 
   // Compute KPIs from real orders
@@ -30,6 +35,22 @@ export default function PortailAdmin({ toast }) {
 
   return (
     <div className="animate-fade-in">
+      {/* Admin tabs */}
+      <div className="flex border-b border-gray-100 mb-8">
+        {[
+          { id: "dashboard", label: "Dashboard" },
+          { id: "users", label: "Gestion des utilisateurs" },
+        ].map((tab) => (
+          <button key={tab.id} onClick={() => setAdminTab(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${adminTab === tab.id ? "text-navy" : "text-gray-400 hover:text-gray-600"}`}>
+            {tab.label}
+            {adminTab === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy rounded-full" />}
+          </button>
+        ))}
+      </div>
+
+      {adminTab === "users" && <UserManagement toast={toast} />}
+
+      {adminTab === "dashboard" && <>
       {/* Overview KPIs */}
       <div className="grid grid-cols-5 gap-4 mb-8">
         <KPICard label="AUM Total" value={fmt(totalAUM)} sub="Bridge Fund SCSp" />
@@ -225,6 +246,7 @@ export default function PortailAdmin({ toast }) {
           </table>
         </div>
       </div>
+      </>}
 
       {/* Document viewer modal */}
       {docModal && (
@@ -267,6 +289,185 @@ export default function PortailAdmin({ toast }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ─── User Management Component ─── */
+function UserManagement({ toast }) {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editRole, setEditRole] = useState("");
+  const [newUser, setNewUser] = useState({ email: "", password: "", fullName: "", role: "investor", company: "", intermediaryId: "" });
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      const data = await listProfiles();
+      setUsers(data);
+    } catch (err) {
+      console.error("Failed to load users:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!newUser.email || !newUser.password || !newUser.fullName) {
+      toast("Veuillez remplir tous les champs obligatoires");
+      return;
+    }
+    setCreating(true);
+    try {
+      await createUser(newUser);
+      toast(`Compte créé pour ${newUser.fullName} (${ROLE_LABELS[newUser.role]})`);
+      setNewUser({ email: "", password: "", fullName: "", role: "investor", company: "", intermediaryId: "" });
+      setShowForm(false);
+      await loadUsers();
+    } catch (err) {
+      toast("Erreur : " + err.message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleRoleUpdate = async (userId) => {
+    try {
+      await updateUserProfile(userId, { role: editRole });
+      toast("Rôle mis à jour");
+      setEditingId(null);
+      await loadUsers();
+    } catch (err) {
+      toast("Erreur : " + err.message);
+    }
+  };
+
+  const intermediaries = users.filter((u) => u.role === "intermediary");
+
+  return (
+    <div className="animate-fade-in">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-sm font-semibold text-navy">Utilisateurs de la plateforme</h3>
+          <p className="text-xs text-gray-400 mt-1">{users.length} comptes enregistrés</p>
+        </div>
+        <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-navy text-white text-xs rounded-xl hover:bg-navy-light transition-colors">
+          {showForm ? "Annuler" : "+ Créer un compte"}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6 mb-6">
+          <h4 className="text-sm font-semibold text-navy mb-4">Nouveau compte utilisateur</h4>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Nom complet *</label>
+              <input value={newUser.fullName} onChange={(e) => setNewUser((p) => ({ ...p, fullName: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20" placeholder="Jean Dupont" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Email *</label>
+              <input type="email" value={newUser.email} onChange={(e) => setNewUser((p) => ({ ...p, email: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20" placeholder="user@email.com" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Mot de passe *</label>
+              <input type="password" value={newUser.password} onChange={(e) => setNewUser((p) => ({ ...p, password: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20" placeholder="Min. 6 caractères" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Rôle *</label>
+              <select value={newUser.role} onChange={(e) => setNewUser((p) => ({ ...p, role: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20 bg-white">
+                <option value="investor">Investisseur</option>
+                <option value="intermediary">Intermédiaire</option>
+                <option value="aifm">AIFM</option>
+                <option value="admin">Administrateur</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Société</label>
+              <input value={newUser.company} onChange={(e) => setNewUser((p) => ({ ...p, company: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20" placeholder="Optionnel" />
+            </div>
+            {newUser.role === "investor" && intermediaries.length > 0 && (
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Intermédiaire rattaché</label>
+                <select value={newUser.intermediaryId} onChange={(e) => setNewUser((p) => ({ ...p, intermediaryId: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20 bg-white">
+                  <option value="">Aucun (direct)</option>
+                  {intermediaries.map((i) => <option key={i.id} value={i.id}>{i.full_name} — {i.company || i.email}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+          <button onClick={handleCreate} disabled={creating} className="px-6 py-2 bg-navy text-white text-sm rounded-xl hover:bg-navy-light transition-colors disabled:opacity-50">
+            {creating ? "Création…" : "Créer le compte"}
+          </button>
+        </div>
+      )}
+
+      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center text-gray-400 text-sm">Chargement…</div>
+        ) : (
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Nom</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Email</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Rôle</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Société</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Rattaché à</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Créé le</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => {
+                const linked = u.intermediary_id ? users.find((x) => x.id === u.intermediary_id) : null;
+                return (
+                  <tr key={u.id} className="border-b border-gray-50 hover:bg-cream/50">
+                    <td className="px-5 py-3 font-medium text-navy">{u.full_name || "—"}</td>
+                    <td className="px-5 py-3 text-gray-500">{u.email}</td>
+                    <td className="px-5 py-3">
+                      {editingId === u.id ? (
+                        <div className="flex items-center gap-2">
+                          <select value={editRole} onChange={(e) => setEditRole(e.target.value)} className="px-2 py-1 rounded-lg border border-gray-200 text-xs bg-white">
+                            <option value="investor">Investisseur</option>
+                            <option value="intermediary">Intermédiaire</option>
+                            <option value="aifm">AIFM</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                          <button onClick={() => handleRoleUpdate(u.id)} className="text-xs text-emerald-600 font-medium">OK</button>
+                          <button onClick={() => setEditingId(null)} className="text-xs text-gray-400">Annuler</button>
+                        </div>
+                      ) : (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
+                          u.role === "admin" ? "bg-emerald-50 text-emerald-700" :
+                          u.role === "aifm" ? "bg-gold/10 text-gold" :
+                          u.role === "intermediary" ? "bg-blue-50 text-blue-700" :
+                          "bg-navy/10 text-navy"
+                        }`}>
+                          {ROLE_LABELS[u.role] || u.role}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-gray-500 text-xs">{u.company || "—"}</td>
+                    <td className="px-5 py-3 text-gray-500 text-xs">{linked ? linked.full_name : "—"}</td>
+                    <td className="px-5 py-3 text-gray-400 text-xs">{u.created_at?.split("T")[0]}</td>
+                    <td className="px-5 py-3">
+                      <button onClick={() => { setEditingId(u.id); setEditRole(u.role); }} className="text-xs text-navy hover:text-gold transition-colors font-medium">
+                        Modifier rôle
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }

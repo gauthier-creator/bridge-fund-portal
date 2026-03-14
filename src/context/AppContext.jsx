@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useCallback, useEffect, useState } from "react";
+import { createContext, useContext, useReducer, useCallback, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { generateDocumentURLs, getDocumentURL } from "../utils/generateDocument";
 import * as orderService from "../services/orderService";
@@ -116,7 +116,15 @@ export function AppProvider({ children }) {
   const submitOrder = useCallback(async (order) => {
     if (isSupabase) {
       try {
-        await orderService.createOrder(order);
+        // Inject current user ID into the order
+        const { data: { user } } = await supabase.auth.getUser();
+        const enrichedOrder = { ...order };
+        if (user) {
+          enrichedOrder.userId = enrichedOrder.userId || user.id;
+        }
+        await orderService.createOrder(enrichedOrder);
+        dispatch({ type: "SUBMIT_ORDER", payload: enrichedOrder });
+        return;
       } catch (err) {
         console.error("Failed to persist order:", err);
       }
@@ -154,7 +162,10 @@ export function AppProvider({ children }) {
     let finalPosition = { ...position, id: Date.now() };
     if (isSupabase) {
       try {
-        finalPosition = await collateralService.addCollateralPosition(position);
+        const { data: { user } } = await supabase.auth.getUser();
+        const enriched = { ...position };
+        if (user) enriched.userId = enriched.userId || user.id;
+        finalPosition = await collateralService.addCollateralPosition(enriched);
       } catch (err) {
         console.error("Failed to persist collateral:", err);
       }

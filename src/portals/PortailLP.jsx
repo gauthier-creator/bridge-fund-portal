@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { NAV_PER_PART } from "../data";
 import { generateBulletinPDF } from "../generateBulletin";
 import { useAppContext } from "../context/AppContext";
+import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import {
   KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls,
@@ -11,10 +12,17 @@ import {
 /* ─── Sub-tab: Souscription directe ─── */
 function Souscription({ toast }) {
   const { submitOrder } = useAppContext();
+  const { profile } = useAuth();
   const [step, setStep] = useState(0);
   const [personType, setPersonType] = useState("morale");
+
+  // Pre-fill from authenticated user profile
+  const nameParts = (profile?.full_name || "").split(" ");
+  const defaultPrenom = nameParts.slice(0, -1).join(" ") || "";
+  const defaultNom = nameParts.slice(-1)[0] || "";
+
   const [formData, setFormData] = useState({
-    nom: "", prenom: "", societe: "", pays: "France",
+    nom: defaultNom, prenom: defaultPrenom, societe: profile?.company || "", pays: "France",
     typeInvestisseur: "Professionnel", montant: 250000,
     shareClass: 1, paymentMethod: "fiat",
     dateNaissance: "", nationalite: "Française", adresse: "", codePostal: "", ville: "",

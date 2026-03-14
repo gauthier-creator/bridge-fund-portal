@@ -9,6 +9,8 @@ function dbToPosition(row) {
     pool: row.pool,
     apy: Number(row.apy),
     date: row.position_date || row.created_at?.split("T")[0],
+    userId: row.user_id,
+    managedBy: row.managed_by,
   };
 }
 
@@ -31,6 +33,8 @@ export async function addCollateralPosition(position) {
       pool: position.pool,
       apy: position.apy,
       position_date: position.date || new Date().toISOString().split("T")[0],
+      user_id: position.userId || null,
+      managed_by: position.managedBy || null,
     })
     .select()
     .single();

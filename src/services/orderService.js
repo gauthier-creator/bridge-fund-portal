@@ -39,6 +39,8 @@ function dbToOrder(row, docs = []) {
     beneficiaireNom: row.beneficiaire_nom,
     beneficiairePct: row.beneficiaire_pct,
     paymentMethod: row.payment_method,
+    userId: row.user_id,
+    intermediaryId: row.intermediary_id,
     documents: docs.map(dbToDocument),
   };
 }
@@ -94,6 +96,9 @@ function orderToDb(order) {
     beneficiaire_nom: order.beneficiaireNom || null,
     beneficiaire_pct: order.beneficiairePct || null,
     payment_method: order.paymentMethod || "fiat",
+    // Auth fields
+    user_id: order.userId || null,
+    intermediary_id: order.intermediaryId || null,
   };
 }
 
