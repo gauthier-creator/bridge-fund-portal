@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AppProvider } from "./context/AppContext";
 import { ToastContainer, useToast } from "./components/shared";
 import LoginPage from "./components/LoginPage";
+import FundPublicPage from "./components/FundPublicPage";
 import PortailLP from "./portals/PortailLP";
 import PortailSwissLife from "./portals/PortailSwissLife";
 import PortailAIFM from "./portals/PortailAIFM";
@@ -40,7 +41,7 @@ function PortalRouter({ toast }) {
   useEffect(() => {
     if (role) {
       const config = ROLE_CONFIG[role];
-      if (config && (route === "/" || !Object.values(ROLE_CONFIG).some((c) => route.startsWith(c.path)))) {
+      if (config && !Object.values(ROLE_CONFIG).some((c) => route.startsWith(c.path))) {
         navigate(config.path);
       }
     }
@@ -65,9 +66,9 @@ function AuthenticatedApp() {
         <header className="bg-white/80 backdrop-blur-xl border-b border-gray-100 sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-navy rounded-xl flex items-center justify-center">
+              <button onClick={() => navigate("/fund")} className="w-9 h-9 bg-navy rounded-xl flex items-center justify-center hover:bg-navy-light transition-colors">
                 <span className="text-gold font-bold text-sm">BF</span>
-              </div>
+              </button>
               <div>
                 <h1 className="text-lg font-semibold text-navy leading-tight">{config.label}</h1>
                 <p className="text-xs text-gray-400">{config.sub}</p>
@@ -82,7 +83,7 @@ function AuthenticatedApp() {
                 </div>
               </div>
               <button
-                onClick={() => { signOut(); navigate("/"); }}
+                onClick={() => { signOut(); navigate("/fund"); }}
                 className="text-xs text-gray-400 hover:text-red-500 transition-colors ml-2"
               >
                 Déconnexion
@@ -109,7 +110,17 @@ function AuthenticatedApp() {
 }
 
 function AppContent() {
+  const route = useHashRoute();
   const { user, loading, signIn } = useAuth();
+  const [returnTo, setReturnTo] = useState(null);
+
+  // After login, redirect to returnTo path
+  useEffect(() => {
+    if (user && returnTo) {
+      navigate(returnTo);
+      setReturnTo(null);
+    }
+  }, [user, returnTo]);
 
   if (loading) {
     return (
@@ -122,8 +133,26 @@ function AppContent() {
     );
   }
 
+  // Public fund page (accessible without login)
+  if (!user && (route === "/" || route === "/fund")) {
+    return (
+      <FundPublicPage
+        onInvest={() => {
+          setReturnTo("/investisseur");
+          navigate("/login");
+        }}
+      />
+    );
+  }
+
+  // Login page
   if (!user) {
-    return <LoginPage onLogin={signIn} />;
+    return (
+      <LoginPage
+        onLogin={signIn}
+        onBack={() => navigate("/fund")}
+      />
+    );
   }
 
   return <AuthenticatedApp />;

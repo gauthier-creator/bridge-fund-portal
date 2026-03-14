@@ -5,6 +5,7 @@ import { useAppContext } from "../context/AppContext";
 import { KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls } from "../components/shared";
 import { supabase } from "../lib/supabase";
 import { listProfiles, createUser, updateUserProfile } from "../services/profileService";
+import { getFundConfig, updateFundConfig, uploadFundAsset } from "../services/fundConfigService";
 
 const ROLE_LABELS = { investor: "Investisseur", intermediary: "Intermédiaire", aifm: "AIFM", admin: "Admin" };
 
@@ -40,6 +41,7 @@ export default function PortailAdmin({ toast }) {
         {[
           { id: "dashboard", label: "Dashboard" },
           { id: "users", label: "Gestion des utilisateurs" },
+          { id: "fund", label: "Page Fonds" },
         ].map((tab) => (
           <button key={tab.id} onClick={() => setAdminTab(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${adminTab === tab.id ? "text-navy" : "text-gray-400 hover:text-gray-600"}`}>
             {tab.label}
@@ -49,6 +51,7 @@ export default function PortailAdmin({ toast }) {
       </div>
 
       {adminTab === "users" && <UserManagement toast={toast} />}
+      {adminTab === "fund" && <FundEditor toast={toast} />}
 
       {adminTab === "dashboard" && <>
       {/* Overview KPIs */}
@@ -289,6 +292,184 @@ export default function PortailAdmin({ toast }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ─── Fund Editor Component ─── */
+function FundEditor({ toast }) {
+  const [config, setConfig] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [highlightsText, setHighlightsText] = useState("");
+
+  useEffect(() => {
+    getFundConfig()
+      .then((data) => {
+        if (data) {
+          setConfig(data);
+          setHighlightsText(Array.isArray(data.highlights) ? data.highlights.join("\n") : "");
+        } else {
+          // Default empty config
+          setConfig({
+            fund_name: "", fund_subtitle: "", description: "", strategy: "", investment_thesis: "",
+            target_return: "", minimum_investment: 0, fund_size: 0, nav_per_share: 0,
+            jurisdiction: "", legal_form: "", aifm: "", custodian: "", auditor: "",
+            administrator: "", regulatory_status: "", highlights: [],
+          });
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const update = (field, value) => setConfig((prev) => ({ ...prev, [field]: value }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const payload = {
+        ...config,
+        highlights: highlightsText.split("\n").map((s) => s.trim()).filter(Boolean),
+        minimum_investment: Number(config.minimum_investment) || 0,
+        fund_size: Number(config.fund_size) || 0,
+        nav_per_share: Number(config.nav_per_share) || 0,
+      };
+      await updateFundConfig(payload);
+      toast("Configuration du fonds sauvegardée");
+    } catch (err) {
+      toast("Erreur : " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div className="text-center py-12 text-gray-400 text-sm">Chargement de la configuration…</div>;
+  if (!config) return <div className="text-center py-12 text-gray-400 text-sm">Impossible de charger la configuration</div>;
+
+  const fieldCls = "w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20";
+  const lblCls = "block text-xs font-medium text-gray-500 mb-1";
+
+  return (
+    <div className="animate-fade-in">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-sm font-semibold text-navy">Configuration de la page fonds</h3>
+          <p className="text-xs text-gray-400 mt-1">Ces informations sont affichées sur la page publique du fonds</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <a href="/#/fund" target="_blank" rel="noopener noreferrer" className="px-4 py-2 border border-gray-200 text-gray-600 text-xs rounded-xl hover:bg-gray-50 transition-colors">
+            Voir la page publique
+          </a>
+          <button onClick={handleSave} disabled={saving} className="px-6 py-2 bg-navy text-white text-xs rounded-xl hover:bg-navy-light transition-colors disabled:opacity-50">
+            {saving ? "Sauvegarde…" : "Sauvegarder"}
+          </button>
+        </div>
+      </div>
+
+      {/* General info */}
+      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6 mb-6">
+        <h4 className="text-sm font-semibold text-navy mb-4">Informations générales</h4>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={lblCls}>Nom du fonds</label>
+            <input value={config.fund_name || ""} onChange={(e) => update("fund_name", e.target.value)} className={fieldCls} placeholder="Bridge Fund SCSp" />
+          </div>
+          <div>
+            <label className={lblCls}>Sous-titre</label>
+            <input value={config.fund_subtitle || ""} onChange={(e) => update("fund_subtitle", e.target.value)} className={fieldCls} placeholder="Fonds de dette privée tokenisé..." />
+          </div>
+          <div className="col-span-2">
+            <label className={lblCls}>Description</label>
+            <textarea value={config.description || ""} onChange={(e) => update("description", e.target.value)} rows={3} className={fieldCls} placeholder="Description du fonds…" />
+          </div>
+          <div className="col-span-2">
+            <label className={lblCls}>Stratégie d'investissement</label>
+            <textarea value={config.strategy || ""} onChange={(e) => update("strategy", e.target.value)} rows={3} className={fieldCls} placeholder="Stratégie du fonds…" />
+          </div>
+          <div className="col-span-2">
+            <label className={lblCls}>Thèse d'investissement</label>
+            <textarea value={config.investment_thesis || ""} onChange={(e) => update("investment_thesis", e.target.value)} rows={3} className={fieldCls} placeholder="Thèse d'investissement…" />
+          </div>
+        </div>
+      </div>
+
+      {/* Key metrics */}
+      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6 mb-6">
+        <h4 className="text-sm font-semibold text-navy mb-4">Métriques clés</h4>
+        <div className="grid grid-cols-4 gap-4">
+          <div>
+            <label className={lblCls}>Rendement cible</label>
+            <input value={config.target_return || ""} onChange={(e) => update("target_return", e.target.value)} className={fieldCls} placeholder="8-12% net" />
+          </div>
+          <div>
+            <label className={lblCls}>NAV / Part (€)</label>
+            <input type="number" step="0.01" value={config.nav_per_share || ""} onChange={(e) => update("nav_per_share", e.target.value)} className={fieldCls} placeholder="1043.27" />
+          </div>
+          <div>
+            <label className={lblCls}>Investissement minimum (€)</label>
+            <input type="number" value={config.minimum_investment || ""} onChange={(e) => update("minimum_investment", e.target.value)} className={fieldCls} placeholder="125000" />
+          </div>
+          <div>
+            <label className={lblCls}>Taille du fonds (€)</label>
+            <input type="number" value={config.fund_size || ""} onChange={(e) => update("fund_size", e.target.value)} className={fieldCls} placeholder="50000000" />
+          </div>
+        </div>
+      </div>
+
+      {/* Structure */}
+      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6 mb-6">
+        <h4 className="text-sm font-semibold text-navy mb-4">Structure du fonds</h4>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={lblCls}>Juridiction</label>
+            <input value={config.jurisdiction || ""} onChange={(e) => update("jurisdiction", e.target.value)} className={fieldCls} placeholder="Luxembourg" />
+          </div>
+          <div>
+            <label className={lblCls}>Forme juridique</label>
+            <input value={config.legal_form || ""} onChange={(e) => update("legal_form", e.target.value)} className={fieldCls} placeholder="SCSp" />
+          </div>
+          <div>
+            <label className={lblCls}>AIFM</label>
+            <input value={config.aifm || ""} onChange={(e) => update("aifm", e.target.value)} className={fieldCls} placeholder="Bridge Capital Management" />
+          </div>
+          <div>
+            <label className={lblCls}>Dépositaire</label>
+            <input value={config.custodian || ""} onChange={(e) => update("custodian", e.target.value)} className={fieldCls} placeholder="Banque de Luxembourg" />
+          </div>
+          <div>
+            <label className={lblCls}>Auditeur</label>
+            <input value={config.auditor || ""} onChange={(e) => update("auditor", e.target.value)} className={fieldCls} placeholder="PricewaterhouseCoopers" />
+          </div>
+          <div>
+            <label className={lblCls}>Administrateur</label>
+            <input value={config.administrator || ""} onChange={(e) => update("administrator", e.target.value)} className={fieldCls} placeholder="Apex Fund Services" />
+          </div>
+          <div>
+            <label className={lblCls}>Statut réglementaire</label>
+            <input value={config.regulatory_status || ""} onChange={(e) => update("regulatory_status", e.target.value)} className={fieldCls} placeholder="CSSF regulated" />
+          </div>
+        </div>
+      </div>
+
+      {/* Highlights */}
+      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6 mb-6">
+        <h4 className="text-sm font-semibold text-navy mb-2">Points clés</h4>
+        <p className="text-xs text-gray-400 mb-3">Un point clé par ligne. Ces éléments apparaissent dans la section "Points clés" de la page publique.</p>
+        <textarea
+          value={highlightsText}
+          onChange={(e) => setHighlightsText(e.target.value)}
+          rows={6}
+          className={fieldCls}
+          placeholder={"Rendement cible 8-12% net annuel\nTokenisé sur blockchain Cardano\nLiquidité améliorée via marché secondaire"}
+        />
+      </div>
+
+      {/* Save button bottom */}
+      <div className="flex justify-end">
+        <button onClick={handleSave} disabled={saving} className="px-8 py-2.5 bg-navy text-white text-sm rounded-xl hover:bg-navy-light transition-colors disabled:opacity-50">
+          {saving ? "Sauvegarde…" : "Sauvegarder les modifications"}
+        </button>
+      </div>
     </div>
   );
 }

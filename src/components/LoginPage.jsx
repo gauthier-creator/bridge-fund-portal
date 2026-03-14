@@ -7,7 +7,7 @@ const ROLE_LABELS = {
   admin: "Administrateur",
 };
 
-export default function LoginPage({ onLogin, error: externalError }) {
+export default function LoginPage({ onLogin, onBack, error: externalError }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,6 +37,11 @@ export default function LoginPage({ onLogin, error: externalError }) {
           </div>
           <h1 className="text-2xl font-semibold text-navy">Bridge Fund Portal</h1>
           <p className="text-sm text-gray-400 mt-1">SLP Luxembourg · Fonds de dette tokenisé · Cardano</p>
+          {onBack && (
+            <button onClick={onBack} className="mt-3 text-xs text-gold hover:text-gold/80 transition-colors font-medium">
+              ← Retour à la page du fonds
+            </button>
+          )}
         </div>
       </header>
 
