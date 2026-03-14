@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AppProvider } from "./context/AppContext";
 import { ToastContainer, useToast } from "./components/shared";
@@ -8,21 +9,49 @@ import PortailAIFM from "./portals/PortailAIFM";
 import PortailAdmin from "./portals/PortailAdmin";
 
 const ROLE_CONFIG = {
-  investor: { label: "Espace Investisseur", sub: "Souscription directe & collatéral", icon: "LP", color: "bg-navy" },
-  intermediary: { label: "Espace Intermédiaire", sub: "Souscription intermédiée & custody", icon: "SL", color: "bg-blue-600" },
-  aifm: { label: "Espace AIFM", sub: "Gestion du fonds & validation", icon: "AI", color: "bg-gold" },
-  admin: { label: "Espace Admin", sub: "Vue d'ensemble propriétaire", icon: "GA", color: "bg-emerald-600" },
+  investor: { path: "/investisseur", label: "Espace Investisseur", sub: "Souscription directe & collatéral", icon: "LP", color: "bg-navy" },
+  intermediary: { path: "/intermediaire", label: "Espace Intermédiaire", sub: "Souscription intermédiée & custody", icon: "SL", color: "bg-blue-600" },
+  aifm: { path: "/aifm", label: "Espace AIFM", sub: "Gestion du fonds & validation", icon: "AI", color: "bg-gold" },
+  admin: { path: "/admin", label: "Espace Admin", sub: "Vue d'ensemble propriétaire", icon: "GA", color: "bg-emerald-600" },
 };
 
+// Simple hash-based router
+function useHashRoute() {
+  const [hash, setHash] = useState(window.location.hash.replace("#", "") || "/");
+
+  useEffect(() => {
+    const onHashChange = () => setHash(window.location.hash.replace("#", "") || "/");
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  return hash;
+}
+
+function navigate(path) {
+  window.location.hash = path;
+}
+
 function PortalRouter({ toast }) {
+  const route = useHashRoute();
   const { role } = useAuth();
-  switch (role) {
-    case "investor": return <PortailLP toast={toast} />;
-    case "intermediary": return <PortailSwissLife toast={toast} />;
-    case "aifm": return <PortailAIFM toast={toast} />;
-    case "admin": return <PortailAdmin toast={toast} />;
-    default: return <div className="text-center py-20 text-gray-500">Rôle non reconnu. Contactez l'administrateur.</div>;
-  }
+
+  // Redirect to correct portal if on root or wrong path
+  useEffect(() => {
+    if (role) {
+      const config = ROLE_CONFIG[role];
+      if (config && (route === "/" || !Object.values(ROLE_CONFIG).some((c) => route.startsWith(c.path)))) {
+        navigate(config.path);
+      }
+    }
+  }, [role, route]);
+
+  if (route.startsWith("/investisseur")) return <PortailLP toast={toast} />;
+  if (route.startsWith("/intermediaire")) return <PortailSwissLife toast={toast} />;
+  if (route.startsWith("/aifm")) return <PortailAIFM toast={toast} />;
+  if (route.startsWith("/admin")) return <PortailAdmin toast={toast} />;
+
+  return <div className="text-center py-20 text-gray-500">Chargement…</div>;
 }
 
 function AuthenticatedApp() {
@@ -53,7 +82,7 @@ function AuthenticatedApp() {
                 </div>
               </div>
               <button
-                onClick={signOut}
+                onClick={() => { signOut(); navigate("/"); }}
                 className="text-xs text-gray-400 hover:text-red-500 transition-colors ml-2"
               >
                 Déconnexion

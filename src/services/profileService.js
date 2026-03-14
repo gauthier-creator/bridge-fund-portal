@@ -40,7 +40,10 @@ export async function listProfiles() {
 // ─── Admin: create a user account (uses Supabase Admin API via edge function or service role) ───
 // For now, we use supabase.auth.admin if available, otherwise signUp + profile update
 export async function createUser({ email, password, fullName, role, company, intermediaryId }) {
-  // Sign up the user
+  // Save current admin session before signUp (which changes the active session)
+  const { data: { session: adminSession } } = await supabase.auth.getSession();
+
+  // Sign up the new user
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -48,7 +51,16 @@ export async function createUser({ email, password, fullName, role, company, int
       data: { full_name: fullName, role },
     },
   });
-  if (error) throw error;
+  if (error) {
+    // Restore admin session on error
+    if (adminSession) await supabase.auth.setSession(adminSession);
+    throw error;
+  }
+
+  // Restore admin session immediately
+  if (adminSession) {
+    await supabase.auth.setSession(adminSession);
+  }
 
   // Update profile with additional fields (company, intermediary link)
   if (data.user) {
@@ -100,6 +112,9 @@ export async function createClientAccount({ email, password, fullName, company }
   const { data: { user: me } } = await supabase.auth.getUser();
   if (!me) throw new Error("Not authenticated");
 
+  // Save current session before signUp
+  const { data: { session: currentSession } } = await supabase.auth.getSession();
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -107,7 +122,15 @@ export async function createClientAccount({ email, password, fullName, company }
       data: { full_name: fullName, role: "investor" },
     },
   });
-  if (error) throw error;
+  if (error) {
+    if (currentSession) await supabase.auth.setSession(currentSession);
+    throw error;
+  }
+
+  // Restore session immediately
+  if (currentSession) {
+    await supabase.auth.setSession(currentSession);
+  }
 
   // Link to intermediary
   if (data.user) {
