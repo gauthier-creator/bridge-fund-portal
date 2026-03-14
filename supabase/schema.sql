@@ -86,30 +86,4 @@ create policy "Allow all on collateral_positions" on collateral_positions for al
 create policy "Allow all on documents bucket" on storage.objects
   for all using (bucket_id = 'documents') with check (bucket_id = 'documents');
 
--- 6. Seed data — 3 initial orders
-insert into orders (id, type, status, lp_name, societe, person_type, share_class, montant, pays, adresse, type_investisseur, origine_fonds, pep_status, kyc_status, payment_status, signature_date, created_at)
-values
-  ('BF-2026-0001', 'direct', 'pending', 'Fontaine Élise', 'Fontaine Capital', 'morale', 1, 800000, 'France', '15 rue de la Paix, 75002 Paris', 'Professionnel', 'Cession d''actifs financiers / entreprise', 'non', 'Validé', 'Reçu', '2025-10-12 14:22:00+01', '2025-10-12'),
-  ('BF-2026-0002', 'intermediated', 'pending', 'Martin Olivier', null, 'physique', 2, 100000, 'France', '8 boulevard Haussmann, 75009 Paris', 'Averti (well-informed)', 'Épargne accumulée', 'non', 'Validé', 'Reçu', '2025-12-15 09:45:00+01', '2025-12-15'),
-  ('BF-2026-0003', 'intermediated', 'pending', 'Weber Thomas', 'Weber Holding AG', 'morale', 1, 500000, 'Suisse', 'Bahnhofstrasse 42, 8001 Zürich', 'Professionnel', 'Revenus d''activité professionnelle', 'non', 'Validé', 'Reçu', '2026-01-20 11:10:00+01', '2026-01-20')
-on conflict (id) do nothing;
-
--- Seed documents for initial orders
-insert into order_documents (order_id, name, type, size, doc_date) values
-  ('BF-2026-0001', 'kbis_fontaine_capital.pdf', 'K-bis', '1.8 Mo', '2025-10-10'),
-  ('BF-2026-0001', 'passeport_fontaine.pdf', 'Pièce d''identité', '2.3 Mo', '2025-10-10'),
-  ('BF-2026-0001', 'attestation_fonds_fontaine.pdf', 'Justificatif origine des fonds', '890 Ko', '2025-10-11'),
-  ('BF-2026-0002', 'cni_martin_olivier.pdf', 'Pièce d''identité', '1.5 Mo', '2025-12-14'),
-  ('BF-2026-0002', 'justificatif_domicile_martin.pdf', 'Justificatif de domicile', '720 Ko', '2025-12-14'),
-  ('BF-2026-0002', 'avis_imposition_martin.pdf', 'Justificatif origine des fonds', '1.1 Mo', '2025-12-14'),
-  ('BF-2026-0003', 'handelsregister_weber.pdf', 'Registre de commerce', '2.1 Mo', '2026-01-18'),
-  ('BF-2026-0003', 'passeport_weber.pdf', 'Pièce d''identité', '1.9 Mo', '2026-01-18'),
-  ('BF-2026-0003', 'statuts_weber_holding.pdf', 'Statuts société', '3.2 Mo', '2026-01-19'),
-  ('BF-2026-0003', 'ubo_declaration_weber.pdf', 'Déclaration UBO', '540 Ko', '2026-01-19');
-
--- Seed collateral positions
-insert into collateral_positions (owner, tokens, type, pool, apy, position_date) values
-  ('Dupont Patrimoine SAS', 200, 'Staking', 'BF/ADA', 8.2, '2026-02-15'),
-  ('VDB Family Office', 500, 'Staking', 'BF/ADA', 8.2, '2026-02-20'),
-  ('Schneider Wealth AG', 300, 'Staking', 'BF/ADA', 8.2, '2026-03-01'),
-  ('Catherine Lefèvre', 100, 'Collatéral', 'Lending', 5.5, '2026-03-05');
+-- 6. No seed data — tables start empty in production
