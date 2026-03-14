@@ -8,9 +8,11 @@ import {
   KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls,
   Checkbox, ComplianceAlert, SignaturePad,
 } from "../components/shared";
+import FundCatalog from "../components/FundCatalog";
+import FundDetail from "../components/FundDetail";
 
 /* ─── Sub-tab: Souscription directe ─── */
-function Souscription({ toast }) {
+function Souscription({ toast, fund }) {
   const { submitOrder } = useAppContext();
   const { profile } = useAuth();
   const [step, setStep] = useState(0);
@@ -866,24 +868,43 @@ function Collateral({ toast }) {
 
 /* ─── Main LP Portal ─── */
 export default function PortailLP({ toast }) {
-  const [subTab, setSubTab] = useState("souscription");
+  // view: "catalog" | "detail:slug" | "subscribe" | "collateral"
+  const [view, setView] = useState("catalog");
+  const [selectedFund, setSelectedFund] = useState(null);
+
+  const handleSelectFund = (slug) => setView("detail:" + slug);
+  const handleInvest = (fund) => { setSelectedFund(fund); setView("subscribe"); };
+  const handleBack = () => { setView("catalog"); setSelectedFund(null); };
+
+  // Extract slug from view
+  const fundSlug = view.startsWith("detail:") ? view.slice(7) : null;
+
+  // Tabs (only show when not in catalog/detail)
+  const showTabs = view === "subscribe" || view === "collateral";
 
   return (
     <div>
-      <div className="flex border-b border-gray-100 mb-8">
-        {[
-          { id: "souscription", label: "Souscription directe" },
-          { id: "collateral", label: "Collatéral & DeFi" },
-        ].map((tab) => (
-          <button key={tab.id} onClick={() => setSubTab(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${subTab === tab.id ? "text-navy" : "text-gray-400 hover:text-gray-600"}`}>
-            {tab.label}
-            {subTab === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy rounded-full" />}
+      {showTabs && (
+        <div className="flex border-b border-gray-100 mb-8">
+          <button onClick={handleBack} className="px-5 py-3 text-sm text-gray-400 hover:text-navy transition-all font-medium">
+            ← Fonds
           </button>
-        ))}
-      </div>
+          {[
+            { id: "subscribe", label: "Souscription directe" },
+            { id: "collateral", label: "Collatéral & DeFi" },
+          ].map((tab) => (
+            <button key={tab.id} onClick={() => setView(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${view === tab.id ? "text-navy" : "text-gray-400 hover:text-gray-600"}`}>
+              {tab.label}
+              {view === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy rounded-full" />}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {subTab === "souscription" && <Souscription toast={toast} />}
-      {subTab === "collateral" && <Collateral toast={toast} />}
+      {view === "catalog" && <FundCatalog onSelectFund={handleSelectFund} />}
+      {fundSlug && <FundDetail fundSlug={fundSlug} onBack={handleBack} onInvest={handleInvest} />}
+      {view === "subscribe" && <Souscription toast={toast} fund={selectedFund} />}
+      {view === "collateral" && <Collateral toast={toast} />}
     </div>
   );
 }

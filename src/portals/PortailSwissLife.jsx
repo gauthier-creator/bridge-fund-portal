@@ -10,6 +10,8 @@ import {
   KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls,
   Checkbox, ComplianceAlert, SignaturePad,
 } from "../components/shared";
+import FundCatalog from "../components/FundCatalog";
+import FundDetail from "../components/FundDetail";
 
 /* ─── Sub-tab: Souscription intermédiée ─── */
 function SouscriptionIntermediee({ toast }) {
@@ -670,28 +672,44 @@ function MesClients({ toast }) {
 }
 
 export default function PortailSwissLife({ toast }) {
-  const [subTab, setSubTab] = useState("souscription");
+  // view: "catalog" | "detail:slug" | "souscription" | "clients" | "custody" | "collateral"
+  const [view, setView] = useState("catalog");
+  const [selectedFund, setSelectedFund] = useState(null);
+
+  const handleSelectFund = (slug) => setView("detail:" + slug);
+  const handleInvest = (fund) => { setSelectedFund(fund); setView("souscription"); };
+  const handleBack = () => { setView("catalog"); setSelectedFund(null); };
+
+  const fundSlug = view.startsWith("detail:") ? view.slice(7) : null;
+  const showTabs = !["catalog"].includes(view) && !fundSlug;
 
   return (
     <div>
-      <div className="flex border-b border-gray-100 mb-8">
-        {[
-          { id: "souscription", label: "Souscription intermédiée" },
-          { id: "clients", label: "Mes clients" },
-          { id: "custody", label: "Custody" },
-          { id: "collateral", label: "Collatéral clients" },
-        ].map((tab) => (
-          <button key={tab.id} onClick={() => setSubTab(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${subTab === tab.id ? "text-navy" : "text-gray-400 hover:text-gray-600"}`}>
-            {tab.label}
-            {subTab === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy rounded-full" />}
+      {showTabs && (
+        <div className="flex border-b border-gray-100 mb-8">
+          <button onClick={handleBack} className="px-5 py-3 text-sm text-gray-400 hover:text-navy transition-all font-medium">
+            ← Fonds
           </button>
-        ))}
-      </div>
+          {[
+            { id: "souscription", label: "Souscription intermédiée" },
+            { id: "clients", label: "Mes clients" },
+            { id: "custody", label: "Custody" },
+            { id: "collateral", label: "Collatéral clients" },
+          ].map((tab) => (
+            <button key={tab.id} onClick={() => setView(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${view === tab.id ? "text-navy" : "text-gray-400 hover:text-gray-600"}`}>
+              {tab.label}
+              {view === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy rounded-full" />}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {subTab === "souscription" && <SouscriptionIntermediee toast={toast} />}
-      {subTab === "clients" && <MesClients toast={toast} />}
-      {subTab === "custody" && <Custody toast={toast} />}
-      {subTab === "collateral" && <CollateralClients toast={toast} />}
+      {view === "catalog" && <FundCatalog onSelectFund={handleSelectFund} />}
+      {fundSlug && <FundDetail fundSlug={fundSlug} onBack={handleBack} onInvest={handleInvest} />}
+      {view === "souscription" && <SouscriptionIntermediee toast={toast} />}
+      {view === "clients" && <MesClients toast={toast} />}
+      {view === "custody" && <Custody toast={toast} />}
+      {view === "collateral" && <CollateralClients toast={toast} />}
     </div>
   );
 }

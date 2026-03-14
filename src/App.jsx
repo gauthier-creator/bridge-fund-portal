@@ -10,7 +10,7 @@ import PortailAIFM from "./portals/PortailAIFM";
 import PortailAdmin from "./portals/PortailAdmin";
 
 const ROLE_CONFIG = {
-  investor: { path: "/investisseur", label: "Espace Investisseur", sub: "Souscription directe & collatéral", icon: "LP", color: "bg-navy" },
+  investor: { path: "/investisseur", label: "Espace Investisseur", sub: "Catalogue de fonds & souscription", icon: "LP", color: "bg-navy" },
   intermediary: { path: "/intermediaire", label: "Espace Intermédiaire", sub: "Souscription intermédiée & custody", icon: "SL", color: "bg-blue-600" },
   aifm: { path: "/aifm", label: "Espace AIFM", sub: "Gestion du fonds & validation", icon: "AI", color: "bg-gold" },
   admin: { path: "/admin", label: "Espace Admin", sub: "Vue d'ensemble propriétaire", icon: "GA", color: "bg-emerald-600" },
@@ -66,9 +66,9 @@ function AuthenticatedApp() {
         <header className="bg-white/80 backdrop-blur-xl border-b border-gray-100 sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button onClick={() => navigate("/fund")} className="w-9 h-9 bg-navy rounded-xl flex items-center justify-center hover:bg-navy-light transition-colors">
+              <div className="w-9 h-9 bg-navy rounded-xl flex items-center justify-center">
                 <span className="text-gold font-bold text-sm">BF</span>
-              </button>
+              </div>
               <div>
                 <h1 className="text-lg font-semibold text-navy leading-tight">{config.label}</h1>
                 <p className="text-xs text-gray-400">{config.sub}</p>
@@ -83,7 +83,7 @@ function AuthenticatedApp() {
                 </div>
               </div>
               <button
-                onClick={() => { signOut(); navigate("/fund"); }}
+                onClick={() => { signOut(); navigate("/"); }}
                 className="text-xs text-gray-400 hover:text-red-500 transition-colors ml-2"
               >
                 Déconnexion
@@ -98,7 +98,7 @@ function AuthenticatedApp() {
 
         <footer className="border-t border-gray-100 bg-white mt-auto">
           <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between text-xs text-gray-400">
-            <span>Bridge Fund SCSp · CSSF regulated · Luxembourg</span>
+            <span>Bridge Fund · CSSF regulated · Luxembourg</span>
             <span>Portail sécurisé · Données en temps réel</span>
           </div>
         </footer>
@@ -111,16 +111,17 @@ function AuthenticatedApp() {
 
 function AppContent() {
   const route = useHashRoute();
-  const { user, loading, signIn } = useAuth();
+  const { user, role, loading, signIn } = useAuth();
   const [returnTo, setReturnTo] = useState(null);
 
-  // After login, redirect to returnTo path
+  // After login, redirect to correct portal based on role
   useEffect(() => {
-    if (user && returnTo) {
-      navigate(returnTo);
+    if (user && role && returnTo) {
+      const config = ROLE_CONFIG[role];
+      if (config) navigate(config.path);
       setReturnTo(null);
     }
-  }, [user, returnTo]);
+  }, [user, role, returnTo]);
 
   if (loading) {
     return (
@@ -133,12 +134,12 @@ function AppContent() {
     );
   }
 
-  // Public fund page (accessible without login)
-  if (!user && (route === "/" || route === "/fund")) {
+  // Public pages (accessible without login)
+  if (!user && (route === "/" || route.startsWith("/fund"))) {
     return (
       <FundPublicPage
         onInvest={() => {
-          setReturnTo("/investisseur");
+          setReturnTo(true);
           navigate("/login");
         }}
       />
@@ -150,7 +151,7 @@ function AppContent() {
     return (
       <LoginPage
         onLogin={signIn}
-        onBack={() => navigate("/fund")}
+        onBack={() => navigate("/")}
       />
     );
   }
