@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import { supabase } from "../lib/supabase";
 
 const NAVY = [26, 35, 50];
 const GOLD = [201, 168, 76];
@@ -80,22 +81,83 @@ export function generateDocumentPDF({ docType, docName, ownerName, orderRef, dat
   doc.text("Conforme AMLD5 / CSSF 12-02 / RGPD — Stockage sécurisé Luxembourg", 105, footerY + 9, { align: "center" });
 
   const blob = doc.output("blob");
-  return URL.createObjectURL(blob);
+  return blob;
 }
 
 /**
- * Generates blob URLs for an array of document metadata objects.
- * Mutates each doc to add a `url` property.
+ * Upload a generated PDF to Supabase Storage and return the signed URL.
+ * Falls back to a blob URL if Supabase is not configured.
+ */
+export async function uploadGeneratedPDF({ docType, docName, ownerName, orderRef, date }) {
+  const blob = generateDocumentPDF({ docType, docName, ownerName, orderRef, date });
+
+  if (!supabase) {
+    return { url: URL.createObjectURL(blob), storagePath: null };
+  }
+
+  const path = `${orderRef || "misc"}/${Date.now()}_${docName}`;
+  const { error } = await supabase.storage
+    .from("documents")
+    .upload(path, blob, { contentType: "application/pdf" });
+
+  if (error) {
+    console.error("Document upload failed:", error.message);
+    return { url: URL.createObjectURL(blob), storagePath: null };
+  }
+
+  // Get a signed URL valid for 7 days
+  const { data } = await supabase.storage
+    .from("documents")
+    .createSignedUrl(path, 7 * 24 * 3600);
+
+  return { url: data?.signedUrl || URL.createObjectURL(blob), storagePath: path };
+}
+
+/**
+ * Generate blob URLs for an array of document metadata objects (local fallback).
  */
 export function generateDocumentURLs(documents, ownerName, orderRef) {
   return documents.map((d) => ({
     ...d,
-    url: generateDocumentPDF({
+    url: URL.createObjectURL(generateDocumentPDF({
       docType: d.type,
       docName: d.name,
       ownerName,
       orderRef,
       date: d.date,
-    }),
+    })),
   }));
+}
+
+/**
+ * Upload all documents for an order to Supabase Storage.
+ * Returns enriched document array with storagePath and signed URLs.
+ */
+export async function uploadDocumentsToStorage(documents, ownerName, orderRef) {
+  if (!supabase) return generateDocumentURLs(documents, ownerName, orderRef);
+
+  return Promise.all(
+    documents.map(async (d) => {
+      const { url, storagePath } = await uploadGeneratedPDF({
+        docType: d.type,
+        docName: d.name,
+        ownerName,
+        orderRef,
+        date: d.date,
+      });
+      return { ...d, url, storagePath };
+    })
+  );
+}
+
+/**
+ * Get a fresh signed URL for a document stored in Supabase Storage.
+ */
+export async function getDocumentURL(storagePath) {
+  if (!storagePath || !supabase) return null;
+  const { data, error } = await supabase.storage
+    .from("documents")
+    .createSignedUrl(storagePath, 3600);
+  if (error) return null;
+  return data?.signedUrl || null;
 }

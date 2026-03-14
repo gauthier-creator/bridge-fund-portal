@@ -5,7 +5,7 @@ import {
 import { NAV_PER_PART, priceHistory, defiHistory } from "../data";
 import { generateBulletinPDF } from "../generateBulletin";
 import { useAppContext } from "../context/AppContext";
-import { generateDocumentPDF } from "../utils/generateDocument";
+import { uploadGeneratedPDF } from "../utils/generateDocument";
 import {
   KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls,
   Checkbox, ComplianceAlert, SignaturePad,
@@ -63,13 +63,24 @@ function Souscription({ toast }) {
     setTimeout(() => { setPaymentReceived(true); toast("Virement reçu et validé — €" + formData.montant.toLocaleString("fr-FR") + " · origine des fonds conforme"); }, 2500);
   };
 
-  const handleSign = () => {
+  const handleSign = async () => {
     const doc = generateBulletinPDF({ formData, subRef, personType, signatureDataUrl: signatureData });
     const blob = doc.output("blob");
     const url = URL.createObjectURL(blob);
     setPdfUrl(url);
     setSigned(true);
     toast("Bulletin de souscription signé électroniquement via eIDAS");
+
+    // Build documents with Storage upload
+    const docs = [];
+    if (idUploaded) {
+      const docName = `passeport_${formData.nom.toLowerCase() || "souscripteur"}.pdf`;
+      const docDate = new Date().toISOString().split("T")[0];
+      const ownerName = (formData.prenom + " " + formData.nom).trim();
+      const result = await uploadGeneratedPDF({ docType: "Pièce d'identité", docName, ownerName, orderRef: subRef, date: docDate });
+      docs.push({ name: docName, type: "Pièce d'identité", size: "2.1 Mo", date: docDate, url: result.url, storagePath: result.storagePath });
+    }
+
     submitOrder({
       id: subRef,
       type: "direct",
@@ -101,16 +112,7 @@ function Souscription({ toast }) {
       beneficiaireNom: formData.beneficiaireNom || null,
       beneficiairePct: formData.beneficiairePct || null,
       paymentMethod: formData.paymentMethod || "fiat",
-      documents: [
-        idUploaded ? (() => {
-          const docName = `passeport_${formData.nom.toLowerCase() || "souscripteur"}.pdf`;
-          const docDate = new Date().toISOString().split("T")[0];
-          return {
-            name: docName, type: "Pièce d'identité", size: "2.1 Mo", date: docDate,
-            url: generateDocumentPDF({ docType: "Pièce d'identité", docName, ownerName: (formData.prenom + " " + formData.nom).trim(), orderRef: subRef, date: docDate }),
-          };
-        })() : null,
-      ].filter(Boolean),
+      documents: docs,
     });
   };
 

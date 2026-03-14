@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { generateDocumentURLs } from "../utils/generateDocument";
+import { generateDocumentURLs, getDocumentURL } from "../utils/generateDocument";
 import * as orderService from "../services/orderService";
 import * as collateralService from "../services/collateralService";
 
@@ -115,14 +115,21 @@ export function AppProvider({ children }) {
           collateralService.fetchCollateralPositions(),
         ]);
         if (!cancelled) {
-          // Generate placeholder doc URLs for documents without storage paths
-          const enrichedOrders = orders.map((order) => ({
-            ...order,
-            documents: order.documents?.map((d) => ({
-              ...d,
-              url: d.storagePath ? null : generateDocumentURLs([d], order.lpName, order.id)[0]?.url,
-            })) || [],
-          }));
+          // Resolve document URLs: signed URL for stored docs, generated PDF for others
+          const enrichedOrders = await Promise.all(
+            orders.map(async (order) => ({
+              ...order,
+              documents: await Promise.all(
+                (order.documents || []).map(async (d) => {
+                  if (d.storagePath) {
+                    const url = await getDocumentURL(d.storagePath);
+                    return { ...d, url };
+                  }
+                  return { ...d, url: generateDocumentURLs([d], order.lpName, order.id)[0]?.url };
+                })
+              ),
+            }))
+          );
           dispatch({ type: "SET_DATA", payload: { orders: enrichedOrders, collateralPositions: positions } });
         }
       } catch (err) {

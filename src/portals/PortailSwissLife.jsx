@@ -2,7 +2,7 @@ import { useState } from "react";
 import { custodyClients, NAV_PER_PART, swisslifeClients } from "../data";
 import { generateBulletinPDF } from "../generateBulletin";
 import { useAppContext } from "../context/AppContext";
-import { generateDocumentPDF } from "../utils/generateDocument";
+import { uploadGeneratedPDF } from "../utils/generateDocument";
 import {
   KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls,
   Checkbox, ComplianceAlert, SignaturePad,
@@ -31,14 +31,11 @@ function SouscriptionIntermediee({ toast }) {
   const [consents, setConsents] = useState({ prospectus: false, dici: false, risques: false, illiquidite: false, donnees: false, fiscalite: false });
   const [documents, setDocuments] = useState([]);
 
-  const addDoc = (name, type, size) => {
+  const addDoc = async (name, type, size) => {
     const date = new Date().toISOString().split("T")[0];
-    const url = generateDocumentPDF({
-      docType: type, docName: name,
-      ownerName: (formData.prenom + " " + formData.nom).trim() || "Client",
-      orderRef: subRef, date,
-    });
-    setDocuments((prev) => [...prev, { name, type, size, date, url }]);
+    const ownerName = (formData.prenom + " " + formData.nom).trim() || "Client";
+    const result = await uploadGeneratedPDF({ docType: type, docName: name, ownerName, orderRef: subRef, date });
+    setDocuments((prev) => [...prev, { name, type, size, date, url: result.url, storagePath: result.storagePath }]);
     toast(`Document uploadé — ${name}`);
   };
 
