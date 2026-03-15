@@ -1,6 +1,20 @@
 import { supabase } from "../lib/supabase";
 import { generateWallet } from "./cardanoService";
 
+// Wait for the profiles trigger to create the row after auth.signUp
+async function waitForProfile(userId, maxRetries = 10, delayMs = 500) {
+  for (let i = 0; i < maxRetries; i++) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", userId)
+      .single();
+    if (data) return true;
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  return false;
+}
+
 // ─── Fetch current user's profile ───
 export async function fetchMyProfile() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -64,6 +78,12 @@ export async function createUser({ email, password, fullName, role, company, int
 
   // Update profile with additional fields (company, intermediary link)
   if (data.user) {
+    // Wait for the DB trigger to create the profiles row
+    const profileExists = await waitForProfile(data.user.id);
+    if (!profileExists) {
+      console.error("Profile row not created in time for user", data.user.id);
+    }
+
     const updates = {};
     if (company) updates.company = company;
     if (intermediaryId) updates.intermediary_id = intermediaryId;
@@ -142,6 +162,12 @@ export async function createClientAccount({ email, password, fullName, company }
 
   // Link to intermediary + generate wallet
   if (data.user) {
+    // Wait for the DB trigger to create the profiles row
+    const profileExists = await waitForProfile(data.user.id);
+    if (!profileExists) {
+      console.error("Profile row not created in time for client", data.user.id);
+    }
+
     const updates = { intermediary_id: me.id, company: company || null };
 
     // Generate a Cardano wallet for this investor

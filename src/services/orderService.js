@@ -172,7 +172,7 @@ export async function validateOrder(orderId) {
     .update({ status: "validated", validated_at: now })
     .eq("id", orderId)
     .select()
-    .single();
+    .maybeSingle();
   if (error) throw error;
   if (!data) throw new Error("Aucun ordre trouvé avec cet ID");
 
@@ -186,7 +186,7 @@ export async function validateOrder(orderId) {
         .from("profiles")
         .select("wallet_address, full_name")
         .eq("id", data.user_id)
-        .single();
+        .maybeSingle();
       investorAddress = profile?.wallet_address;
     }
 
@@ -199,7 +199,7 @@ export async function validateOrder(orderId) {
         .from("funds")
         .select("slug, fund_name, nav_per_share")
         .eq("id", data.fund_id)
-        .single();
+        .maybeSingle();
       if (fund) {
         fundSlug = fund.slug;
         fundName = fund.fund_name;
@@ -237,7 +237,7 @@ export async function rejectOrder(orderId, reason) {
     .update({ status: "rejected", rejected_at: now, reject_reason: reason })
     .eq("id", orderId)
     .select()
-    .single();
+    .maybeSingle();
   if (error) throw error;
   if (!data) throw new Error("Aucun ordre trouvé avec cet ID");
   return { orderId, rejectedAt: now, reason };
