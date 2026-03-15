@@ -247,6 +247,69 @@ export async function transferToken({ toAddress, fundSlug, tokenCount }) {
 }
 
 /**
+ * Mint synthetic tokens: lock security tokens in vault, receive 1:1 synthetic tokens.
+ * Synthetic tokens (sBF-[FUND]) are freely transferable — no whitelist needed.
+ * Returns { txHash, vaultAddress, syntheticPolicyId, syntheticUnit, tokenCount, explorerUrl }
+ */
+export async function mintSynthetic({ userAddress, fundSlug, fundId, tokenCount, userId }) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error("Supabase not configured");
+  }
+
+  console.log(`[Cardano] Minting ${tokenCount} synthetic tokens for ${fundSlug}...`);
+
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/mint-synthetic`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "apikey": SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({ userAddress, fundSlug, fundId, tokenCount, userId }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || `Mint synthetic failed: ${res.status}`);
+  }
+
+  const data = await res.json();
+  console.log(`[Cardano] Synthetic minted! Tx: ${data.txHash}`);
+  return data;
+}
+
+/**
+ * Burn synthetic tokens: burn synthetics, unlock security tokens from vault.
+ * Returns { txHash, securityUnit, tokenCount, explorerUrl }
+ */
+export async function burnSynthetic({ userAddress, fundSlug, fundId, tokenCount, vaultPositionId, userId }) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error("Supabase not configured");
+  }
+
+  console.log(`[Cardano] Burning ${tokenCount} synthetic tokens for ${fundSlug}...`);
+
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/burn-synthetic`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "apikey": SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({ userAddress, fundSlug, fundId, tokenCount, vaultPositionId, userId }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || `Burn synthetic failed: ${res.status}`);
+  }
+
+  const data = await res.json();
+  console.log(`[Cardano] Synthetic burned! Tx: ${data.txHash}`);
+  return data;
+}
+
+/**
  * Get fund token info from Cardano via Blockfrost (if configured)
  */
 export async function getFundTokenInfo(policyId) {
