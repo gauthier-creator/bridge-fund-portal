@@ -176,18 +176,39 @@ export async function validateOrder(orderId) {
   if (error) throw error;
   if (!data) throw new Error("Aucun ordre trouvé avec cet ID");
 
-  // After DB validation, mint tokens and send to investor wallet
+  // After DB validation, mint tokens and send to the appropriate wallet:
+  // - If the order has an intermediary → send to intermediary's wallet (custody model)
+  // - Otherwise → send to investor's wallet directly
   let mintResult = null;
   try {
-    // Get investor's wallet address
-    let investorAddress = null;
-    if (data.user_id) {
+    let targetAddress = null;
+    let targetLabel = null;
+
+    // Check if order goes through an intermediary (custody)
+    if (data.intermediary_id) {
+      const { data: interProfile } = await supabase
+        .from("profiles")
+        .select("wallet_address, full_name")
+        .eq("id", data.intermediary_id)
+        .maybeSingle();
+      if (interProfile?.wallet_address) {
+        targetAddress = interProfile.wallet_address;
+        targetLabel = `intermediary ${interProfile.full_name || data.intermediary_id}`;
+        console.log(`[Order] Intermediary custody — tokens will go to ${targetLabel}`);
+      }
+    }
+
+    // Fallback: send directly to investor's wallet
+    if (!targetAddress && data.user_id) {
       const { data: profile } = await supabase
         .from("profiles")
         .select("wallet_address, full_name")
         .eq("id", data.user_id)
         .maybeSingle();
-      investorAddress = profile?.wallet_address;
+      if (profile?.wallet_address) {
+        targetAddress = profile.wallet_address;
+        targetLabel = `investor ${profile.full_name || data.user_id}`;
+      }
     }
 
     // Get fund info for slug and NAV
@@ -207,10 +228,10 @@ export async function validateOrder(orderId) {
       }
     }
 
-    if (investorAddress) {
+    if (targetAddress) {
       mintResult = await mintAndSendToken({
         orderId: data.id,
-        investorAddress,
+        investorAddress: targetAddress,
         fundName,
         fundSlug,
         shareClass: data.share_class,
@@ -218,9 +239,9 @@ export async function validateOrder(orderId) {
         navPerShare,
         lpName: data.lp_name,
       });
-      console.log(`[Order] Tokens minted for ${data.lp_name}: tx ${mintResult.txHash}`);
+      console.log(`[Order] Tokens minted for ${targetLabel}: tx ${mintResult.txHash}`);
     } else {
-      console.warn(`[Order] No wallet address for user ${data.user_id}, skipping mint`);
+      console.warn(`[Order] No wallet address found for order ${data.id}, skipping mint`);
     }
   } catch (mintErr) {
     // Don't fail the validation if minting fails — log and continue

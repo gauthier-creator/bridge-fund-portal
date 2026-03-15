@@ -192,6 +192,61 @@ export async function mintAndSendToken({ orderId, investorAddress, fundName, fun
 }
 
 /**
+ * Transfer fund tokens from the custody wallet to a destination address.
+ * Used by intermediaries to release tokens to the investor's own wallet.
+ * Returns { txHash, policyId, tokenCount, explorerUrl }
+ */
+export async function transferToken({ toAddress, fundSlug, tokenCount }) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn("[Cardano] Supabase not configured, simulating transfer");
+    const hex = (len) => {
+      const c = "0123456789abcdef";
+      let s = "";
+      for (let i = 0; i < len; i++) s += c[Math.floor(Math.random() * 16)];
+      return s;
+    };
+    const txHash = hex(64);
+    return {
+      txHash,
+      policyId: hex(56),
+      tokenCount,
+      explorerUrl: `https://preprod.cardanoscan.io/transaction/${txHash}`,
+    };
+  }
+
+  try {
+    console.log(`[Cardano] Transferring ${tokenCount} tokens to ${toAddress.slice(0, 20)}...`);
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/transfer-token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "apikey": SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ toAddress, fundSlug, tokenCount }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || `Transfer failed: ${res.status}`);
+    }
+
+    const data = await res.json();
+    console.log(`[Cardano] Transferred! Tx: ${data.txHash}`);
+    return {
+      txHash: data.txHash,
+      policyId: data.policyId,
+      tokenCount: data.tokenCount,
+      explorerUrl: data.explorerUrl,
+    };
+  } catch (err) {
+    console.error("[Cardano] Transfer failed:", err.message);
+    throw err;
+  }
+}
+
+/**
  * Get fund token info from Cardano via Blockfrost (if configured)
  */
 export async function getFundTokenInfo(policyId) {

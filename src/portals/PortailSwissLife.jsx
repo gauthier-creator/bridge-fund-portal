@@ -10,6 +10,7 @@ import {
   KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls,
   Checkbox, ComplianceAlert, SignaturePad,
 } from "../components/shared";
+import { transferToken } from "../services/cardanoService";
 import FundCatalog from "../components/FundCatalog";
 import FundDetail from "../components/FundDetail";
 
@@ -1129,18 +1130,51 @@ function MesClients({ toast, clients, onClientsChange }) {
 /* ─────────────────────────────────────────────────────
    4. CUSTODY
    ───────────────────────────────────────────────────── */
-function Custody({ toast }) {
+function Custody({ toast, clients }) {
   const { orders } = useAppContext();
   const { user } = useAuth();
   const validatedOrders = orders.filter((o) => o.status === "validated" && (o.intermediaryId === user?.id || o.intermediaire));
   const totalTokens = validatedOrders.reduce((s, o) => s + Math.floor(o.montant / NAV_PER_PART), 0);
   const totalNav = validatedOrders.reduce((s, o) => s + o.montant, 0);
 
+  // Transfer modal state
+  const [transferModal, setTransferModal] = useState(null); // order being transferred
+  const [transferAddress, setTransferAddress] = useState("");
+  const [transferring, setTransferring] = useState(false);
+  const [transferResult, setTransferResult] = useState(null);
+
+  const openTransfer = (order) => {
+    // Pre-fill with investor's wallet if available
+    const client = clients?.find((c) => c.full_name === order.lpName || c.id === order.userId);
+    setTransferAddress(client?.wallet_address || "");
+    setTransferResult(null);
+    setTransferModal(order);
+  };
+
+  const handleTransfer = async () => {
+    if (!transferAddress || !transferModal) return;
+    setTransferring(true);
+    try {
+      const tokenCount = Math.floor(transferModal.montant / NAV_PER_PART);
+      const result = await transferToken({
+        toAddress: transferAddress,
+        fundSlug: "bridgefund",
+        tokenCount,
+      });
+      setTransferResult(result);
+      toast(`${tokenCount} token(s) transféré(s) — tx: ${result.txHash.slice(0, 12)}...`);
+    } catch (err) {
+      toast("Erreur transfert : " + err.message);
+    } finally {
+      setTransferring(false);
+    }
+  };
+
   return (
     <div className="animate-fade-in space-y-6">
       <div>
         <h2 className="text-xl font-semibold text-navy">Custody</h2>
-        <p className="text-sm text-gray-400 mt-1">Tokens sous garde pour le compte de vos clients</p>
+        <p className="text-sm text-gray-400 mt-1">Tokens sous garde pour le compte de vos clients — transférez-les à la demande</p>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
@@ -1172,6 +1206,7 @@ function Custody({ toast }) {
                 <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Classe</th>
                 <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
                 <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Statut</th>
+                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -1185,12 +1220,100 @@ function Custody({ toast }) {
                   </td>
                   <td className="px-5 py-3.5 text-gray-500">{o.date}</td>
                   <td className="px-5 py-3.5"><Badge status="Actif" /></td>
+                  <td className="px-5 py-3.5 text-right">
+                    <button
+                      onClick={() => openTransfer(o)}
+                      className="px-3 py-1.5 text-xs font-medium bg-gold/10 text-gold rounded-lg hover:bg-gold/20 transition-colors"
+                    >
+                      Transférer
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      {/* Transfer Modal */}
+      {transferModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => !transferring && setTransferModal(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-navy mb-1">Transférer des tokens</h3>
+            <p className="text-sm text-gray-400 mb-5">
+              Envoyez les tokens de {transferModal.lpName} vers un wallet externe
+            </p>
+
+            <div className="space-y-4">
+              <div className="bg-cream rounded-xl p-4 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-xs text-gray-400 block">Client</span>
+                  <span className="font-medium text-navy">{transferModal.lpName}</span>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-400 block">Tokens</span>
+                  <span className="font-mono font-medium text-navy">{Math.floor(transferModal.montant / NAV_PER_PART)}</span>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-400 block">Valeur</span>
+                  <span className="text-navy">{fmt(transferModal.montant)}</span>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-400 block">Classe</span>
+                  <span className="text-navy">Classe {transferModal.shareClass || 1}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                  Adresse Cardano de destination
+                </label>
+                <input
+                  value={transferAddress}
+                  onChange={(e) => setTransferAddress(e.target.value)}
+                  placeholder="addr_test1q..."
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-navy/20 transition-all"
+                  disabled={transferring}
+                />
+              </div>
+
+              {transferResult && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                  <p className="text-sm font-medium text-emerald-800 mb-1">Transfert confirmé on-chain</p>
+                  <p className="text-xs text-emerald-600 font-mono break-all">Tx: {transferResult.txHash}</p>
+                  <a
+                    href={transferResult.explorerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-emerald-700 underline mt-1 inline-block"
+                  >
+                    Voir sur Cardanoscan
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setTransferModal(null)}
+                disabled={transferring}
+                className="px-4 py-2 border border-gray-200 text-gray-500 text-xs rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                {transferResult ? "Fermer" : "Annuler"}
+              </button>
+              {!transferResult && (
+                <button
+                  onClick={handleTransfer}
+                  disabled={transferring || !transferAddress.startsWith("addr")}
+                  className="px-4 py-2 bg-gold text-white text-xs rounded-xl hover:bg-gold/90 transition-colors disabled:opacity-50"
+                >
+                  {transferring ? "Transfert en cours..." : "Confirmer le transfert"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1356,7 +1479,7 @@ export default function PortailSwissLife({ toast }) {
       )}
 
       {activeTab === "clients" && <MesClients toast={toast} clients={clients} onClientsChange={setClients} />}
-      {activeTab === "custody" && <Custody toast={toast} />}
+      {activeTab === "custody" && <Custody toast={toast} clients={clients} />}
       {activeTab === "collateral" && <CollateralClients toast={toast} />}
     </div>
   );
