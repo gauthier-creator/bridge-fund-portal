@@ -68,6 +68,17 @@ create policy "profiles_update_own" on profiles for update using (
   id = auth.uid()
 ) with check (id = auth.uid());
 
+-- Intermediary can update their clients' profiles (KYC, wallet, etc.)
+-- USING allows targeting profiles where intermediary_id is already set OR null (first assignment)
+-- WITH CHECK ensures they can only set intermediary_id to their own uid
+create policy "profiles_intermediary_update" on profiles for update using (
+  get_my_role() = 'intermediary'
+  and (intermediary_id = auth.uid() or intermediary_id is null)
+) with check (
+  get_my_role() = 'intermediary'
+  and intermediary_id = auth.uid()
+);
+
 create policy "profiles_admin_all" on profiles for all using (
   get_my_role() = 'admin'
 ) with check (get_my_role() = 'admin');

@@ -117,7 +117,7 @@ export async function updateUserProfile(userId, updates) {
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq("id", userId)
     .select()
-    .single();
+    .maybeSingle();
   if (error) throw error;
   return data;
 }

@@ -4,6 +4,7 @@ import { generateBulletinPDF } from "../generateBulletin";
 import { useAppContext } from "../context/AppContext";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
+import { updateUserProfile } from "../services/profileService";
 import {
   KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls,
   Checkbox, ComplianceAlert, SignaturePad,
@@ -28,15 +29,17 @@ function Souscription({ toast, fund }) {
   const [formData, setFormData] = useState({
     nom: defaultNom, prenom: defaultPrenom, societe: profile?.company || "", pays: "France",
     typeInvestisseur: "Professionnel", montant: 250000,
-    shareClass: 1, paymentMethod: "fiat",
+    shareClass: 1, /* Class B reserved for intermediaries */ paymentMethod: "fiat",
     dateNaissance: "", nationalite: "Française", adresse: "", codePostal: "", ville: "",
     lei: "", rcs: "", formeJuridique: "SAS",
     beneficiaireNom: "", beneficiairePct: "",
     origineFonds: "", pepStatus: "non", pepDetail: "",
   });
-  const [kycStatus, setKycStatus] = useState(null);
-  const [amlStatus, setAmlStatus] = useState(null);
-  const [eligibilityDone, setEligibilityDone] = useState(false);
+  // Skip KYC entirely if the investor's profile is already validated
+  const kycAlreadyDone = profile?.kyc_status === "validated";
+  const [kycStatus, setKycStatus] = useState(kycAlreadyDone ? "Validé" : null);
+  const [amlStatus, setAmlStatus] = useState(kycAlreadyDone ? "clear" : null);
+  const [eligibilityDone, setEligibilityDone] = useState(kycAlreadyDone);
   const [eligibilityAnswers, setEligibilityAnswers] = useState({ patrimoine: "", experience: "", horizon: "", risque: "" });
   const [signed, setSigned] = useState(false);
   const [paymentReceived, setPaymentReceived] = useState(false);
@@ -82,12 +85,28 @@ function Souscription({ toast, fund }) {
     setTimeout(() => { setAmlStatus("clear"); toast("Screening AML/CFT terminé — aucune correspondance PEP/sanctions"); }, 2800);
   };
 
-  const handleEligibility = () => {
+  const handleEligibility = async () => {
     if (!eligibilityAnswers.patrimoine || !eligibilityAnswers.experience || !eligibilityAnswers.horizon || !eligibilityAnswers.risque) {
       toast("Veuillez compléter toutes les questions d'éligibilité"); return;
     }
     setEligibilityDone(true);
     toast("Éligibilité confirmée — profil investisseur qualifié validé (MiFID II)");
+
+    // Persist KYC validation so next subscription skips this step
+    if (profile?.id) {
+      try {
+        await updateUserProfile(profile.id, {
+          kyc_status: "validated",
+          person_type: personType,
+          investor_classification: formData.typeInvestisseur,
+          source_of_funds: formData.origineFonds,
+          pep_status: formData.pepStatus,
+          country: formData.pays,
+        });
+      } catch (err) {
+        console.error("Failed to persist KYC status:", err);
+      }
+    }
   };
 
   const handlePaymentSent = () => {
@@ -178,6 +197,27 @@ function Souscription({ toast, fund }) {
             <h3 className="text-lg font-semibold text-navy mb-2">Vérification d'identité</h3>
             <p className="text-xs text-gray-400 mb-5">Conformément à la directive (UE) 2015/849 (AMLD5) et au règlement CSSF 12-02</p>
 
+            {/* KYC already validated — skip */}
+            {kycAlreadyDone ? (
+              <div className="space-y-4">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 text-center">
+                  <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  </div>
+                  <p className="text-sm font-semibold text-emerald-800">KYC/KYB déjà validé</p>
+                  <p className="text-xs text-emerald-600 mt-1">Votre identité a été vérifiée lors d'une précédente souscription — aucune action requise</p>
+                  {profile?.investor_classification && (
+                    <p className="text-xs text-emerald-500 mt-2">Classification : <strong>{profile.investor_classification}</strong></p>
+                  )}
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={() => setStep(1)} className="bg-navy text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-navy-light transition-colors">
+                    Continuer vers le paiement →
+                  </button>
+                </div>
+              </div>
+            ) : (
+            <>
             <div className="flex border-b border-gray-100 mb-6">
               {[{ i: 0, label: "Identité" }, { i: 1, label: "Compliance AML" }, { i: 2, label: "Éligibilité investisseur" }].map(({ i, label }) => (
                 <button key={i} onClick={() => setKycSubStep(i)} className={`px-4 py-2 text-xs font-medium transition-all relative ${kycSubStep === i ? "text-navy" : "text-gray-400"}`}>
@@ -516,6 +556,8 @@ function Souscription({ toast, fund }) {
                 </div>
               </div>
             )}
+            </>
+            )}
           </div>
         )}
 
@@ -541,15 +583,16 @@ function Souscription({ toast, fund }) {
 
             <div className="flex gap-4 mb-6">
               <button onClick={() => set("shareClass", 1)} className={`flex-1 p-4 rounded-xl border-2 text-left transition-all ${formData.shareClass === 1 ? "border-navy bg-navy/5" : "border-gray-200"}`}>
-                <p className="text-sm font-semibold text-navy">Share Class 1</p>
+                <p className="text-sm font-semibold text-navy">Share Class A</p>
                 <p className="text-xs text-gray-500 mt-1">Rendement cible 7-9% · Durée 36 mois</p>
                 <p className="text-xs text-gray-400 mt-0.5">Profil : dynamique · Risque : 5/7</p>
               </button>
-              <button onClick={() => set("shareClass", 2)} className={`flex-1 p-4 rounded-xl border-2 text-left transition-all ${formData.shareClass === 2 ? "border-navy bg-navy/5" : "border-gray-200"}`}>
-                <p className="text-sm font-semibold text-navy">Share Class 2</p>
-                <p className="text-xs text-gray-500 mt-1">Rendement cible 5-6% · Durée 24 mois</p>
-                <p className="text-xs text-gray-400 mt-0.5">Profil : équilibré · Risque : 4/7</p>
-              </button>
+              <div className="flex-1 p-4 rounded-xl border-2 border-gray-100 bg-gray-50 text-left opacity-60 cursor-not-allowed relative">
+                <p className="text-sm font-semibold text-gray-400">Share Class B</p>
+                <p className="text-xs text-gray-400 mt-1">Rendement cible 5-6% · Durée 24 mois</p>
+                <p className="text-xs text-gray-300 mt-0.5">Profil : équilibré · Risque : 4/7</p>
+                <span className="absolute top-2 right-2 text-[10px] bg-navy/10 text-navy px-2 py-0.5 rounded-full font-medium">Intermédiaires uniquement</span>
+              </div>
             </div>
 
             {formData.paymentMethod === "fiat" ? (

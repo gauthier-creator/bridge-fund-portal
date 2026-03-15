@@ -265,12 +265,13 @@ function SouscriptionIntermediee({ toast, fund, clients }) {
                   <p className="text-xs text-gray-400 mt-1">Minimum : 100 000 EUR · Parts estimées : {(formData.montant / NAV_PER_PART).toFixed(2)}</p>
                 </div>
                 <button onClick={() => set("shareClass", 1)} className={`p-4 rounded-xl border-2 text-left transition-all ${formData.shareClass === 1 ? "border-navy bg-navy/5" : "border-gray-200"}`}>
-                  <p className="text-sm font-semibold text-navy">Share Class 1</p>
+                  <p className="text-sm font-semibold text-navy">Share Class A</p>
                   <p className="text-xs text-gray-500 mt-1">7-9% · 36 mois · Risque 5/7</p>
                 </button>
                 <button onClick={() => set("shareClass", 2)} className={`p-4 rounded-xl border-2 text-left transition-all ${formData.shareClass === 2 ? "border-navy bg-navy/5" : "border-gray-200"}`}>
-                  <p className="text-sm font-semibold text-navy">Share Class 2</p>
+                  <p className="text-sm font-semibold text-navy">Share Class B</p>
                   <p className="text-xs text-gray-500 mt-1">5-6% · 24 mois · Risque 4/7</p>
+                  <p className="text-xs text-gold mt-0.5 font-medium">Réservée aux intermédiaires</p>
                 </button>
               </div>
             </div>
@@ -402,10 +403,10 @@ function SouscriptionIntermediee({ toast, fund, clients }) {
    ───────────────────────────────────────────────────── */
 const KYC_STEPS = ["Identité", "Documents", "Connaissance client", "Classification", "Conformité", "Validation"];
 
-function MesClients({ toast, clients, onClientsChange }) {
+function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
   const { profile, user } = useAuth();
   const { orders } = useAppContext();
-  const [loading, setLoading] = useState(!clients.length);
+  const loading = !clientsLoaded;
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [kycStep, setKycStep] = useState(0);
   const [creating, setCreating] = useState(false);
@@ -453,10 +454,6 @@ function MesClients({ toast, clients, onClientsChange }) {
   };
 
   const setField = (key, val) => setClientData((prev) => ({ ...prev, [key]: val }));
-
-  useEffect(() => {
-    if (clients.length > 0) setLoading(false);
-  }, [clients]);
 
   const handleFileSelect = (docType) => async (e) => {
     const file = e.target.files?.[0];
@@ -1429,14 +1426,16 @@ export default function PortailSwissLife({ toast }) {
   const [fundView, setFundView] = useState("catalog"); // "catalog" | "detail:slug" | "souscription"
   const [selectedFund, setSelectedFund] = useState(null);
   const [clients, setClients] = useState([]);
+  const [clientsLoaded, setClientsLoaded] = useState(false);
   const { user } = useAuth();
 
   // Load clients for subscription dropdown
   useEffect(() => {
     if (supabase && user) {
+      setClientsLoaded(false);
       listMyClients()
-        .then(setClients)
-        .catch((err) => console.error("Failed to load clients:", err));
+        .then((data) => { setClients(data); setClientsLoaded(true); })
+        .catch((err) => { console.error("Failed to load clients:", err); setClientsLoaded(true); });
     }
   }, [user]);
 
@@ -1478,7 +1477,7 @@ export default function PortailSwissLife({ toast }) {
         </>
       )}
 
-      {activeTab === "clients" && <MesClients toast={toast} clients={clients} onClientsChange={setClients} />}
+      {activeTab === "clients" && <MesClients toast={toast} clients={clients} clientsLoaded={clientsLoaded} onClientsChange={setClients} />}
       {activeTab === "custody" && <Custody toast={toast} clients={clients} />}
       {activeTab === "collateral" && <CollateralClients toast={toast} />}
     </div>
