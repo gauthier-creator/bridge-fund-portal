@@ -835,7 +835,7 @@ function Collateral({ toast }) {
     (async () => {
       setLoading(true);
       const [fundsRes, vaultRes] = await Promise.all([
-        supabase.from("funds").select("id, name, slug, cardano_policy_id").order("name"),
+        supabase.from("funds").select("id, fund_name, slug, cardano_policy_id").eq("status", "active").order("fund_name"),
         supabase.from("vault_positions").select("*").eq("user_id", user?.id).order("created_at", { ascending: false }),
       ]);
       if (fundsRes.data) {
@@ -947,7 +947,7 @@ function Collateral({ toast }) {
               onChange={(e) => setSelectedFund(funds.find((f) => f.id === e.target.value))}
               className={selectCls}
             >
-              {funds.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+              {funds.map((f) => <option key={f.id} value={f.id}>{f.fund_name}</option>)}
             </select>
           )}
         </div>
