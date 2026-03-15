@@ -116,62 +116,102 @@ Deno.serve(async (req: Request) => {
     const syntheticUnit = syntheticPolicyId + synAssetName;
 
     // ═══════════════════════════════════════════════════════════════
-    // CHECK SECURITY TOKEN BALANCE
+    // VALIDATE TOKEN COUNT against user's fund holdings
+    // The frontend already validates against validated orders,
+    // but we double-check server-side via Supabase.
     // ═══════════════════════════════════════════════════════════════
-    const utxos = await lucid.wallet.getUtxos();
-    const availableSecurityTokens = utxos.reduce(
-      (sum, u) => sum + BigInt(u.assets[securityUnit] || 0n),
-      0n
-    );
+    if (supabaseUrl && supabaseServiceKey && fundId && userId) {
+      const db = createClient(supabaseUrl, supabaseServiceKey);
 
-    if (availableSecurityTokens < BigInt(tokenCount)) {
-      throw new Error(
-        `Insufficient security tokens: have ${availableSecurityTokens}, need ${tokenCount}`
+      // Count user's validated parts for this fund
+      const { data: userOrders } = await db
+        .from("orders")
+        .select("montant")
+        .eq("user_id", userId)
+        .eq("fund_id", fundId)
+        .eq("status", "validated");
+
+      const { data: fund } = await db
+        .from("funds")
+        .select("nav_per_share")
+        .eq("id", fundId)
+        .maybeSingle();
+
+      const navPerShare = Number(fund?.nav_per_share) || 1000;
+      const totalParts = (userOrders || []).reduce(
+        (s, o) => s + Math.floor(Number(o.montant) / navPerShare), 0
       );
+
+      // Count already locked tokens in vault for this user+fund
+      const { data: existingLocks } = await db
+        .from("vault_positions")
+        .select("security_token_count")
+        .eq("user_id", userId)
+        .eq("fund_id", fundId)
+        .eq("status", "locked");
+
+      const alreadyLocked = (existingLocks || []).reduce(
+        (s, p) => s + (p.security_token_count || 0), 0
+      );
+
+      const maxMintable = totalParts - alreadyLocked;
+      console.log(`[Vault] User has ${totalParts} parts, ${alreadyLocked} locked, max mintable: ${maxMintable}`);
+
+      if (tokenCount > maxMintable) {
+        throw new Error(
+          `Cannot mint ${tokenCount} synthetic tokens: you have ${totalParts} parts ` +
+          `with ${alreadyLocked} already locked (${maxMintable} available)`
+        );
+      }
     }
 
-    console.log(`[Vault] Locking ${tokenCount} security tokens at vault ${vaultAddress.slice(0, 30)}...`);
-    console.log(`[Vault] Minting ${tokenCount} synthetic tokens (${synAssetLabel})`);
+    console.log(`[Vault] Minting ${tokenCount} BF + locking in vault + minting ${tokenCount} sBF`);
     console.log(`[Vault] Security policy: ${securityPolicyId.slice(0, 16)}...`);
     console.log(`[Vault] Synthetic policy: ${syntheticPolicyId.slice(0, 16)}...`);
 
     // ═══════════════════════════════════════════════════════════════
-    // BUILD ATOMIC TRANSACTION: Lock + Mint
+    // BUILD ATOMIC TRANSACTION: Mint BF + Lock in Vault + Mint sBF
+    // Single tx: mint security tokens, lock them, mint synthetics
     // ═══════════════════════════════════════════════════════════════
     const tx = await lucid
       .newTx()
-      // 1. Lock security tokens at vault script address
+      // 1. Mint security tokens (BF) for the vault lock
+      .mintAssets({ [securityUnit]: BigInt(tokenCount) })
+      .attachMintingPolicy(securityPolicy)
+      // 2. Lock security tokens at vault script address
       .payToContract(vaultAddress, Data.void(), {
         [securityUnit]: BigInt(tokenCount),
       })
-      // 2. Mint synthetic tokens 1:1
+      // 3. Mint synthetic tokens 1:1
       .mintAssets({ [syntheticUnit]: BigInt(tokenCount) })
       .attachMintingPolicy(syntheticPolicy)
-      // 3. Send synthetic tokens to the user
+      // 4. Send synthetic tokens to the user
       .payToAddress(userAddress, { [syntheticUnit]: BigInt(tokenCount) })
-      // Metadata
+      // Metadata (all strings must be <= 64 bytes for Cardano)
       .attachMetadata(721, {
         [syntheticPolicyId]: {
           [synAssetLabel]: {
-            name: `Synthetic ${fundSlug} — Freely Transferable`,
-            description: `Synthetic token backed 1:1 by ${secAssetLabel} security tokens locked in vault`,
+            name: `s${secAssetLabel} Synthetic`,
+            description: [
+              `Synthetic token backed 1:1 by`,
+              `${secAssetLabel} locked in vault`,
+            ],
             type: "synthetic",
             backing: "1:1",
-            securityPolicyId,
             securityAsset: secAssetLabel,
-            vaultAddress: vaultAddress.slice(0, 40) + "...",
-            standard: "CIP-113-synthetic",
+            vault: vaultAddress.slice(0, 56),
+            standard: "CIP-113",
             transferable: "unrestricted",
-            mintedAt: new Date().toISOString(),
           },
         },
       })
       .attachMetadata(674, {
         msg: [
-          `Vault: Lock ${tokenCount} ${secAssetLabel} → Mint ${tokenCount} ${synAssetLabel}`,
-          `Security locked at: ${vaultAddress.slice(0, 25)}...`,
-          `Synthetic sent to: ${userAddress.slice(0, 25)}...`,
-          `Ratio: 1:1 | Freely transferable`,
+          `Lock ${tokenCount} ${secAssetLabel}`,
+          `Mint ${tokenCount} ${synAssetLabel}`,
+          `Vault: ${vaultAddress.slice(0, 40)}`,
+          `To: ${userAddress.slice(0, 48)}`,
+          `Ratio 1:1 | Freely transferable`,
         ],
       })
       .complete();

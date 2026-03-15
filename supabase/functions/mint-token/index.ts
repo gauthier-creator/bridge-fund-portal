@@ -143,36 +143,34 @@ Deno.serve(async (req: Request) => {
       .mintAssets({ [unit]: BigInt(tokenCount) })
       .attachMintingPolicy(mintingPolicy)
       .payToAddress(investorAddress, { [unit]: BigInt(tokenCount) })
-      // CIP-25 metadata (NFT/token identity)
+      // CIP-25 metadata (strings <= 64 bytes for Cardano)
       .attachMetadata(721, {
         [policyId]: {
           [assetLabel]: {
-            name: `${fundName || fundSlug} — Part`,
-            description: `${tokenCount} part(s) du fonds ${fundName || fundSlug}`,
-            investor: lpName || "Investor",
+            name: `${(fundName || fundSlug).slice(0, 40)} Part`,
+            description: [
+              `${tokenCount} part(s) du fonds`,
+              `${(fundName || fundSlug).slice(0, 50)}`,
+            ],
+            investor: (lpName || "Investor").slice(0, 60),
             shareClass: `Classe ${shareClass || 1}`,
             amount: `${montant} EUR`,
-            orderId: orderId || "unknown",
-            mintedAt: new Date().toISOString(),
+            orderId: (orderId || "unknown").slice(0, 60),
             network: "Preprod",
-            // CIP-113 compliance metadata
             standard: "CIP-113",
-            transferRestrictions: "whitelist-only",
-            complianceFramework: "AMLD5-CSSF-MiFID2",
+            restrictions: "whitelist-only",
+            compliance: "AMLD5-CSSF-MiFID2",
             jurisdiction: "Luxembourg",
-            regulatoryStatus: "AIFMD-compliant",
-            fundId: fundId || "unknown",
           },
         },
       })
       // CIP-674 transaction message
       .attachMetadata(674, {
         msg: [
-          `CIP-113 Programmable Token: ${tokenCount} part(s)`,
-          `Fund: ${fundName || fundSlug}`,
+          `CIP-113: ${tokenCount} part(s)`,
+          `Fund: ${(fundName || fundSlug).slice(0, 50)}`,
           `Policy: ${policyId.slice(0, 16)}...`,
-          `Investor: ${lpName || "N/A"}`,
-          `Order: ${orderId || "N/A"}`,
+          `Investor: ${(lpName || "N/A").slice(0, 44)}`,
           `Compliance: whitelist-verified`,
         ],
       })

@@ -1316,45 +1316,88 @@ function CollateralClients({ toast, clients }) {
   const { orders } = useAppContext();
   const { user, profile } = useAuth();
   const [vaultPositions, setVaultPositions] = useState([]);
+  const [funds, setFunds] = useState([]);
   const [loadingPositions, setLoadingPositions] = useState(true);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [selectedFund, setSelectedFund] = useState(null);
   const [mintAmount, setMintAmount] = useState(10);
   const [minting, setMinting] = useState(false);
-  const [burning, setBurning] = useState(null); // position being burned
+  const [burning, setBurning] = useState(null);
   const [txResult, setTxResult] = useState(null);
 
-  const validatedOrders = orders.filter((o) => o.status === "validated" && (o.intermediaryId === user?.id || o.intermediaire));
-  const totalSecurityTokens = validatedOrders.reduce((s, o) => s + Math.floor(o.montant / NAV_PER_PART), 0);
-  const lockedTokens = vaultPositions.filter((p) => p.status === "locked").reduce((s, p) => s + p.security_token_count, 0);
-  const availableTokens = totalSecurityTokens - lockedTokens;
+  // All validated orders for this intermediary's clients
+  const allValidatedOrders = orders.filter((o) => o.status === "validated" && (o.intermediaryId === user?.id || o.intermediaire));
 
-  // Load vault positions
+  // Build client list with their token stats
+  const clientsWithStats = (clients || []).map((c) => {
+    const clientOrders = allValidatedOrders.filter((o) => o.userId === c.id);
+    const totalParts = clientOrders.reduce((s, o) => s + Math.floor(o.montant / NAV_PER_PART), 0);
+    const clientVaults = vaultPositions.filter((p) => p.user_id === c.id && p.status === "locked");
+    const locked = clientVaults.reduce((s, p) => s + (p.security_token_count || 0), 0);
+    const sBF = clientVaults.reduce((s, p) => s + (p.synthetic_token_count || 0), 0);
+    return { ...c, totalParts, locked, sBF, available: totalParts - locked, orders: clientOrders };
+  }).filter((c) => c.totalParts > 0 || c.sBF > 0);
+
+  // Selected client's data
+  const clientOrders = selectedClient ? allValidatedOrders.filter((o) => o.userId === selectedClient.id) : [];
+  const clientTotalParts = clientOrders.reduce((s, o) => s + Math.floor(o.montant / NAV_PER_PART), 0);
+  const clientVaults = selectedClient ? vaultPositions.filter((p) => p.user_id === selectedClient.id && p.status === "locked") : [];
+  const clientLocked = clientVaults.reduce((s, p) => s + (p.security_token_count || 0), 0);
+  const clientAvailable = clientTotalParts - clientLocked;
+  const clientSBF = clientVaults.reduce((s, p) => s + (p.synthetic_token_count || 0), 0);
+
+  // Global totals
+  const totalAllParts = clientsWithStats.reduce((s, c) => s + c.totalParts, 0);
+  const totalAllLocked = clientsWithStats.reduce((s, c) => s + c.locked, 0);
+  const totalAllSBF = clientsWithStats.reduce((s, c) => s + c.sBF, 0);
+
+  // Load funds and all vault positions for managed clients
   useEffect(() => {
     if (!supabase || !user) return;
-    supabase
-      .from("vault_positions")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => { setVaultPositions(data || []); setLoadingPositions(false); })
-      .catch(() => setLoadingPositions(false));
-  }, [user]);
+    (async () => {
+      setLoadingPositions(true);
+      const clientIds = (clients || []).map((c) => c.id);
+      const [fundsRes, vaultRes] = await Promise.all([
+        supabase.from("funds").select("id, fund_name, slug, cardano_policy_id").eq("status", "active").order("fund_name"),
+        clientIds.length > 0
+          ? supabase.from("vault_positions").select("*").in("user_id", clientIds).order("created_at", { ascending: false })
+          : Promise.resolve({ data: [] }),
+      ]);
+      if (fundsRes.data) {
+        setFunds(fundsRes.data);
+        if (fundsRes.data.length > 0 && !selectedFund) setSelectedFund(fundsRes.data[0]);
+      }
+      if (vaultRes.data) setVaultPositions(vaultRes.data);
+      setLoadingPositions(false);
+    })();
+  }, [user, clients]);
+
+  const refreshPositions = async () => {
+    const clientIds = (clients || []).map((c) => c.id);
+    if (clientIds.length === 0) return;
+    const { data } = await supabase.from("vault_positions").select("*").in("user_id", clientIds).order("created_at", { ascending: false });
+    if (data) setVaultPositions(data);
+  };
 
   const handleMintSynthetic = async () => {
-    if (mintAmount <= 0 || mintAmount > availableTokens) return;
+    if (!selectedClient) { toast("Sélectionnez un client"); return; }
+    if (!selectedFund) { toast("Sélectionnez un fonds"); return; }
+    if (mintAmount <= 0 || mintAmount > clientAvailable) { toast("Montant invalide"); return; }
+    if (!profile?.wallet_address) { toast("Wallet intermédiaire non configuré"); return; }
     setMinting(true);
     setTxResult(null);
     try {
       const result = await mintSynthetic({
-        userAddress: profile?.wallet_address,
-        fundSlug: "bridgefund",
-        fundId: validatedOrders[0]?.fundId || null,
+        userAddress: profile.wallet_address,
+        fundSlug: selectedFund.slug,
+        fundId: selectedFund.id,
         tokenCount: mintAmount,
-        userId: user?.id,
+        userId: selectedClient.id,
       });
+      if (result.error) throw new Error(result.error);
       setTxResult({ type: "mint", ...result });
-      toast(`${mintAmount} sBF mintés — security tokens verrouillés dans le vault`);
-      // Refresh positions
-      const { data } = await supabase.from("vault_positions").select("*").order("created_at", { ascending: false });
-      setVaultPositions(data || []);
+      toast(`${mintAmount} sBF mintés pour ${selectedClient.full_name}`);
+      await refreshPositions();
     } catch (err) {
       toast("Erreur mint : " + err.message);
     } finally {
@@ -1363,22 +1406,23 @@ function CollateralClients({ toast, clients }) {
   };
 
   const handleBurnSynthetic = async (position) => {
+    if (!profile?.wallet_address) { toast("Wallet manquant"); return; }
     setBurning(position.id);
     setTxResult(null);
     try {
+      const fund = funds.find((f) => f.id === position.fund_id);
       const result = await burnSynthetic({
-        userAddress: profile?.wallet_address,
-        fundSlug: "bridgefund",
+        userAddress: profile.wallet_address,
+        fundSlug: fund?.slug || "bridgefund",
         fundId: position.fund_id,
         tokenCount: position.synthetic_token_count,
         vaultPositionId: position.id,
-        userId: user?.id,
+        userId: position.user_id,
       });
+      if (result.error) throw new Error(result.error);
       setTxResult({ type: "burn", ...result });
-      toast(`${position.synthetic_token_count} sBF brûlés — security tokens déverrouillés`);
-      // Refresh
-      const { data } = await supabase.from("vault_positions").select("*").order("created_at", { ascending: false });
-      setVaultPositions(data || []);
+      toast(`${position.synthetic_token_count} sBF brûlés — BF déverrouillés`);
+      await refreshPositions();
     } catch (err) {
       toast("Erreur burn : " + err.message);
     } finally {
@@ -1386,14 +1430,17 @@ function CollateralClients({ toast, clients }) {
     }
   };
 
-  const lockedPositions = vaultPositions.filter((p) => p.status === "locked");
-  const unlockedPositions = vaultPositions.filter((p) => p.status === "unlocked");
+  const allLockedPositions = selectedClient
+    ? vaultPositions.filter((p) => p.user_id === selectedClient.id && p.status === "locked")
+    : vaultPositions.filter((p) => p.status === "locked");
+
+  if (loadingPositions) return <div className="text-center py-12 text-gray-400 text-sm">Chargement...</div>;
 
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-navy">Collatéral & DeFi</h2>
-        <p className="text-sm text-gray-400 mt-1">Tokenisez vos parts en synthetic tokens librement transférables</p>
+        <h2 className="text-xl font-semibold text-navy">Collatéral & DeFi — Gestion pour compte client</h2>
+        <p className="text-sm text-gray-400 mt-1">Gérez la collateralisation des parts de vos clients en synthetic tokens</p>
       </div>
 
       {/* Explainer */}
@@ -1403,96 +1450,177 @@ function CollateralClients({ toast, clients }) {
             <span className="text-gold font-bold text-xs">sBF</span>
           </div>
           <div>
-            <p className="text-sm font-semibold text-navy">Synthetic Tokens — Modèle BlackRock BUIDL</p>
+            <p className="text-sm font-semibold text-navy">Custody & Synthetic Tokens</p>
             <p className="text-xs text-gray-500 mt-1">
-              Vos <strong>security tokens (BF)</strong> sont restricted (whitelist CIP-113). En les verrouillant dans le vault,
-              vous recevez des <strong>synthetic tokens (sBF)</strong> librement transférables, utilisables comme collatéral
-              auprès de protocoles DeFi ou d'investisseurs non-whitelistés. Ratio 1:1, réversible à tout moment.
+              En tant qu'intermédiaire, vous gérez la collateralisation pour le compte de vos clients.
+              Sélectionnez un client, verrouillez ses <strong>security tokens (BF)</strong> dans le vault
+              et recevez des <strong>synthetic tokens (sBF)</strong> librement transférables sur votre wallet custody.
             </p>
           </div>
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* Global KPIs */}
       <div className="grid grid-cols-4 gap-4">
-        <KPICard label="Security tokens (BF)" value={totalSecurityTokens.toLocaleString("fr-FR")} sub="Total des parts" />
-        <KPICard label="Disponibles" value={availableTokens.toLocaleString("fr-FR")} sub="Non verrouillés" />
-        <KPICard label="Verrouillés (vault)" value={lockedTokens.toLocaleString("fr-FR")} sub="Security tokens lockés" />
-        <KPICard label="Synthetic (sBF)" value={lockedTokens.toLocaleString("fr-FR")} sub="Librement transférables" />
+        <KPICard label="Clients actifs" value={clientsWithStats.length} sub="Avec des parts" />
+        <KPICard label="Total parts (BF)" value={totalAllParts.toLocaleString("fr-FR")} sub="Tous clients" />
+        <KPICard label="Verrouillés (vault)" value={totalAllLocked.toLocaleString("fr-FR")} sub="BF lockés" />
+        <KPICard label="Synthetic (sBF)" value={totalAllSBF.toLocaleString("fr-FR")} sub="Librement transférables" />
       </div>
 
-      {/* Mint Synthetic */}
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
-        <h3 className="text-sm font-semibold text-navy mb-1">Mint Synthetic Tokens</h3>
-        <p className="text-xs text-gray-400 mb-4">Lock vos security tokens → Recevez des synthetic tokens 1:1</p>
-
-        <div className="grid grid-cols-3 gap-4 items-end">
-          <div>
-            <label className={labelCls}>Tokens à verrouiller</label>
-            <input
-              type="number"
-              value={mintAmount}
-              onChange={(e) => setMintAmount(Math.min(Number(e.target.value), availableTokens))}
-              min={1}
-              max={availableTokens}
-              className={inputCls}
-              disabled={minting}
-            />
-            <p className="text-xs text-gray-400 mt-1">{availableTokens} BF disponibles</p>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl text-gray-300 mb-1">→</div>
-            <p className="text-xs text-gray-400">1:1</p>
-          </div>
-          <div>
-            <label className={labelCls}>Synthetic tokens reçus</label>
-            <div className="px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm font-mono text-navy">
-              {mintAmount} sBF
-            </div>
-            <p className="text-xs text-emerald-500 mt-1">Librement transférables</p>
-          </div>
+      {/* Client selector cards */}
+      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-navy">Sélectionnez un client</h3>
         </div>
-
-        <button
-          onClick={handleMintSynthetic}
-          disabled={minting || mintAmount <= 0 || mintAmount > availableTokens || !profile?.wallet_address}
-          className="mt-4 bg-navy text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-navy-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {minting ? "Transaction en cours..." : `Lock ${mintAmount} BF → Mint ${mintAmount} sBF`}
-        </button>
-
-        {!profile?.wallet_address && (
-          <p className="text-xs text-amber-600 mt-2">Wallet non configuré — veuillez d'abord avoir un wallet Cardano</p>
+        {clientsWithStats.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="text-sm text-gray-400">Aucun client avec des parts validées</p>
+          </div>
+        ) : (
+          <div className="grid gap-3 p-5">
+            {clientsWithStats.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => { setSelectedClient(c); setMintAmount(Math.min(10, c.available)); setTxResult(null); }}
+                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all text-left ${
+                  selectedClient?.id === c.id
+                    ? "border-navy bg-navy/5 ring-1 ring-navy/20"
+                    : "border-gray-100 hover:border-gray-200 hover:bg-cream/30"
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                    selectedClient?.id === c.id ? "bg-navy text-white" : "bg-gray-100 text-gray-500"
+                  }`}>
+                    {(c.full_name || "?").charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-navy">{c.full_name || "Client"}</p>
+                    <p className="text-xs text-gray-400">{c.email || "—"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6 text-right">
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Parts</p>
+                    <p className="text-sm font-semibold text-navy">{c.totalParts.toLocaleString("fr-FR")}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Lockés</p>
+                    <p className="text-sm font-semibold text-navy">{c.locked.toLocaleString("fr-FR")}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">sBF</p>
+                    <p className="text-sm font-bold text-emerald-600">{c.sBF.toLocaleString("fr-FR")}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Disponible</p>
+                    <p className="text-sm font-semibold text-gray-500">{c.available.toLocaleString("fr-FR")}</p>
+                  </div>
+                  {selectedClient?.id === c.id && (
+                    <div className="w-6 h-6 bg-navy rounded-full flex items-center justify-center">
+                      <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                    </div>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
         )}
       </div>
+
+      {/* Mint form — only when client selected */}
+      {selectedClient && (
+        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-navy">Mint Synthetic pour {selectedClient.full_name}</h3>
+              <p className="text-xs text-gray-400">Lock BF → Recevez sBF 1:1 sur votre wallet custody</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-400">Parts disponibles</p>
+              <p className="text-lg font-bold text-navy">{clientAvailable.toLocaleString("fr-FR")} BF</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 gap-4 items-end">
+            <div>
+              <label className={labelCls}>Fonds</label>
+              <select
+                value={selectedFund?.id || ""}
+                onChange={(e) => setSelectedFund(funds.find((f) => f.id === e.target.value))}
+                className={selectCls}
+              >
+                {funds.map((f) => <option key={f.id} value={f.id}>{f.fund_name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>BF à verrouiller</label>
+              <input
+                type="number"
+                value={mintAmount}
+                onChange={(e) => setMintAmount(Math.min(Number(e.target.value), clientAvailable))}
+                min={1}
+                max={clientAvailable}
+                className={inputCls}
+                disabled={minting}
+              />
+              <p className="text-xs text-gray-400 mt-1">{clientAvailable} disponibles</p>
+            </div>
+            <div>
+              <label className={labelCls}>sBF reçus</label>
+              <div className="px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm font-mono text-emerald-600 font-semibold">
+                {mintAmount} sBF
+              </div>
+            </div>
+            <button
+              onClick={handleMintSynthetic}
+              disabled={minting || mintAmount <= 0 || mintAmount > clientAvailable || !profile?.wallet_address}
+              className="py-2.5 rounded-xl text-sm font-medium transition-colors bg-navy text-white hover:bg-navy-light disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {minting ? "Transaction..." : `Lock ${mintAmount} BF → ${mintAmount} sBF`}
+            </button>
+          </div>
+
+          {!profile?.wallet_address && (
+            <p className="text-xs text-amber-600 mt-3">Wallet custody non configuré dans votre profil</p>
+          )}
+        </div>
+      )}
 
       {/* Transaction result */}
       {txResult && (
         <div className={`rounded-xl p-4 border ${txResult.type === "mint" ? "bg-emerald-50 border-emerald-200" : "bg-blue-50 border-blue-200"}`}>
-          <p className="text-sm font-medium mb-1">{txResult.type === "mint" ? "Synthetic tokens mintés" : "Synthetic tokens brûlés — Security tokens déverrouillés"}</p>
+          <p className="text-sm font-medium mb-1">{txResult.type === "mint" ? "Synthetic tokens mintés" : "Security tokens déverrouillés"}</p>
           <p className="text-xs font-mono break-all">Tx: {txResult.txHash}</p>
-          <a href={txResult.explorerUrl} target="_blank" rel="noopener noreferrer" className="text-xs underline mt-1 inline-block">
+          <a href={txResult.explorerUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-navy underline mt-1 inline-block">
             Voir sur Cardanoscan
           </a>
         </div>
       )}
 
-      {/* Locked Positions */}
+      {/* Positions table */}
       <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="text-sm font-semibold text-navy">Positions vault actives</h3>
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-navy">
+            Positions vault {selectedClient ? `— ${selectedClient.full_name}` : "— Tous les clients"}
+          </h3>
+          {selectedClient && (
+            <button onClick={() => setSelectedClient(null)} className="text-xs text-gray-400 hover:text-navy transition-colors">
+              Voir tous les clients
+            </button>
+          )}
         </div>
-        {loadingPositions ? (
-          <div className="p-8 text-center text-gray-400 text-sm">Chargement...</div>
-        ) : lockedPositions.length === 0 ? (
+        {allLockedPositions.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-sm text-gray-400">Aucune position active</p>
-            <p className="text-xs text-gray-300 mt-1">Mintez des synthetic tokens pour créer une position</p>
+            <p className="text-xs text-gray-300 mt-1">Sélectionnez un client et mintez des sBF</p>
           </div>
         ) : (
           <table className="w-full text-sm text-left">
             <thead>
               <tr className="border-b border-gray-100">
+                {!selectedClient && <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Client</th>}
                 <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Vault</th>
                 <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">BF lockés</th>
                 <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">sBF mintés</th>
@@ -1502,61 +1630,97 @@ function CollateralClients({ toast, clients }) {
               </tr>
             </thead>
             <tbody>
-              {lockedPositions.map((p) => (
-                <tr key={p.id} className="border-b border-gray-50 hover:bg-cream/50 transition-colors">
-                  <td className="px-5 py-3 font-mono text-xs text-gray-500">{p.vault_address?.slice(0, 16)}...</td>
-                  <td className="px-5 py-3 text-right font-mono font-medium text-navy">{p.security_token_count}</td>
-                  <td className="px-5 py-3 text-right font-mono text-emerald-600">{p.synthetic_token_count}</td>
-                  <td className="px-5 py-3">
-                    <a href={`https://preprod.cardanoscan.io/transaction/${p.lock_tx_hash}`} target="_blank" rel="noopener noreferrer" className="text-xs text-navy underline font-mono">
-                      {p.lock_tx_hash?.slice(0, 10)}...
-                    </a>
-                  </td>
-                  <td className="px-5 py-3 text-gray-500 text-xs">{p.locked_at?.split("T")[0]}</td>
-                  <td className="px-5 py-3 text-right">
-                    <button
-                      onClick={() => handleBurnSynthetic(p)}
-                      disabled={burning === p.id}
-                      className="px-3 py-1.5 text-xs font-medium bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
-                    >
-                      {burning === p.id ? "Burn..." : "Burn sBF → Unlock BF"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {allLockedPositions.map((p) => {
+                const client = (clients || []).find((c) => c.id === p.user_id);
+                return (
+                  <tr key={p.id} className="border-b border-gray-50 hover:bg-cream/50 transition-colors">
+                    {!selectedClient && (
+                      <td className="px-5 py-3">
+                        <button onClick={() => setSelectedClient(clientsWithStats.find((c) => c.id === p.user_id))} className="text-xs font-medium text-navy hover:underline">
+                          {client?.full_name || "—"}
+                        </button>
+                      </td>
+                    )}
+                    <td className="px-5 py-3 font-mono text-xs text-gray-500">{p.vault_address?.slice(0, 16)}...</td>
+                    <td className="px-5 py-3 text-right font-mono font-medium text-navy">{p.security_token_count}</td>
+                    <td className="px-5 py-3 text-right font-mono text-emerald-600">{p.synthetic_token_count}</td>
+                    <td className="px-5 py-3">
+                      <a href={`https://preprod.cardanoscan.io/transaction/${p.lock_tx_hash}`} target="_blank" rel="noopener noreferrer" className="text-xs text-navy underline font-mono">
+                        {p.lock_tx_hash?.slice(0, 10)}...
+                      </a>
+                    </td>
+                    <td className="px-5 py-3 text-gray-500 text-xs">{p.created_at?.split("T")[0]}</td>
+                    <td className="px-5 py-3 text-right">
+                      <button
+                        onClick={() => handleBurnSynthetic(p)}
+                        disabled={burning === p.id}
+                        className="px-3 py-1.5 text-xs font-medium bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                      >
+                        {burning === p.id ? "Burn..." : "Burn sBF"}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
 
-      {/* History */}
-      {unlockedPositions.length > 0 && (
+      {/* DeFi Pools */}
+      {totalAllSBF > 0 && (
         <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-navy">Historique (positions clôturées)</h3>
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-navy">DeFi Pools</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Déployez les sBF de vos clients sur les protocoles DeFi Cardano</p>
+            </div>
+            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">{totalAllSBF.toLocaleString("fr-FR")} sBF</span>
           </div>
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Tokens</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Lock Tx</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Unlock Tx</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Lockée le</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Déverrouillée le</th>
-              </tr>
-            </thead>
-            <tbody>
-              {unlockedPositions.map((p) => (
-                <tr key={p.id} className="border-b border-gray-50 opacity-60">
-                  <td className="px-5 py-3 font-mono">{p.security_token_count} BF</td>
-                  <td className="px-5 py-3 font-mono text-xs">{p.lock_tx_hash?.slice(0, 10)}...</td>
-                  <td className="px-5 py-3 font-mono text-xs">{p.unlock_tx_hash?.slice(0, 10)}...</td>
-                  <td className="px-5 py-3 text-xs">{p.locked_at?.split("T")[0]}</td>
-                  <td className="px-5 py-3 text-xs">{p.unlocked_at?.split("T")[0]}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="grid grid-cols-3 gap-4 p-5">
+            <a href="https://app.minswap.org/swap" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-gray-100 rounded-xl hover:border-blue-200 hover:bg-blue-50/30 transition-all">
+              <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-blue-600 font-bold text-sm">M</span></div>
+              <div>
+                <p className="text-sm font-semibold text-navy">Minswap</p>
+                <p className="text-[10px] text-gray-400">DEX — Swap & Liquidity</p>
+              </div>
+            </a>
+            <a href="https://app.sundae.fi/swap" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-gray-100 rounded-xl hover:border-purple-200 hover:bg-purple-50/30 transition-all">
+              <div className="w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-purple-600 font-bold text-sm">S</span></div>
+              <div>
+                <p className="text-sm font-semibold text-navy">SundaeSwap</p>
+                <p className="text-[10px] text-gray-400">DEX — Yield Farming</p>
+              </div>
+            </a>
+            <a href="https://app.liqwid.finance" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-gray-100 rounded-xl hover:border-cyan-200 hover:bg-cyan-50/30 transition-all">
+              <div className="w-9 h-9 bg-cyan-100 rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-cyan-600 font-bold text-sm">L</span></div>
+              <div>
+                <p className="text-sm font-semibold text-navy">Liqwid Finance</p>
+                <p className="text-[10px] text-gray-400">Lending — Collateral</p>
+              </div>
+            </a>
+            <a href="https://app.lenfi.io" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-gray-100 rounded-xl hover:border-emerald-200 hover:bg-emerald-50/30 transition-all">
+              <div className="w-9 h-9 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-emerald-600 font-bold text-sm">LF</span></div>
+              <div>
+                <p className="text-sm font-semibold text-navy">Lenfi</p>
+                <p className="text-[10px] text-gray-400">Lending — Peer-to-Pool</p>
+              </div>
+            </a>
+            <a href="https://app.splash.trade" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-gray-100 rounded-xl hover:border-orange-200 hover:bg-orange-50/30 transition-all">
+              <div className="w-9 h-9 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-orange-600 font-bold text-sm">SP</span></div>
+              <div>
+                <p className="text-sm font-semibold text-navy">Splash</p>
+                <p className="text-[10px] text-gray-400">DEX — Concentrated Liquidity</p>
+              </div>
+            </a>
+            <a href="https://www.jpg.store" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-gray-100 rounded-xl hover:border-pink-200 hover:bg-pink-50/30 transition-all">
+              <div className="w-9 h-9 bg-pink-100 rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-pink-600 font-bold text-sm">JPG</span></div>
+              <div>
+                <p className="text-sm font-semibold text-navy">JPG Store</p>
+                <p className="text-[10px] text-gray-400">Marketplace OTC</p>
+              </div>
+            </a>
+          </div>
         </div>
       )}
     </div>

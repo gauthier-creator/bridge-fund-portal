@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bridge Fund — Organigramme Distribution Marche Primaire</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --navy: #0A1628;
+    --navy-light: #132035;
+    --blue: #1E3A5F;
+    --blue-mid: #2563EB;
+    --blue-accent: #3B82F6;
+    --gold: #C8A951;
+    --gold-light: #E8D48B;
+    --gold-dark: #A68B3C;
+    --green: #10B981;
+    --green-dark: #059669;
+    --purple: #8B5CF6;
+    --purple-dark: #7C3AED;
+    --red: #EF4444;
+    --orange: #F59E0B;
+    --cyan: #06B6D4;
+    --white: #FFFFFF;
+    --gray-100: #F1F5F9;
+    --gray-200: #E2E8F0;
+    --gray-300: #CBD5E1;
+    --gray-400: #94A3B8;
+    --gray-500: #64748B;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --text: #F8FAFC;
+    --text-muted: #94A3B8;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--navy);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ══════════════════════════════════════ */
+  /* HEADER                                 */
+  /* ══════════════════════════════════════ */
+  .header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+    border-bottom: 1px solid rgba(200, 169, 81, 0.3);
+    padding: 28px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  .header-left { display: flex; align-items: center; gap: 20px; }
+  .logo-mark {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px; color: var(--navy);
+    box-shadow: 0 4px 12px rgba(200, 169, 81, 0.3);
+  }
+  .header-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .header-subtitle { font-size: 13px; color: var(--gold); font-weight: 500; margin-top: 2px; letter-spacing: 1.5px; text-transform: uppercase; }
+  .header-meta { text-align: right; }
+  .header-meta span { display: block; font-size: 11px; color: var(--gray-400); }
+  .header-meta .confidential { color: var(--gold); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; font-size: 10px; }
+
+  /* ══════════════════════════════════════ */
+  /* MAIN CANVAS                            */
+  /* ══════════════════════════════════════ */
+  .canvas {
+    position: relative;
+    width: 1400px;
+    margin: 0 auto;
+    padding: 40px 0 60px;
+    min-height: 1700px;
+  }
+
+  /* ══════════════════════════════════════ */
+  /* SECTION LABELS                         */
+  /* ══════════════════════════════════════ */
+  .section-label {
+    position: absolute;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gray-500);
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+  .section-label::before {
+    content: '';
+    display: block;
+    width: 1px;
+    height: 40px;
+    background: var(--gray-600);
+    margin: 0 auto 8px;
+  }
+
+  /* ══════════════════════════════════════ */
+  /* NODE BOXES                             */
+  /* ══════════════════════════════════════ */
+  .node {
+    position: absolute;
+    border-radius: 14px;
+    padding: 0;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: default;
+  }
+  .node:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .node-header {
+    padding: 14px 20px 12px;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .node-header .icon {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .node-body {
+    padding: 12px 20px 16px;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--gray-300);
+  }
+  .node-body li {
+    list-style: none;
+    padding-left: 16px;
+    position: relative;
+  }
+  .node-body li::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 9px;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+  }
+
+  /* ── Color Themes ── */
+  /* Investors - Gold */
+  .node--investor {
+    background: linear-gradient(135deg, #1C1608 0%, #2A1F0A 100%);
+    border: 1px solid rgba(200, 169, 81, 0.35);
+    box-shadow: 0 8px 32px rgba(200, 169, 81, 0.1);
+  }
+  .node--investor .node-header { background: linear-gradient(135deg, var(--gold-dark), var(--gold)); color: var(--navy); }
+  .node--investor .icon { background: rgba(10,22,40,0.3); color: var(--navy); }
+  .node--investor li::before { background: var(--gold); }
+
+  /* Distributeur - Blue */
+  .node--distributor {
+    background: linear-gradient(135deg, #0C1929 0%, #112240 100%);
+    border: 1px solid rgba(37, 99, 235, 0.3);
+    box-shadow: 0 8px 32px rgba(37, 99, 235, 0.08);
+  }
+  .node--distributor .node-header { background: linear-gradient(135deg, #1D4ED8, var(--blue-mid)); color: white; }
+  .node--distributor .icon { background: rgba(255,255,255,0.15); }
+  .node--distributor li::before { background: var(--blue-accent); }
+
+  /* GP - Dark Blue */
+  .node--gp {
+    background: linear-gradient(135deg, #0B0F1A 0%, #111827 100%);
+    border: 1px solid rgba(100, 116, 139, 0.3);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+  .node--gp .node-header { background: linear-gradient(135deg, #1E293B, #334155); color: white; }
+  .node--gp .icon { background: rgba(255,255,255,0.1); }
+  .node--gp li::before { background: var(--gray-400); }
+
+  /* AIFM - Red/Orange */
+  .node--aifm {
+    background: linear-gradient(135deg, #1A0A0A 0%, #2D1212 100%);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    box-shadow: 0 8px 32px rgba(239, 68, 68, 0.06);
+  }
+  .node--aifm .node-header { background: linear-gradient(135deg, #DC2626, #EF4444); color: white; }
+  .node--aifm .icon { background: rgba(255,255,255,0.15); }
+  .node--aifm li::before { background: var(--red); }
+
+  /* Fund - Cyan */
+  .node--fund {
+    background: linear-gradient(135deg, #062029 0%, #0A3040 100%);
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    box-shadow: 0 8px 32px rgba(6, 182, 212, 0.08);
+  }
+  .node--fund .node-header { background: linear-gradient(135deg, #0891B2, #06B6D4); color: white; }
+  .node--fund .icon { background: rgba(255,255,255,0.15); }
+  .node--fund li::before { background: var(--cyan); }
+
+  /* SPV / Deals - Green */
+  .node--spv {
+    background: linear-gradient(135deg, #061A14 0%, #0A2920 100%);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    box-shadow: 0 8px 32px rgba(16, 185, 129, 0.06);
+  }
+  .node--spv .node-header { background: linear-gradient(135deg, var(--green-dark), var(--green)); color: white; }
+  .node--spv .icon { background: rgba(255,255,255,0.15); }
+  .node--spv li::before { background: var(--green); }
+
+  /* Holdco / Asset - Subtle */
+  .node--holdco {
+    background: linear-gradient(135deg, #111318 0%, #1A1D26 100%);
+    border: 1px solid rgba(100, 116, 139, 0.2);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  }
+  .node--holdco .node-header { background: linear-gradient(135deg, #374151, #4B5563); color: white; font-size: 12px; }
+  .node--holdco .icon { background: rgba(255,255,255,0.08); }
+
+  .node--asset {
+    background: linear-gradient(135deg, #0F1114 0%, #181C24 100%);
+    border: 1px solid rgba(100, 116, 139, 0.15);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  }
+  .node--asset .node-header { background: linear-gradient(135deg, #1F2937, #374151); color: var(--gray-300); font-size: 11px; }
+
+  /* Blockchain / Tech */
+  .node--blockchain {
+    background: linear-gradient(135deg, #140A24 0%, #1E1038 100%);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    box-shadow: 0 8px 32px rgba(139, 92, 246, 0.08);
+  }
+  .node--blockchain .node-header { background: linear-gradient(135deg, var(--purple-dark), var(--purple)); color: white; }
+  .node--blockchain .icon { background: rgba(255,255,255,0.15); }
+  .node--blockchain li::before { background: var(--purple); }
+
+  /* Custody */
+  .node--custody {
+    background: linear-gradient(135deg, #1A1406 0%, #2E2410 100%);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    box-shadow: 0 8px 32px rgba(245, 158, 11, 0.06);
+  }
+  .node--custody .node-header { background: linear-gradient(135deg, #D97706, var(--orange)); color: white; }
+  .node--custody .icon { background: rgba(255,255,255,0.15); }
+  .node--custody li::before { background: var(--orange); }
+
+  /* Token box */
+  .node--token {
+    background: linear-gradient(135deg, #18082A 0%, #24103E 100%);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    box-shadow: 0 8px 32px rgba(168, 85, 247, 0.08);
+  }
+  .node--token .node-header { background: linear-gradient(135deg, #7C3AED, #A855F7); color: white; }
+  .node--token .icon { background: rgba(255,255,255,0.15); }
+  .node--token li::before { background: #A855F7; }
+
+  /* ══════════════════════════════════════ */
+  /* SHARE CLASS PILLS                      */
+  /* ══════════════════════════════════════ */
+  .share-classes {
+    position: absolute;
+    display: flex;
+    gap: 12px;
+  }
+  .share-pill {
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.5;
+  }
+  .share-pill--1 {
+    background: linear-gradient(135deg, #1E3A5F, #2563EB);
+    border: 1px solid rgba(37, 99, 235, 0.4);
+    color: white;
+  }
+  .share-pill--2 {
+    background: linear-gradient(135deg, #1C1608, #2A1F0A);
+    border: 1px solid rgba(200, 169, 81, 0.4);
+    color: var(--gold-light);
+  }
+
+  /* ══════════════════════════════════════ */
+  /* SVG CONNECTORS                         */
+  /* ══════════════════════════════════════ */
+  .connectors {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .node { z-index: 1; }
+  .connector-line {
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+  }
+  .connector-line--gold { stroke: rgba(200, 169, 81, 0.4); }
+  .connector-line--blue { stroke: rgba(37, 99, 235, 0.35); }
+  .connector-line--gray { stroke: rgba(100, 116, 139, 0.25); }
+  .connector-line--green { stroke: rgba(16, 185, 129, 0.3); }
+  .connector-line--red { stroke: rgba(239, 68, 68, 0.25); }
+  .connector-line--purple { stroke: rgba(139, 92, 246, 0.3); }
+  .connector-line--cyan { stroke: rgba(6, 182, 212, 0.3); }
+  .connector-line--orange { stroke: rgba(245, 158, 11, 0.3); }
+  .connector-dashed { stroke-dasharray: 6 4; }
+
+  .connector-arrow {
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Flow label on connector */
+  .flow-label {
+    position: absolute;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    z-index: 2;
+  }
+  .flow-label--gold { background: rgba(200, 169, 81, 0.15); color: var(--gold); border: 1px solid rgba(200, 169, 81, 0.2); }
+  .flow-label--blue { background: rgba(37, 99, 235, 0.12); color: var(--blue-accent); border: 1px solid rgba(37, 99, 235, 0.2); }
+  .flow-label--green { background: rgba(16, 185, 129, 0.12); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.2); }
+  .flow-label--red { background: rgba(239, 68, 68, 0.1); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.2); }
+  .flow-label--purple { background: rgba(139, 92, 246, 0.12); color: #A78BFA; border: 1px solid rgba(139, 92, 246, 0.2); }
+  .flow-label--cyan { background: rgba(6, 182, 212, 0.12); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.2); }
+  .flow-label--orange { background: rgba(245, 158, 11, 0.12); color: var(--orange); border: 1px solid rgba(245, 158, 11, 0.2); }
+  .flow-label--gray { background: rgba(100, 116, 139, 0.1); color: var(--gray-400); border: 1px solid rgba(100, 116, 139, 0.2); }
+
+  /* ══════════════════════════════════════ */
+  /* ZONE BACKGROUNDS                       */
+  /* ══════════════════════════════════════ */
+  .zone {
+    position: absolute;
+    border-radius: 20px;
+    z-index: 0;
+  }
+  .zone-label {
+    position: absolute;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 8px;
+    z-index: 1;
+  }
+
+  .zone--distribution {
+    border: 1px dashed rgba(37, 99, 235, 0.15);
+    background: rgba(37, 99, 235, 0.02);
+  }
+  .zone-label--distribution {
+    color: var(--blue-accent);
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(37, 99, 235, 0.15);
+  }
+
+  .zone--governance {
+    border: 1px dashed rgba(100, 116, 139, 0.15);
+    background: rgba(100, 116, 139, 0.02);
+  }
+  .zone-label--governance {
+    color: var(--gray-400);
+    background: rgba(100, 116, 139, 0.08);
+    border: 1px solid rgba(100, 116, 139, 0.15);
+  }
+
+  .zone--blockchain {
+    border: 1px dashed rgba(139, 92, 246, 0.15);
+    background: rgba(139, 92, 246, 0.02);
+  }
+  .zone-label--blockchain {
+    color: #A78BFA;
+    background: rgba(139, 92, 246, 0.08);
+    border: 1px solid rgba(139, 92, 246, 0.15);
+  }
+
+  .zone--assets {
+    border: 1px dashed rgba(16, 185, 129, 0.15);
+    background: rgba(16, 185, 129, 0.02);
+  }
+  .zone-label--assets {
+    color: var(--green);
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.15);
+  }
+
+  /* ══════════════════════════════════════ */
+  /* FOOTER                                 */
+  /* ══════════════════════════════════════ */
+  .footer {
+    border-top: 1px solid rgba(200, 169, 81, 0.15);
+    padding: 20px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--gray-500);
+  }
+  .footer-legend {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 500;
+  }
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  /* ══════════════════════════════════════ */
+  /* RESPONSIVE / PRINT                     */
+  /* ══════════════════════════════════════ */
+  @media print {
+    body { background: white; color: #1a1a1a; }
+    .node { break-inside: avoid; }
+  }
+
+  .wrapper {
+    width: 1400px;
+    margin: 0 auto;
+    overflow-x: auto;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- HEADER                                      -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo-mark">BF</div>
+    <div>
+      <div class="header-title">Bridge Fund SCSp</div>
+      <div class="header-subtitle">Distribution Marche Primaire &mdash; Architecture</div>
+    </div>
+  </div>
+  <div class="header-meta">
+    <span class="confidential">Confidentiel</span>
+    <span>Mars 2026 &bull; Luxembourg</span>
+    <span>React 19 + Supabase + Cardano Preprod</span>
+  </div>
+</div>
+
+<div class="wrapper">
+<div class="canvas">
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- ZONES                                    -->
+  <!-- ═══════════════════════════════════════ -->
+
+  <!-- Distribution zone -->
+  <div class="zone zone--distribution" style="left:320px; top:0; width:760px; height:340px;"></div>
+  <div class="zone-label zone-label--distribution" style="left:340px; top:10px;">Distribution</div>
+
+  <!-- Governance zone -->
+  <div class="zone zone--governance" style="left:20px; top:360px; width:440px; height:310px;"></div>
+  <div class="zone-label zone-label--governance" style="left:40px; top:370px;">Gouvernance &amp; Compliance</div>
+
+  <!-- Blockchain / Token zone -->
+  <div class="zone zone--blockchain" style="left:820px; top:360px; width:560px; height:310px;"></div>
+  <div class="zone-label zone-label--blockchain" style="left:840px; top:370px;">Tokenisation Cardano</div>
+
+  <!-- Assets zone -->
+  <div class="zone zone--assets" style="left:180px; top:900px; width:1040px; height:430px;"></div>
+  <div class="zone-label zone-label--assets" style="left:200px; top:910px;">Sous-jacents</div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SVG CONNECTORS                           -->
+  <!-- ═══════════════════════════════════════ -->
+  <svg class="connectors" viewBox="0 0 1400 1700" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <marker id="arrow-gold" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L8,3 L0,6" fill="none" stroke="rgba(200,169,81,0.6)" stroke-width="1.2"/>
+      </marker>
+      <marker id="arrow-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L8,3 L0,6" fill="none" stroke="rgba(37,99,235,0.5)" stroke-width="1.2"/>
+      </marker>
+      <marker id="arrow-gray" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L8,3 L0,6" fill="none" stroke="rgba(100,116,139,0.4)" stroke-width="1.2"/>
+      </marker>
+      <marker id="arrow-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L8,3 L0,6" fill="none" stroke="rgba(16,185,129,0.5)" stroke-width="1.2"/>
+      </marker>
+      <marker id="arrow-red" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L8,3 L0,6" fill="none" stroke="rgba(239,68,68,0.5)" stroke-width="1.2"/>
+      </marker>
+      <marker id="arrow-purple" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L8,3 L0,6" fill="none" stroke="rgba(139,92,246,0.5)" stroke-width="1.2"/>
+      </marker>
+      <marker id="arrow-cyan" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L8,3 L0,6" fill="none" stroke="rgba(6,182,212,0.5)" stroke-width="1.2"/>
+      </marker>
+      <marker id="arrow-orange" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L8,3 L0,6" fill="none" stroke="rgba(245,158,11,0.5)" stroke-width="1.2"/>
+      </marker>
+    </defs>
+
+    <!-- LP → Distributeur -->
+    <path d="M700,170 L700,200 Q700,210 700,210 L570,210 L570,230" class="connector-line connector-line--gold" marker-end="url(#arrow-gold)"/>
+
+    <!-- LP → Share Class 2 (direct) -->
+    <path d="M700,170 L700,200 Q700,210 700,210 L830,210 L830,230" class="connector-line connector-line--gold" marker-end="url(#arrow-gold)"/>
+
+    <!-- Distributeur → Custody -->
+    <path d="M500,330 L500,345 Q500,355 510,355 L640,355 Q650,355 650,345 L650,360" class="connector-line connector-line--blue" marker-end="url(#arrow-blue)" class="connector-dashed"/>
+
+    <!-- Distributeur → Share Class 1 -->
+    <path d="M570,330 L570,390 Q570,400 580,400 L605,400" class="connector-line connector-line--blue" marker-end="url(#arrow-blue)"/>
+
+    <!-- Share classes → SLP Fund -->
+    <path d="M680,430 L680,480" class="connector-line connector-line--cyan" marker-end="url(#arrow-cyan)"/>
+    <path d="M830,280 L830,400 Q830,410 820,410 L760,410 L760,480" class="connector-line connector-line--gold" marker-end="url(#arrow-gold)"/>
+
+    <!-- GP → SLP Fund -->
+    <path d="M300,530 L460,530" class="connector-line connector-line--gray" marker-end="url(#arrow-gray)"/>
+
+    <!-- AIFM → SLP Fund (dashed) -->
+    <path d="M290,460 L460,460 Q470,460 470,470 L470,490" class="connector-line connector-line--red connector-dashed" stroke-dasharray="6 4" marker-end="url(#arrow-red)"/>
+
+    <!-- SLP Fund → SPV Synth -->
+    <path d="M760,580 L760,610 Q760,620 770,620 L920,620 Q930,620 930,610 L930,590" class="connector-line connector-line--purple" marker-end="url(#arrow-purple)"/>
+
+    <!-- SPV Synth → Custody -->
+    <path d="M1000,520 L1050,520 Q1060,520 1060,470 L1060,400 Q1060,390 1050,390 L780,390 Q770,390 770,380 L770,370" class="connector-line connector-line--orange connector-dashed" stroke-dasharray="6 4" marker-end="url(#arrow-orange)"/>
+
+    <!-- SLP Fund → SPV Deal 1 -->
+    <path d="M620,600 L620,690 Q620,700 620,700 L400,700 L400,730" class="connector-line connector-line--green" marker-end="url(#arrow-green)"/>
+
+    <!-- SLP Fund → SPV Deal 2 -->
+    <path d="M760,600 L760,690 Q760,700 760,700 L980,700 L980,730" class="connector-line connector-line--green" marker-end="url(#arrow-green)"/>
+
+    <!-- SPV Deal 1 → Holdco 1 -->
+    <path d="M400,830 L400,880" class="connector-line connector-line--green" marker-end="url(#arrow-green)"/>
+
+    <!-- SPV Deal 2 → Holdco 2 -->
+    <path d="M980,830 L980,880" class="connector-line connector-line--green" marker-end="url(#arrow-green)"/>
+
+    <!-- Holdco 1 → Asset 1 -->
+    <path d="M400,970 L400,1020" class="connector-line connector-line--gray" marker-end="url(#arrow-gray)"/>
+
+    <!-- Holdco 2 → Asset 2 -->
+    <path d="M980,970 L980,1020" class="connector-line connector-line--gray" marker-end="url(#arrow-gray)"/>
+
+    <!-- Blockchain Cardano → SPV Synth (mint) -->
+    <path d="M1100,480 L1020,480 Q1010,480 1010,490 L1010,500" class="connector-line connector-line--purple" marker-end="url(#arrow-purple)"/>
+
+    <!-- Blockchain → Fund registry -->
+    <path d="M1100,520 L1060,520 Q1050,520 1050,540 L820,560" class="connector-line connector-line--purple connector-dashed" stroke-dasharray="6 4" marker-end="url(#arrow-purple)"/>
+
+  </svg>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- FLOW LABELS                              -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="flow-label flow-label--gold" style="left:585px; top:194px;">Souscription FIAT/Crypto</div>
+  <div class="flow-label flow-label--blue" style="left:525px; top:342px;">KYC + Custody</div>
+  <div class="flow-label flow-label--red" style="left:310px; top:440px;">Validation &amp; NAV</div>
+  <div class="flow-label flow-label--gray" style="left:310px; top:518px;">Gouvernance</div>
+  <div class="flow-label flow-label--purple" style="left:790px; top:612px;">Emission tokens sBF</div>
+  <div class="flow-label flow-label--orange" style="left:820px; top:378px;">Custody sBF</div>
+  <div class="flow-label flow-label--green" style="left:300px; top:694px;">Deploiement capital</div>
+  <div class="flow-label flow-label--green" style="left:820px; top:694px;">Deploiement capital</div>
+  <div class="flow-label flow-label--purple" style="left:1040px; top:460px;">Mint / CIP-113</div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- NODES                                    -->
+  <!-- ═══════════════════════════════════════ -->
+
+  <!-- ── LP (Investor) ── -->
+  <div class="node node--investor" style="left:540px; top:20px; width:320px;">
+    <div class="node-header">
+      <div class="icon">LP</div>
+      Investisseur (LP)
+    </div>
+    <div class="node-body">
+      <ul>
+        <li>Investisseur qualifie (> 125 000 EUR)</li>
+        <li>Souscription en FIAT ou Crypto</li>
+        <li>Wallet Cardano dedie (Preprod)</li>
+        <li>Recoit tokens synthetiques sBF</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── Distributeur (Intermediary) ── -->
+  <div class="node node--distributor" style="left:360px; top:230px; width:280px;">
+    <div class="node-header">
+      <div class="icon">CGP</div>
+      Distributeur (Intermediaire)
+    </div>
+    <div class="node-body">
+      <ul>
+        <li>Presentation du Fonds aux clients</li>
+        <li>Gestion du parcours de souscription</li>
+        <li>Transmission communications investisseurs</li>
+        <li>Custody wallet pour compte client</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── Share Class pills ── -->
+  <div class="share-classes" style="left:590px; top:395px;">
+    <div class="share-pill share-pill--1">
+      <div>Share Class 1</div>
+      <div style="font-weight:400; font-size:10px; opacity:0.8;">Intermediee (via CGP)</div>
+    </div>
+    <div class="share-pill share-pill--2">
+      <div>Share Class 2</div>
+      <div style="font-weight:400; font-size:10px; opacity:0.8;">Direct (LP qualifie)</div>
+    </div>
+  </div>
+
+  <!-- ── Custody ── -->
+  <div class="node node--custody" style="left:660px; top:262px; width:260px;">
+    <div class="node-header">
+      <div class="icon">&#128274;</div>
+      Custody &mdash; Parts du Fond
+    </div>
+    <div class="node-body">
+      <ul>
+        <li>Custody tokens sBF pour clients CGP</li>
+        <li>Wallet Cardano dedie intermediaire</li>
+        <li>Whitelist CIP-113 automatique</li>
+        <li>Distribution aux investisseurs finaux</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── GP ── -->
+  <div class="node node--gp" style="left:30px; top:480px; width:270px;">
+    <div class="node-header">
+      <div class="icon">GP</div>
+      GP &mdash; Bridge GP Sarl
+    </div>
+    <div class="node-body">
+      <ul>
+        <li>Representation legale et signature</li>
+        <li>Convocation et gouvernance des associes</li>
+        <li>Supervision des delegataires</li>
+        <li>Decisions strategiques (deploiement)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── AIFM ── -->
+  <div class="node node--aifm" style="left:30px; top:400px; width:270px;">
+    <div class="node-header">
+      <div class="icon">&#9878;</div>
+      AIFM &mdash; Prestataire Externe
+    </div>
+    <div class="node-body">
+      <ul>
+        <li>Validation souscriptions et rachats</li>
+        <li>KYC/AML et onboarding (Supabase Auth)</li>
+        <li>Tenue des registres du fonds</li>
+        <li>Calcul et validation de la NAV</li>
+        <li>Reporting operationnel et distribution</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── SLP Bridge Fund ── -->
+  <div class="node node--fund" style="left:460px; top:480px; width:310px;">
+    <div class="node-header">
+      <div class="icon">SLP</div>
+      SLP Bridge Fund Sarl
+    </div>
+    <div class="node-body">
+      <ul>
+        <li>Fonds de dette privee tokenise</li>
+        <li>Juridiction: Luxembourg (CSSF)</li>
+        <li>Forme: SCSp (Societe en Commandite Speciale)</li>
+        <li>NAV/part: 1 043,27 EUR</li>
+        <li>Taille cible: 50M EUR</li>
+        <li>Registry on-chain CIP-25 (NFT)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── SPV Synthetique ── -->
+  <div class="node node--token" style="left:840px; top:490px; width:280px;">
+    <div class="node-header">
+      <div class="icon">&#9830;</div>
+      SPV Synthetique (Tokens)
+    </div>
+    <div class="node-body">
+      <ul>
+        <li>Emet tokens synthetiques sBF</li>
+        <li>Backed 1:1 par security tokens BF</li>
+        <li>Lock BF dans Vault on-chain</li>
+        <li>Mint sBF librement transferables</li>
+        <li>Burn sBF → Unlock BF (redemption)</li>
+        <li>Policy: Native Script Cardano</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── Blockchain Cardano ── -->
+  <div class="node node--blockchain" style="left:1100px; top:400px; width:270px;">
+    <div class="node-header">
+      <div class="icon">&#9883;</div>
+      Blockchain Cardano
+    </div>
+    <div class="node-body">
+      <ul>
+        <li>Preprod Testnet</li>
+        <li>Native Scripts (non Plutus)</li>
+        <li>Lucid v0.10.10 + Blockfrost API</li>
+        <li>CIP-25 : NFT Registry</li>
+        <li>CIP-113 : Whitelist, Freeze, Cap</li>
+        <li>CIP-674 : Messages on-chain</li>
+        <li>3 scripts par fonds deployes</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- DEAL STRUCTURE                           -->
+  <!-- ═══════════════════════════════════════ -->
+
+  <!-- ── SPV Deal 1 ── -->
+  <div class="node node--spv" style="left:260px; top:730px; width:280px;">
+    <div class="node-header">
+      <div class="icon">1</div>
+      SPV Value Add &mdash; Deal 1
+    </div>
+    <div class="node-body">
+      <ul>
+        <li>Vehicule dedie au deal 1</li>
+        <li>Pret garanti a PME europeenne</li>
+        <li>Maturite 12-36 mois</li>
+        <li>Garantie reelle</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── SPV Deal 2 ── -->
+  <div class="node node--spv" style="left:840px; top:730px; width:280px;">
+    <div class="node-header">
+      <div class="icon">2</div>
+      SPV Value Add &mdash; Deal 2
+    </div>
+    <div class="node-body">
+      <ul>
+        <li>Vehicule dedie au deal 2</li>
+        <li>Pret garanti a PME europeenne</li>
+        <li>Maturite 12-36 mois</li>
+        <li>Garantie reelle</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── Holdco 1 ── -->
+  <div class="node node--holdco" style="left:300px; top:880px; width:200px;">
+    <div class="node-header">
+      <div class="icon">H1</div>
+      Holdco 1
+    </div>
+  </div>
+
+  <!-- ── Holdco 2 ── -->
+  <div class="node node--holdco" style="left:880px; top:880px; width:200px;">
+    <div class="node-header">
+      <div class="icon">H2</div>
+      Holdco 2
+    </div>
+  </div>
+
+  <!-- ── Asset 1 ── -->
+  <div class="node node--asset" style="left:310px; top:1020px; width:180px;">
+    <div class="node-header">
+      <div class="icon">A1</div>
+      Asset 1 (Sous-jacent)
+    </div>
+  </div>
+
+  <!-- ── Asset 2 ── -->
+  <div class="node node--asset" style="left:890px; top:1020px; width:180px;">
+    <div class="node-header">
+      <div class="icon">A2</div>
+      Asset 2 (Sous-jacent)
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- TECH STACK BAR (bottom)                  -->
+  <!-- ═══════════════════════════════════════ -->
+  <div style="
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 16px;
+    padding: 14px 28px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(100, 116, 139, 0.15);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+  ">
+    <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:var(--gray-400); font-weight:600; letter-spacing:0.5px;">
+      <span style="color:var(--cyan);">&#9679;</span> Supabase (PostgreSQL + RLS + Auth)
+    </div>
+    <div style="width:1px; background:var(--gray-700);"></div>
+    <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:var(--gray-400); font-weight:600; letter-spacing:0.5px;">
+      <span style="color:var(--purple);">&#9679;</span> Cardano Preprod (Lucid + Blockfrost)
+    </div>
+    <div style="width:1px; background:var(--gray-700);"></div>
+    <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:var(--gray-400); font-weight:600; letter-spacing:0.5px;">
+      <span style="color:var(--blue-accent);">&#9679;</span> React 19 + Vite 7 + Tailwind v4
+    </div>
+    <div style="width:1px; background:var(--gray-700);"></div>
+    <div style="display:flex; align-items:center; gap:6px; font-size:10px; color:var(--gray-400); font-weight:600; letter-spacing:0.5px;">
+      <span style="color:var(--green);">&#9679;</span> Edge Functions (Deno/TypeScript)
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!-- FOOTER                                      -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="footer">
+  <div class="footer-legend">
+    <span style="font-weight:600; color:var(--gray-400); letter-spacing:1px; text-transform:uppercase; font-size:9px;">Legende :</span>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--gold);"></div> Investisseurs</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--blue-accent);"></div> Distribution</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--red);"></div> AIFM / Compliance</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--cyan);"></div> Fonds</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--purple);"></div> Blockchain / Tokens</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--green);"></div> Sous-jacents</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--orange);"></div> Custody</div>
+  </div>
+  <div>
+    <span style="color:var(--gold); font-weight:600;">Bridge Fund Portal</span> &bull; Document Confidentiel &bull; Mars 2026
+  </div>
+</div>
+
+</body>
+</html>

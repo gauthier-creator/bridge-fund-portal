@@ -173,9 +173,10 @@ Deno.serve(async (req: Request) => {
       // Metadata
       .attachMetadata(674, {
         msg: [
-          `Vault: Burn ${tokenCount} ${synAssetLabel} → Unlock ${tokenCount} ${secAssetLabel}`,
-          `Security sent to: ${userAddress.slice(0, 25)}...`,
-          `Ratio: 1:1 | Redemption`,
+          `Burn ${tokenCount} ${synAssetLabel}`,
+          `Unlock ${tokenCount} ${secAssetLabel}`,
+          `To: ${userAddress.slice(0, 48)}`,
+          `Ratio 1:1 | Redemption`,
         ],
       });
 

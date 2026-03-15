@@ -74,8 +74,8 @@ Deno.serve(async (req: Request) => {
       .attachMetadata(721, {
         [policyId]: {
           [assetLabel]: {
-            name: fundName,
-            description: `On-chain registry for ${fundName} — Bridge Fund Platform`,
+            name: (fundName).slice(0, 60),
+            description: `Registry ${(fundName).slice(0, 40)}`,
             platform: "Bridge Fund",
             type: "Fund Registry",
             created: new Date().toISOString().split("T")[0],

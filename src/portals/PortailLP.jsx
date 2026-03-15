@@ -830,6 +830,16 @@ function Collateral({ toast }) {
   const availableTokens = totalSecurityTokens - lockedTokens;
   const syntheticTokens = vaultPositions.filter((p) => p.status === "locked").reduce((s, p) => s + p.synthetic_token_count, 0);
 
+  // Compute synthetic token breakdown per fund
+  const syntheticByFund = funds.map((f) => {
+    const fundPositions = vaultPositions.filter((p) => p.fund_id === f.id && p.status === "locked");
+    const sBF = fundPositions.reduce((s, p) => s + (p.synthetic_token_count || 0), 0);
+    const locked = fundPositions.reduce((s, p) => s + (p.security_token_count || 0), 0);
+    const fundOrders = myOrders.filter((o) => o.fundId === f.id);
+    const totalParts = fundOrders.reduce((s, o) => s + Math.floor(o.montant / NAV_PER_PART), 0);
+    return { ...f, sBF, locked, totalParts, available: totalParts - locked, positions: fundPositions.length };
+  }).filter((f) => f.totalParts > 0 || f.sBF > 0);
+
   // Load funds and vault positions
   useEffect(() => {
     (async () => {
@@ -978,6 +988,147 @@ function Collateral({ toast }) {
         )}
       </div>
 
+      {/* Synthetic tokens per fund */}
+      {syntheticByFund.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-navy">Mes tokens synthetiques par fonds</h3>
+          </div>
+          <div className="grid gap-4 p-5">
+            {syntheticByFund.map((f) => (
+              <div key={f.id} className="flex items-center justify-between p-4 bg-cream/30 border border-gray-100 rounded-xl">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-gold/15 rounded-xl flex items-center justify-center">
+                    <span className="text-gold font-bold text-xs">sBF</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-navy">{f.fund_name}</p>
+                    <p className="text-xs text-gray-400">{f.positions} position{f.positions > 1 ? "s" : ""} active{f.positions > 1 ? "s" : ""}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-8 text-right">
+                  <div>
+                    <p className="text-xs text-gray-400">Parts detenues</p>
+                    <p className="text-sm font-semibold text-navy">{f.totalParts.toLocaleString("fr-FR")}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">BF lockes</p>
+                    <p className="text-sm font-semibold text-navy">{f.locked.toLocaleString("fr-FR")}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">sBF detenus</p>
+                    <p className="text-sm font-bold text-emerald-600">{f.sBF.toLocaleString("fr-FR")}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Disponible</p>
+                    <p className="text-sm font-semibold text-gray-500">{f.available.toLocaleString("fr-FR")} BF</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* DeFi Pools — External protocols */}
+      {syntheticTokens > 0 && (
+        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-navy">DeFi Pools</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Utilisez vos sBF comme collateral ou liquidite sur les protocoles DeFi Cardano</p>
+            </div>
+            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">{syntheticTokens.toLocaleString("fr-FR")} sBF disponibles</span>
+          </div>
+          <div className="grid grid-cols-2 gap-4 p-5">
+            {/* Minswap */}
+            <a href="https://app.minswap.org/swap" target="_blank" rel="noopener noreferrer" className="group flex items-start gap-4 p-4 border border-gray-100 rounded-xl hover:border-blue-200 hover:bg-blue-50/30 transition-all">
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <span className="text-blue-600 font-bold text-sm">M</span>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-navy group-hover:text-blue-700">Minswap</p>
+                  <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">DEX</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Swap sBF, fournir de la liquidite dans les pools sBF/ADA. TVL ~$50M.</p>
+                <p className="text-xs text-blue-500 mt-2 font-medium group-hover:underline">Ouvrir Minswap →</p>
+              </div>
+            </a>
+            {/* SundaeSwap */}
+            <a href="https://app.sundae.fi/swap" target="_blank" rel="noopener noreferrer" className="group flex items-start gap-4 p-4 border border-gray-100 rounded-xl hover:border-purple-200 hover:bg-purple-50/30 transition-all">
+              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <span className="text-purple-600 font-bold text-sm">S</span>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-navy group-hover:text-purple-700">SundaeSwap</p>
+                  <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">DEX</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">DEX Cardano avec pools de liquidite et yield farming pour tokens natifs.</p>
+                <p className="text-xs text-purple-500 mt-2 font-medium group-hover:underline">Ouvrir SundaeSwap →</p>
+              </div>
+            </a>
+            {/* Liqwid */}
+            <a href="https://app.liqwid.finance" target="_blank" rel="noopener noreferrer" className="group flex items-start gap-4 p-4 border border-gray-100 rounded-xl hover:border-cyan-200 hover:bg-cyan-50/30 transition-all">
+              <div className="w-10 h-10 bg-cyan-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <span className="text-cyan-600 font-bold text-sm">L</span>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-navy group-hover:text-cyan-700">Liqwid Finance</p>
+                  <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">Lending</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Deposez vos sBF comme collateral et empruntez ADA ou stablecoins (iUSD, DJED).</p>
+                <p className="text-xs text-cyan-500 mt-2 font-medium group-hover:underline">Ouvrir Liqwid →</p>
+              </div>
+            </a>
+            {/* Lenfi (ex-Aada) */}
+            <a href="https://app.lenfi.io" target="_blank" rel="noopener noreferrer" className="group flex items-start gap-4 p-4 border border-gray-100 rounded-xl hover:border-emerald-200 hover:bg-emerald-50/30 transition-all">
+              <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <span className="text-emerald-600 font-bold text-sm">LF</span>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-navy group-hover:text-emerald-700">Lenfi</p>
+                  <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">Lending</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Protocole de pret/emprunt decentralise. Utilisez sBF comme collateral peer-to-pool.</p>
+                <p className="text-xs text-emerald-500 mt-2 font-medium group-hover:underline">Ouvrir Lenfi →</p>
+              </div>
+            </a>
+            {/* Splash */}
+            <a href="https://app.splash.trade" target="_blank" rel="noopener noreferrer" className="group flex items-start gap-4 p-4 border border-gray-100 rounded-xl hover:border-orange-200 hover:bg-orange-50/30 transition-all">
+              <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <span className="text-orange-600 font-bold text-sm">SP</span>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-navy group-hover:text-orange-700">Splash</p>
+                  <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">DEX</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">DEX avec concentrated liquidity et stable swap pools pour tokens Cardano.</p>
+                <p className="text-xs text-orange-500 mt-2 font-medium group-hover:underline">Ouvrir Splash →</p>
+              </div>
+            </a>
+            {/* JPG Store */}
+            <a href="https://www.jpg.store" target="_blank" rel="noopener noreferrer" className="group flex items-start gap-4 p-4 border border-gray-100 rounded-xl hover:border-pink-200 hover:bg-pink-50/30 transition-all">
+              <div className="w-10 h-10 bg-pink-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <span className="text-pink-600 font-bold text-sm">JPG</span>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-navy group-hover:text-pink-700">JPG Store</p>
+                  <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">Marketplace</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Marketplace OTC pour tokens natifs Cardano. Echangez sBF sur le marche secondaire.</p>
+                <p className="text-xs text-pink-500 mt-2 font-medium group-hover:underline">Ouvrir JPG Store →</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Transaction result */}
       {txResult && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
@@ -1017,7 +1168,7 @@ function Collateral({ toast }) {
             <tbody>
               {lockedPositions.map((p) => (
                 <tr key={p.id} className="border-b border-gray-50 hover:bg-cream/50 transition-colors">
-                  <td className="px-5 py-3 text-xs text-gray-500">{new Date(p.locked_at).toLocaleDateString("fr-FR")}</td>
+                  <td className="px-5 py-3 text-xs text-gray-500">{new Date(p.created_at).toLocaleDateString("fr-FR")}</td>
                   <td className="px-5 py-3 font-mono text-xs text-gray-500">{p.vault_address?.slice(0, 16)}...</td>
                   <td className="px-5 py-3 text-right font-mono text-navy font-medium">{p.security_token_count}</td>
                   <td className="px-5 py-3 text-right font-mono text-emerald-600">{p.synthetic_token_count}</td>
@@ -1060,7 +1211,7 @@ function Collateral({ toast }) {
             <tbody>
               {unlockedPositions.map((p) => (
                 <tr key={p.id} className="border-b border-gray-50">
-                  <td className="px-5 py-3 text-xs text-gray-400">{new Date(p.locked_at).toLocaleDateString("fr-FR")}</td>
+                  <td className="px-5 py-3 text-xs text-gray-400">{new Date(p.created_at).toLocaleDateString("fr-FR")}</td>
                   <td className="px-5 py-3 text-xs text-gray-400">{p.unlocked_at ? new Date(p.unlocked_at).toLocaleDateString("fr-FR") : "—"}</td>
                   <td className="px-5 py-3 text-right font-mono text-gray-500">{p.security_token_count} BF</td>
                   <td className="px-5 py-3">
