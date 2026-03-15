@@ -504,25 +504,17 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
         password: clientData.password,
         fullName: `${clientData.prenom} ${clientData.nom}`.trim(),
         company: clientData.societe || null,
+        kycData: {
+          kyc_status: "validated",
+          person_type: personType,
+          investor_classification: clientData.investorClassification,
+          source_of_funds: clientData.origineFonds,
+          pep_status: clientData.pepStatus,
+          country: clientData.pays,
+          fatca_status: clientData.fatcaCrs,
+          tax_residence: clientData.paysResidenceFiscale,
+        },
       });
-
-      // Persist KYC data on the new profile
-      if (result.user) {
-        try {
-          await updateUserProfile(result.user.id, {
-            kyc_status: "validated",
-            person_type: personType,
-            investor_classification: clientData.investorClassification,
-            source_of_funds: clientData.origineFonds,
-            pep_status: clientData.pepStatus,
-            country: clientData.pays,
-            fatca_status: clientData.fatcaCrs,
-            tax_residence: clientData.paysResidenceFiscale,
-          });
-        } catch (kycErr) {
-          console.error("Failed to persist KYC data:", kycErr);
-        }
-      }
 
       // Refresh client list in parent
       if (onClientsChange) {

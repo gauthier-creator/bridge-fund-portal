@@ -149,7 +149,7 @@ export async function listMyClients() {
 }
 
 // ─── Intermediary: create a client account ───
-export async function createClientAccount({ email, password, fullName, company }) {
+export async function createClientAccount({ email, password, fullName, company, kycData }) {
   const { data: { user: me } } = await supabase.auth.getUser();
   if (!me) throw new Error("Not authenticated");
 
@@ -173,25 +173,32 @@ export async function createClientAccount({ email, password, fullName, company }
     await supabase.auth.setSession(currentSession);
   }
 
-  // Link to intermediary + generate wallet
+  // Link to intermediary + generate wallet + persist KYC via SECURITY DEFINER RPC
   if (data.user) {
-    const updates = { intermediary_id: me.id, company: company || null };
-
-    // Generate a Cardano wallet for this investor
+    let walletAddress = null;
     try {
       const wallet = await generateWallet(data.user.id);
-      if (wallet?.address) updates.wallet_address = wallet.address;
+      if (wallet?.address) walletAddress = wallet.address;
     } catch (err) {
       console.error("Failed to generate wallet:", err);
     }
 
-    // Retry update until the profile row is created by the DB trigger
-    // The intermediary's RLS allows UPDATE on profiles where intermediary_id IS NULL
-    const { data: updated, error: linkErr } = await retryUpdate(
-      "profiles", updates, "id", data.user.id
-    );
+    const { data: linked, error: linkErr } = await supabase.rpc("link_client_to_intermediary", {
+      client_id: data.user.id,
+      inter_id: me.id,
+      p_company: company || null,
+      p_wallet_address: walletAddress,
+      p_kyc_status: kycData?.kyc_status || "pending",
+      p_person_type: kycData?.person_type || "physique",
+      p_investor_classification: kycData?.investor_classification || null,
+      p_source_of_funds: kycData?.source_of_funds || null,
+      p_pep_status: kycData?.pep_status || "non",
+      p_country: kycData?.country || "France",
+      p_fatca_status: kycData?.fatca_status || "non_us",
+      p_tax_residence: kycData?.tax_residence || "France",
+    });
     if (linkErr) console.error("Failed to link client profile:", linkErr.message);
-    else console.log("[Client] Profile linked:", updated?.id);
+    else console.log("[Client] Profile linked via RPC:", linked?.id || data.user.id);
   }
 
   return data;
