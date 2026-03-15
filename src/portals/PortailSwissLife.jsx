@@ -5,7 +5,7 @@ import { useAppContext } from "../context/AppContext";
 import { useAuth } from "../context/AuthContext";
 import { uploadGeneratedPDF } from "../utils/generateDocument";
 import { supabase } from "../lib/supabase";
-import { listMyClients, createClientAccount } from "../services/profileService";
+import { listMyClients, createClientAccount, updateUserProfile } from "../services/profileService";
 import {
   KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls,
   Checkbox, ComplianceAlert, SignaturePad,
@@ -401,11 +401,10 @@ function SouscriptionIntermediee({ toast, fund, clients }) {
    ───────────────────────────────────────────────────── */
 const KYC_STEPS = ["Identité", "Documents", "Connaissance client", "Classification", "Conformité", "Validation"];
 
-function MesClients({ toast }) {
+function MesClients({ toast, clients, onClientsChange }) {
   const { profile, user } = useAuth();
   const { orders } = useAppContext();
-  const [clients, setClients] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!clients.length);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [kycStep, setKycStep] = useState(0);
   const [creating, setCreating] = useState(false);
@@ -455,15 +454,8 @@ function MesClients({ toast }) {
   const setField = (key, val) => setClientData((prev) => ({ ...prev, [key]: val }));
 
   useEffect(() => {
-    if (supabase && user) {
-      listMyClients()
-        .then(setClients)
-        .catch((err) => console.error("Failed to load clients:", err))
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
-  }, [user]);
+    if (clients.length > 0) setLoading(false);
+  }, [clients]);
 
   const handleFileSelect = (docType) => async (e) => {
     const file = e.target.files?.[0];
@@ -508,17 +500,36 @@ function MesClients({ toast }) {
   const handleCreateClient = async () => {
     setCreating(true);
     try {
-      await createClientAccount({
+      const result = await createClientAccount({
         email: clientData.email,
         password: clientData.password,
         fullName: `${clientData.prenom} ${clientData.nom}`.trim(),
         company: clientData.societe || null,
       });
 
-      // Update the newly created client profile with KYC data
-      // In a real app, this would persist all KYC fields
-      const updated = await listMyClients();
-      setClients(updated);
+      // Persist KYC data on the new profile
+      if (result.user) {
+        try {
+          await updateUserProfile(result.user.id, {
+            kyc_status: "validated",
+            person_type: personType,
+            investor_classification: clientData.investorClassification,
+            source_of_funds: clientData.origineFonds,
+            pep_status: clientData.pepStatus,
+            country: clientData.pays,
+            fatca_status: clientData.fatcaCrs,
+            tax_residence: clientData.paysResidenceFiscale,
+          });
+        } catch (kycErr) {
+          console.error("Failed to persist KYC data:", kycErr);
+        }
+      }
+
+      // Refresh client list in parent
+      if (onClientsChange) {
+        const updated = await listMyClients();
+        onClientsChange(updated);
+      }
 
       toast(`Client onboardé avec succès — ${clientData.prenom} ${clientData.nom}`);
       resetOnboarding();
@@ -1344,7 +1355,7 @@ export default function PortailSwissLife({ toast }) {
         </>
       )}
 
-      {activeTab === "clients" && <MesClients toast={toast} />}
+      {activeTab === "clients" && <MesClients toast={toast} clients={clients} onClientsChange={setClients} />}
       {activeTab === "custody" && <Custody toast={toast} />}
       {activeTab === "collateral" && <CollateralClients toast={toast} />}
     </div>
