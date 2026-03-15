@@ -2,17 +2,36 @@ import { supabase } from "../lib/supabase";
 import { generateWallet } from "./cardanoService";
 
 // Wait for the profiles trigger to create the row after auth.signUp
+// Uses select for admin/aifm (who can see all profiles), or update-and-check for intermediaries
 async function waitForProfile(userId, maxRetries = 10, delayMs = 500) {
   for (let i = 0; i < maxRetries; i++) {
     const { data } = await supabase
       .from("profiles")
       .select("id")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
     if (data) return true;
     await new Promise((r) => setTimeout(r, delayMs));
   }
   return false;
+}
+
+// Retry an update until the target row exists (handles trigger delay + RLS)
+async function retryUpdate(table, updates, matchColumn, matchValue, maxRetries = 15, delayMs = 600) {
+  for (let i = 0; i < maxRetries; i++) {
+    const { data, error } = await supabase
+      .from(table)
+      .update(updates)
+      .eq(matchColumn, matchValue)
+      .select("id")
+      .maybeSingle();
+    if (error) {
+      console.warn(`[retryUpdate] Attempt ${i + 1} error:`, error.message);
+    }
+    if (data) return { data, error: null };
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  return { data: null, error: new Error(`Update failed after ${maxRetries} retries`) };
 }
 
 // ─── Fetch current user's profile ───
@@ -78,12 +97,6 @@ export async function createUser({ email, password, fullName, role, company, int
 
   // Update profile with additional fields (company, intermediary link)
   if (data.user) {
-    // Wait for the DB trigger to create the profiles row
-    const profileExists = await waitForProfile(data.user.id);
-    if (!profileExists) {
-      console.error("Profile row not created in time for user", data.user.id);
-    }
-
     const updates = {};
     if (company) updates.company = company;
     if (intermediaryId) updates.intermediary_id = intermediaryId;
@@ -99,11 +112,11 @@ export async function createUser({ email, password, fullName, role, company, int
     }
 
     if (Object.keys(updates).length > 0) {
-      const { error: profileErr } = await supabase
-        .from("profiles")
-        .update(updates)
-        .eq("id", data.user.id);
-      if (profileErr) console.error("Failed to update profile:", profileErr);
+      // Retry update until the profile row is created by the DB trigger
+      const { error: profileErr } = await retryUpdate(
+        "profiles", updates, "id", data.user.id
+      );
+      if (profileErr) console.error("Failed to update profile:", profileErr.message);
     }
   }
 
@@ -162,12 +175,6 @@ export async function createClientAccount({ email, password, fullName, company }
 
   // Link to intermediary + generate wallet
   if (data.user) {
-    // Wait for the DB trigger to create the profiles row
-    const profileExists = await waitForProfile(data.user.id);
-    if (!profileExists) {
-      console.error("Profile row not created in time for client", data.user.id);
-    }
-
     const updates = { intermediary_id: me.id, company: company || null };
 
     // Generate a Cardano wallet for this investor
@@ -178,11 +185,13 @@ export async function createClientAccount({ email, password, fullName, company }
       console.error("Failed to generate wallet:", err);
     }
 
-    const { error: linkErr } = await supabase
-      .from("profiles")
-      .update(updates)
-      .eq("id", data.user.id);
-    if (linkErr) console.error("Failed to update client profile:", linkErr);
+    // Retry update until the profile row is created by the DB trigger
+    // The intermediary's RLS allows UPDATE on profiles where intermediary_id IS NULL
+    const { data: updated, error: linkErr } = await retryUpdate(
+      "profiles", updates, "id", data.user.id
+    );
+    if (linkErr) console.error("Failed to link client profile:", linkErr.message);
+    else console.log("[Client] Profile linked:", updated?.id);
   }
 
   return data;
