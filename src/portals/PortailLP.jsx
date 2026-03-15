@@ -1,10 +1,11 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { NAV_PER_PART } from "../data";
 import { generateBulletinPDF } from "../generateBulletin";
 import { useAppContext } from "../context/AppContext";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import { updateUserProfile } from "../services/profileService";
+import { mintSynthetic, burnSynthetic, shortenHash, getExplorerUrl } from "../services/cardanoService";
 import {
   KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls,
   Checkbox, ComplianceAlert, SignaturePad,
@@ -809,105 +810,270 @@ function Souscription({ toast, fund }) {
   );
 }
 
-/* ─── Sub-tab: Collatéral / DeFi ─── */
+/* ─── Sub-tab: Collatéral / DeFi — Synthetic Token Vault ─── */
 function Collateral({ toast }) {
-  const { collateralPositions, addCollateral } = useAppContext();
-  const [stakeAmount, setStakeAmount] = useState(100);
-  const [swapFrom, setSwapFrom] = useState(50);
-  const lpBalance = 479;
-  const stakedBalance = collateralPositions.filter((p) => p.owner === "Dupont Patrimoine SAS").reduce((s, p) => s + p.tokens, 0);
-  const bfPrice = 2.44;
+  const { orders } = useAppContext();
+  const { user, profile } = useAuth();
+  const [mintAmount, setMintAmount] = useState(10);
+  const [minting, setMinting] = useState(false);
+  const [burning, setBurning] = useState(null);
+  const [txResult, setTxResult] = useState(null);
+  const [vaultPositions, setVaultPositions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedFund, setSelectedFund] = useState(null);
+  const [funds, setFunds] = useState([]);
+
+  // Compute security token balance from validated orders
+  const myOrders = orders.filter((o) => o.userId === user?.id && o.status === "validated");
+  const totalSecurityTokens = myOrders.reduce((s, o) => s + Math.floor(o.montant / NAV_PER_PART), 0);
+  const lockedTokens = vaultPositions.filter((p) => p.status === "locked").reduce((s, p) => s + p.security_token_count, 0);
+  const availableTokens = totalSecurityTokens - lockedTokens;
+  const syntheticTokens = vaultPositions.filter((p) => p.status === "locked").reduce((s, p) => s + p.synthetic_token_count, 0);
+
+  // Load funds and vault positions
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const [fundsRes, vaultRes] = await Promise.all([
+        supabase.from("funds").select("id, name, slug, policy_id").order("name"),
+        supabase.from("vault_positions").select("*").eq("user_id", user?.id).order("created_at", { ascending: false }),
+      ]);
+      if (fundsRes.data) {
+        setFunds(fundsRes.data);
+        if (fundsRes.data.length > 0) setSelectedFund(fundsRes.data[0]);
+      }
+      if (vaultRes.data) setVaultPositions(vaultRes.data);
+      setLoading(false);
+    })();
+  }, [user?.id]);
+
+  const handleMintSynthetic = async () => {
+    if (!profile?.wallet_address) { toast("Veuillez renseigner votre adresse wallet dans votre profil"); return; }
+    if (!selectedFund) { toast("Aucun fonds sélectionné"); return; }
+    if (mintAmount <= 0 || mintAmount > availableTokens) { toast("Montant invalide"); return; }
+    setMinting(true);
+    try {
+      const result = await mintSynthetic({
+        userAddress: profile.wallet_address,
+        fundSlug: selectedFund.slug,
+        fundId: selectedFund.id,
+        tokenCount: mintAmount,
+        userId: user.id,
+      });
+      if (result.error) throw new Error(result.error);
+      setTxResult({ type: "mint", ...result });
+      toast(`${mintAmount} sBF mintes — security tokens verrouilles dans le vault`);
+      // Refresh vault positions
+      const { data } = await supabase.from("vault_positions").select("*").eq("user_id", user?.id).order("created_at", { ascending: false });
+      if (data) setVaultPositions(data);
+    } catch (err) {
+      toast(`Erreur mint synthetic : ${err.message}`);
+    } finally {
+      setMinting(false);
+    }
+  };
+
+  const handleBurnSynthetic = async (position) => {
+    if (!profile?.wallet_address) { toast("Wallet manquant"); return; }
+    setBurning(position.id);
+    try {
+      const result = await burnSynthetic({
+        userAddress: profile.wallet_address,
+        fundSlug: selectedFund?.slug || position.security_asset_name?.toLowerCase(),
+        fundId: position.fund_id,
+        tokenCount: position.synthetic_token_count,
+        vaultPositionId: position.id,
+        userId: user.id,
+      });
+      if (result.error) throw new Error(result.error);
+      setTxResult({ type: "burn", ...result });
+      toast(`${position.synthetic_token_count} sBF brules — security tokens deverrouilles`);
+      const { data } = await supabase.from("vault_positions").select("*").eq("user_id", user?.id).order("created_at", { ascending: false });
+      if (data) setVaultPositions(data);
+    } catch (err) {
+      toast(`Erreur burn synthetic : ${err.message}`);
+    } finally {
+      setBurning(null);
+    }
+  };
+
+  const lockedPositions = vaultPositions.filter((p) => p.status === "locked");
+  const unlockedPositions = vaultPositions.filter((p) => p.status === "unlocked");
+
+  if (loading) return <div className="text-center py-12 text-gray-400 text-sm">Chargement...</div>;
 
   return (
-    <div className="animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6 mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold">Votre solde Bridge Fund</p>
-            <p className="text-3xl font-semibold text-navy mt-1">{lpBalance} <span className="text-lg text-gray-400">BF</span></p>
-            <p className="text-sm text-gray-400 mt-1">≈ {fmt(lpBalance * NAV_PER_PART)}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-400">Tokens stakés</p>
-            <p className="text-xl font-semibold text-gold">{stakedBalance} BF</p>
-            <p className="text-xs text-gray-400 mt-1">Disponible : {lpBalance - stakedBalance} BF</p>
-          </div>
+    <div className="animate-fade-in space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold text-navy">Collateral & DeFi</h2>
+        <p className="text-sm text-gray-400 mt-1">Tokenisez vos parts en synthetic tokens librement transferables</p>
+      </div>
+
+      {/* Explainer banner */}
+      <div className="bg-gradient-to-r from-navy/5 to-gold/5 border border-navy/10 rounded-2xl p-5 flex items-start gap-4">
+        <div className="w-10 h-10 bg-gold/20 rounded-xl flex items-center justify-center flex-shrink-0">
+          <span className="text-gold font-bold text-xs">sBF</span>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-navy">Synthetic Tokens — Modele BlackRock BUIDL</p>
+          <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+            Vos <strong>security tokens (BF)</strong> sont restricted (whitelist CIP-113). En les verrouillant dans le vault,
+            vous recevez des <strong>synthetic tokens (sBF)</strong> librement transferables, utilisables comme collateral
+            DeFi ou echangeables sans restriction de whitelist. Le ratio est toujours 1:1.
+          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6 mb-6">
-        {/* Staking */}
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-navy">Staking</h3>
-            <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-1 rounded-full">APY 8.2%</span>
-          </div>
-          <p className="text-xs text-gray-400 mb-4">Pool de liquidité BF / ADA — Cardano DEX</p>
+      {/* KPIs */}
+      <div className="grid grid-cols-4 gap-4">
+        <KPICard label="Security Tokens (BF)" value={totalSecurityTokens.toLocaleString("fr-FR")} sub="Total recu" />
+        <KPICard label="Disponibles" value={availableTokens.toLocaleString("fr-FR")} sub="Non verrouilles" />
+        <KPICard label="Verrouilles (vault)" value={lockedTokens.toLocaleString("fr-FR")} sub="Security tokens lockes" />
+        <KPICard label="Synthetic (sBF)" value={syntheticTokens.toLocaleString("fr-FR")} sub="Librement transferables" />
+      </div>
+
+      {/* Fund selector + Mint form */}
+      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
+        <h3 className="text-sm font-semibold text-navy mb-1">Mint Synthetic Tokens</h3>
+        <p className="text-xs text-gray-400 mb-4">Lock vos security tokens → Recevez des synthetic tokens 1:1</p>
+
+        {funds.length > 1 && (
           <div className="mb-4">
-            <div className="flex justify-between text-xs text-gray-500 mb-2">
-              <span>Montant à staker</span>
-              <span className="font-mono">{stakeAmount} BF</span>
-            </div>
-            <input type="range" min={0} max={lpBalance - stakedBalance} value={stakeAmount} onChange={(e) => setStakeAmount(Number(e.target.value))} className="w-full accent-navy h-1.5 rounded-full" />
-            <div className="flex justify-between text-xs text-gray-400 mt-1">
-              <span>0</span>
-              <span>{lpBalance - stakedBalance} BF</span>
-            </div>
+            <label className={labelCls}>Fonds</label>
+            <select
+              value={selectedFund?.id || ""}
+              onChange={(e) => setSelectedFund(funds.find((f) => f.id === e.target.value))}
+              className={selectCls}
+            >
+              {funds.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
           </div>
-          <div className="bg-cream rounded-xl p-3 text-xs space-y-1 mb-4">
-            <div className="flex justify-between"><span className="text-gray-500">Rendement estimé (30j)</span><span className="text-navy font-medium">{(stakeAmount * 0.082 / 12).toFixed(2)} BF</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Pool TVL</span><span className="text-navy">1.2M ADA</span></div>
+        )}
+
+        <div className="grid grid-cols-3 gap-4 items-end">
+          <div>
+            <label className={labelCls}>Security tokens a lock (BF)</label>
+            <input type="number" min={1} max={availableTokens} value={mintAmount} onChange={(e) => setMintAmount(Number(e.target.value))} className={inputCls} />
+            <p className="text-xs text-gray-300 mt-1">Disponible : {availableTokens} BF</p>
           </div>
-          <button onClick={() => { addCollateral({ owner: "Dupont Patrimoine SAS", tokens: stakeAmount, type: "Staking", pool: "BF/ADA", apy: 8.2, date: new Date().toISOString().split("T")[0] }); toast(`${stakeAmount} BF stakés avec succès dans le pool BF/ADA`); }} className="w-full bg-navy text-white py-2.5 rounded-xl text-sm font-medium hover:bg-navy-light transition-colors">
-            Staker mes tokens
+          <div>
+            <label className={labelCls}>Synthetic tokens recus</label>
+            <p className="text-lg font-semibold text-gold">
+              {mintAmount} sBF
+            </p>
+          </div>
+          <button
+            disabled={minting || mintAmount <= 0 || mintAmount > availableTokens || !profile?.wallet_address}
+            onClick={handleMintSynthetic}
+            className={`py-2.5 rounded-xl text-sm font-medium transition-colors ${minting || mintAmount <= 0 || mintAmount > availableTokens ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-navy text-white hover:bg-navy-light"}`}
+          >
+            {minting ? "Transaction en cours..." : `Lock ${mintAmount} BF → Mint ${mintAmount} sBF`}
           </button>
         </div>
 
-        {/* Swap */}
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
-          <h3 className="text-sm font-semibold text-navy mb-4">Swap</h3>
-          <p className="text-xs text-gray-400 mb-4">Échangez vos tokens sur le marché secondaire</p>
-          <div className="bg-cream rounded-xl p-4 mb-2">
-            <div className="flex justify-between text-xs text-gray-400 mb-1">
-              <span>Vous envoyez</span>
-              <span>Solde : {lpBalance - stakedBalance} BF</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <input type="number" value={swapFrom} onChange={(e) => setSwapFrom(Number(e.target.value))} className="flex-1 bg-transparent text-xl font-semibold text-navy outline-none" />
-              <span className="bg-navy text-white px-3 py-1 rounded-lg text-sm font-medium">BF</span>
-            </div>
-          </div>
-          <div className="flex justify-center my-2">
-            <div className="w-8 h-8 bg-cream rounded-full flex items-center justify-center text-gray-400">↓</div>
-          </div>
-          <div className="bg-cream rounded-xl p-4 mb-4">
-            <div className="flex justify-between text-xs text-gray-400 mb-1"><span>Vous recevez (estimé)</span></div>
-            <div className="flex items-center gap-3">
-              <span className="flex-1 text-xl font-semibold text-navy">{(swapFrom * bfPrice).toFixed(2)}</span>
-              <span className="bg-gold/20 text-gold px-3 py-1 rounded-lg text-sm font-medium">ADA</span>
-            </div>
-          </div>
-          <div className="bg-cream/50 rounded-xl p-3 text-xs space-y-1 mb-4">
-            <div className="flex justify-between"><span className="text-gray-500">Prix</span><span className="text-navy">1 BF = {bfPrice} ADA</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Slippage max</span><span className="text-navy">0.5%</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Frais réseau</span><span className="text-navy">~0.17 ADA</span></div>
-          </div>
-          <button onClick={() => toast(`Swap exécuté — ${swapFrom} BF → ${(swapFrom * bfPrice).toFixed(2)} ADA`)} className="w-full bg-gold text-white py-2.5 rounded-xl text-sm font-medium hover:bg-gold-light transition-colors">Swap</button>
-        </div>
+        {!profile?.wallet_address && (
+          <p className="text-xs text-amber-600 mt-3">Vous devez renseigner votre adresse wallet dans votre profil pour utiliser le vault.</p>
+        )}
       </div>
 
-      {/* Price info */}
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-navy">Prix BF / ADA</h3>
-            <p className="text-xs text-gray-400">Cours actuel</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xl font-semibold text-navy">{bfPrice} ADA</p>
-          </div>
+      {/* Transaction result */}
+      {txResult && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
+          <p className="text-sm font-medium mb-1">{txResult.type === "mint" ? "Synthetic tokens mintes" : "Synthetic tokens brules — Security tokens deverrouilles"}</p>
+          <p className="text-xs text-gray-500">
+            Tx : <a href={getExplorerUrl(txResult.txHash)} target="_blank" rel="noopener noreferrer" className="text-navy underline font-mono">{shortenHash(txResult.txHash)}</a>
+          </p>
         </div>
+      )}
+
+      {/* Active vault positions */}
+      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-navy">Positions vault actives</h3>
+        </div>
+
+        {lockedPositions.length === 0 ? (
+          <div className="p-8 text-center">
+            <div className="w-12 h-12 bg-cream rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+            </div>
+            <p className="text-sm text-gray-400">Aucune position active</p>
+            <p className="text-xs text-gray-300 mt-1">Mintez des synthetic tokens pour creer une position</p>
+          </div>
+        ) : (
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Vault</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">BF lockes</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">sBF mintes</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Tx</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lockedPositions.map((p) => (
+                <tr key={p.id} className="border-b border-gray-50 hover:bg-cream/50 transition-colors">
+                  <td className="px-5 py-3 text-xs text-gray-500">{new Date(p.locked_at).toLocaleDateString("fr-FR")}</td>
+                  <td className="px-5 py-3 font-mono text-xs text-gray-500">{p.vault_address?.slice(0, 16)}...</td>
+                  <td className="px-5 py-3 text-right font-mono text-navy font-medium">{p.security_token_count}</td>
+                  <td className="px-5 py-3 text-right font-mono text-emerald-600">{p.synthetic_token_count}</td>
+                  <td className="px-5 py-3">
+                    <a href={getExplorerUrl(p.lock_tx_hash)} target="_blank" rel="noopener noreferrer" className="text-xs text-navy underline font-mono">
+                      {shortenHash(p.lock_tx_hash)}
+                    </a>
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    <button
+                      disabled={burning === p.id}
+                      onClick={() => handleBurnSynthetic(p)}
+                      className="text-xs font-medium px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+                    >
+                      {burning === p.id ? "Burn..." : "Burn sBF → Unlock BF"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
+
+      {/* Unlocked positions history */}
+      {unlockedPositions.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-navy">Historique (positions cloturees)</h3>
+          </div>
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Lock</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Unlock</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Tokens</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Tx unlock</th>
+              </tr>
+            </thead>
+            <tbody>
+              {unlockedPositions.map((p) => (
+                <tr key={p.id} className="border-b border-gray-50">
+                  <td className="px-5 py-3 text-xs text-gray-400">{new Date(p.locked_at).toLocaleDateString("fr-FR")}</td>
+                  <td className="px-5 py-3 text-xs text-gray-400">{p.unlocked_at ? new Date(p.unlocked_at).toLocaleDateString("fr-FR") : "—"}</td>
+                  <td className="px-5 py-3 text-right font-mono text-gray-500">{p.security_token_count} BF</td>
+                  <td className="px-5 py-3">
+                    {p.unlock_tx_hash ? (
+                      <a href={getExplorerUrl(p.unlock_tx_hash)} target="_blank" rel="noopener noreferrer" className="text-xs text-navy underline font-mono">
+                        {shortenHash(p.unlock_tx_hash)}
+                      </a>
+                    ) : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
