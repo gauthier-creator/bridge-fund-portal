@@ -264,14 +264,15 @@ function SouscriptionIntermediee({ toast, fund, clients }) {
                   <input type="number" value={formData.montant} onChange={(e) => set("montant", Number(e.target.value))} min={100000} step={50000} className={inputCls} />
                   <p className="text-xs text-gray-400 mt-1">Minimum : 100 000 EUR · Parts estimées : {(formData.montant / NAV_PER_PART).toFixed(2)}</p>
                 </div>
-                <button onClick={() => set("shareClass", 1)} className={`p-4 rounded-xl border-2 text-left transition-all ${formData.shareClass === 1 ? "border-navy bg-navy/5" : "border-gray-200"}`}>
-                  <p className="text-sm font-semibold text-navy">Share Class A</p>
-                  <p className="text-xs text-gray-500 mt-1">7-9% · 36 mois · Risque 5/7</p>
-                </button>
-                <button onClick={() => set("shareClass", 2)} className={`p-4 rounded-xl border-2 text-left transition-all ${formData.shareClass === 2 ? "border-navy bg-navy/5" : "border-gray-200"}`}>
+                <div className="p-4 rounded-xl border-2 border-gray-100 bg-gray-50 text-left opacity-60 cursor-not-allowed relative">
+                  <p className="text-sm font-semibold text-gray-400">Share Class A</p>
+                  <p className="text-xs text-gray-400 mt-1">7-9% · 36 mois · Risque 5/7</p>
+                  <span className="absolute top-2 right-2 text-[10px] bg-navy/10 text-navy px-2 py-0.5 rounded-full font-medium">Souscription directe</span>
+                </div>
+                <button onClick={() => set("shareClass", 2)} className="p-4 rounded-xl border-2 border-navy bg-navy/5 text-left transition-all">
                   <p className="text-sm font-semibold text-navy">Share Class B</p>
                   <p className="text-xs text-gray-500 mt-1">5-6% · 24 mois · Risque 4/7</p>
-                  <p className="text-xs text-gold mt-0.5 font-medium">Réservée aux intermédiaires</p>
+                  <p className="text-xs text-gold mt-0.5 font-medium">Exclusivité intermédiaires</p>
                 </button>
               </div>
             </div>
