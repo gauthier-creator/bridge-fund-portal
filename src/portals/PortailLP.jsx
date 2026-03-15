@@ -872,7 +872,7 @@ function Collateral({ toast }) {
 export default function PortailLP({ toast }) {
   // Main section: "dashboard" | "funds" | "profile"
   const [section, setSection] = useState("dashboard");
-  // Fund sub-view: "catalog" | "detail:slug" | "subscribe" | "collateral"
+  // Fund sub-view: "catalog" | "detail:slug" | "subscribe"
   const [fundView, setFundView] = useState("catalog");
   const [selectedFund, setSelectedFund] = useState(null);
 
@@ -883,9 +883,6 @@ export default function PortailLP({ toast }) {
   // Extract slug from fund view
   const fundSlug = fundView.startsWith("detail:") ? fundView.slice(7) : null;
 
-  // Show fund sub-tabs only when in subscribe/collateral mode
-  const showFundSubTabs = fundView === "subscribe" || fundView === "collateral";
-
   // Main navigation tabs
   const mainTabs = [
     { id: "dashboard", label: "Tableau de bord", icon: (
@@ -893,6 +890,9 @@ export default function PortailLP({ toast }) {
     )},
     { id: "funds", label: "Fonds", icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+    )},
+    { id: "collateral", label: "Collatéral & DeFi", icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
     )},
     { id: "profile", label: "Mon profil", icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
@@ -924,29 +924,26 @@ export default function PortailLP({ toast }) {
       {/* Funds section */}
       {section === "funds" && (
         <>
-          {showFundSubTabs && (
+          {fundView === "subscribe" && (
             <div className="flex border-b border-gray-100 mb-8">
               <button onClick={handleBackToFunds} className="px-5 py-3 text-sm text-gray-400 hover:text-navy transition-all font-medium">
                 ← Fonds
               </button>
-              {[
-                { id: "subscribe", label: "Souscription directe" },
-                { id: "collateral", label: "Collatéral & DeFi" },
-              ].map((tab) => (
-                <button key={tab.id} onClick={() => setFundView(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${fundView === tab.id ? "text-navy" : "text-gray-400 hover:text-gray-600"}`}>
-                  {tab.label}
-                  {fundView === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy rounded-full" />}
-                </button>
-              ))}
+              <button className="px-5 py-3 text-sm font-medium text-navy relative">
+                Souscription directe
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy rounded-full" />
+              </button>
             </div>
           )}
 
           {fundView === "catalog" && <FundCatalog onSelectFund={handleSelectFund} />}
           {fundSlug && <FundDetail fundSlug={fundSlug} onBack={handleBackToFunds} onInvest={handleInvest} />}
           {fundView === "subscribe" && <Souscription toast={toast} fund={selectedFund} />}
-          {fundView === "collateral" && <Collateral toast={toast} />}
         </>
       )}
+
+      {/* Collateral & DeFi */}
+      {section === "collateral" && <Collateral toast={toast} />}
 
       {/* Profile */}
       {section === "profile" && <InvestorProfile toast={toast} />}
