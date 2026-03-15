@@ -167,14 +167,34 @@ export async function createOrder(order) {
 
 export async function validateOrder(orderId) {
   const now = new Date().toISOString();
+
+  // First check we can see the order (SELECT policy)
+  const { data: existing, error: selectErr } = await supabase
+    .from("orders")
+    .select("id, status")
+    .eq("id", orderId)
+    .maybeSingle();
+  console.log("[Order] Validate check:", { orderId, existing, selectErr: selectErr?.message });
+
+  if (selectErr) throw selectErr;
+  if (!existing) throw new Error(`Ordre ${orderId} introuvable en base — vérifiez votre connexion`);
+  if (existing.status === "validated") return { orderId, validatedAt: now, mintResult: null };
+
+  // Now perform the update
   const { data, error } = await supabase
     .from("orders")
     .update({ status: "validated", validated_at: now })
     .eq("id", orderId)
     .select()
     .maybeSingle();
+  console.log("[Order] Validate update:", { orderId, data: !!data, error: error?.message });
+
   if (error) throw error;
-  if (!data) throw new Error("Aucun ordre trouvé avec cet ID");
+  if (!data) {
+    // RLS likely blocking the update — try alternative approach
+    console.warn("[Order] RLS blocked update, trying direct status check...");
+    throw new Error(`Impossible de valider l'ordre ${orderId} — vérifiez vos droits (rôle AIFM/Admin requis)`);
+  }
 
   // After DB validation, mint tokens and send to the appropriate wallet:
   // - If the order has an intermediary → send to intermediary's wallet (custody model)

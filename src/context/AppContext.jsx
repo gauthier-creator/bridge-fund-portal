@@ -134,11 +134,14 @@ export function AppProvider({ children }) {
 
   const validateOrder = useCallback(async (orderId) => {
     let validatedAt = new Date().toISOString();
+    let mintResult = null;
     if (isSupabase) {
       const result = await orderService.validateOrder(orderId);
       validatedAt = result.validatedAt;
+      mintResult = result.mintResult;
     }
     dispatch({ type: "VALIDATE_ORDER", payload: { id: orderId, validatedAt } });
+    return { orderId, validatedAt, mintResult };
   }, [isSupabase]);
 
   const rejectOrder = useCallback(async (orderId, reason) => {

@@ -99,7 +99,7 @@ create policy "orders_insert" on orders for insert with check (
 
 create policy "orders_aifm_update" on orders for update using (
   get_my_role() in ('aifm', 'admin')
-);
+) with check (true);
 
 create policy "orders_admin_delete" on orders for delete using (
   get_my_role() = 'admin'
