@@ -244,8 +244,13 @@ export async function rejectOrder(orderId, reason) {
 }
 
 export async function uploadDocument(orderId, file, docMeta) {
-  // Upload file to Supabase Storage
-  const path = `${orderId}/${Date.now()}_${file.name}`;
+  // Sanitize file name: remove accents, brackets, special chars, replace spaces
+  const safeName = file.name
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")  // strip accents
+    .replace(/[[\](){}]/g, "")                          // strip brackets
+    .replace(/\s+/g, "_")                               // spaces → underscores
+    .replace(/[^a-zA-Z0-9_.\-]/g, "");                  // keep only safe chars
+  const path = `${orderId}/${Date.now()}_${safeName}`;
   const { error: uploadErr } = await supabase.storage
     .from("documents")
     .upload(path, file, { contentType: file.type });

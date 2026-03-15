@@ -106,6 +106,10 @@ Deno.serve(async (req: Request) => {
     const signedTx = await tx.sign().complete();
     const txHash = await signedTx.submit();
 
+    // Wait for on-chain confirmation to prevent UTxO contention on consecutive mints
+    console.log(`[Mint] Waiting for tx confirmation...`);
+    await lucid.awaitTx(txHash);
+
     console.log(`[Mint] ${tokenCount} tokens minted for order ${orderId}`);
     console.log(`[Mint] Policy ID: ${policyId}`);
     console.log(`[Mint] Sent to: ${investorAddress}`);
