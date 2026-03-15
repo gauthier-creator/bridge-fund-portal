@@ -8,10 +8,12 @@ import { shortenHash, getExplorerUrl } from "../services/cardanoService";
 
 export default function InvestorDashboard({ onViewFund }) {
   const { user, profile } = useAuth();
-  const { orders, collateralPositions } = useAppContext();
+  const { orders } = useAppContext();
   const [funds, setFunds] = useState([]);
+  const [vaultPositions, setVaultPositions] = useState([]);
+  const [tokenTransfers, setTokenTransfers] = useState([]);
 
-  // Load funds to display names
+  // Load funds
   useEffect(() => {
     if (!supabase) return;
     supabase.from("funds").select("id, fund_name, slug, nav_per_share, cardano_tx_hash, blockchain_network, cardano_policy_id")
@@ -19,19 +21,40 @@ export default function InvestorDashboard({ onViewFund }) {
       .then(({ data }) => { if (data) setFunds(data); });
   }, []);
 
+  // Load vault positions for this user
+  useEffect(() => {
+    if (!supabase || !user?.id) return;
+    supabase.from("vault_positions")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setVaultPositions(data); });
+  }, [user?.id]);
+
+  // Load token transfers for this user's wallet
+  useEffect(() => {
+    if (!supabase || !profile?.wallet_address) return;
+    supabase.from("token_transfers")
+      .select("*")
+      .or(`from_address.eq.${profile.wallet_address},to_address.eq.${profile.wallet_address}`)
+      .order("created_at", { ascending: false })
+      .limit(20)
+      .then(({ data }) => { if (data) setTokenTransfers(data); });
+  }, [profile?.wallet_address]);
+
   // Filter orders for this user
   const myOrders = orders.filter((o) => o.userId === user?.id);
   const validatedOrders = myOrders.filter((o) => o.status === "validated");
   const pendingOrders = myOrders.filter((o) => o.status === "pending");
-  const rejectedOrders = myOrders.filter((o) => o.status === "rejected");
 
   const totalInvested = validatedOrders.reduce((s, o) => s + o.montant, 0);
   const totalPending = pendingOrders.reduce((s, o) => s + o.montant, 0);
   const totalParts = validatedOrders.reduce((s, o) => s + Math.floor(o.montant / NAV_PER_PART), 0);
 
-  // My collateral positions
-  const myCollateral = collateralPositions.filter((p) => p.userId === user?.id);
-  const totalStaked = myCollateral.reduce((s, p) => s + p.tokens, 0);
+  // Vault stats
+  const lockedPositions = vaultPositions.filter((p) => p.status === "locked");
+  const totalLocked = lockedPositions.reduce((s, p) => s + (p.security_token_count || 0), 0);
+  const totalSynthetic = lockedPositions.reduce((s, p) => s + (p.synthetic_token_count || 0), 0);
 
   // Group investments by fund
   const investmentsByFund = {};
@@ -61,7 +84,7 @@ export default function InvestorDashboard({ onViewFund }) {
         <KPICard label="Portefeuille" value={fmt(totalInvested)} sub={`${totalParts} parts`} />
         <KPICard label="En attente" value={fmt(totalPending)} sub={`${pendingOrders.length} souscription${pendingOrders.length > 1 ? "s" : ""}`} />
         <KPICard label="NAV / part" value={fmtFull(NAV_PER_PART)} sub="Dernière valorisation" />
-        <KPICard label="Tokens stakés" value={`${totalStaked} BF`} sub={myCollateral.length > 0 ? `${myCollateral.length} position${myCollateral.length > 1 ? "s" : ""}` : "Aucune position"} />
+        <KPICard label="Tokens synthétiques" value={`${totalSynthetic} sBF`} sub={totalLocked > 0 ? `${totalLocked} BF verrouillés` : "Aucune position"} />
       </div>
 
       {/* Portfolio breakdown */}
@@ -75,6 +98,10 @@ export default function InvestorDashboard({ onViewFund }) {
               const total = validated.reduce((s, o) => s + o.montant, 0);
               const parts = Math.floor(total / (fund?.nav_per_share || NAV_PER_PART));
               if (validated.length === 0) return null;
+
+              // Vault positions for this fund
+              const fundVault = lockedPositions.filter((p) => p.fund_id === fundId);
+              const fundSynthetic = fundVault.reduce((s, p) => s + (p.synthetic_token_count || 0), 0);
 
               return (
                 <div key={fundId} className="bg-cream rounded-xl p-4 hover:shadow-md transition-shadow cursor-pointer" onClick={() => fund?.slug && onViewFund?.(fund.slug)}>
@@ -97,6 +124,12 @@ export default function InvestorDashboard({ onViewFund }) {
                       <span className="text-gray-500">Souscriptions</span>
                       <span className="font-medium text-navy">{validated.length}</span>
                     </div>
+                    {fundSynthetic > 0 && (
+                      <div className="flex justify-between text-xs pt-1 border-t border-gray-200/50">
+                        <span className="text-purple-600">Tokens synthétiques</span>
+                        <span className="font-medium text-purple-700">{fundSynthetic} sBF</span>
+                      </div>
+                    )}
                   </div>
                   {fund?.cardano_tx_hash && (
                     <a
@@ -114,6 +147,71 @@ export default function InvestorDashboard({ onViewFund }) {
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Vault Positions */}
+      {vaultPositions.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-purple-500" />
+              <h3 className="text-sm font-semibold text-navy">Positions Vault (Tokens synthétiques)</h3>
+            </div>
+            <span className="text-xs text-gray-400">{lockedPositions.length} active{lockedPositions.length > 1 ? "s" : ""}</span>
+          </div>
+
+          <div className="px-6 py-3 bg-purple-50/50 border-b border-purple-100">
+            <p className="text-xs text-purple-700">
+              Vos tokens de sécurité (BF) sont verrouillés dans le vault on-chain. En échange, vous détenez des tokens synthétiques (sBF) librement transférables.
+            </p>
+          </div>
+
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Asset</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">BF verrouillés</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">sBF détenus</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Statut</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Transaction</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vaultPositions.map((pos) => (
+                <tr key={pos.id} className="border-b border-gray-50 hover:bg-cream/50 transition-colors">
+                  <td className="px-5 py-3">
+                    <p className="font-medium text-navy text-xs">{pos.security_asset_name}</p>
+                    <p className="text-[10px] font-mono text-gray-400">{shortenHash(pos.security_policy_id, 6)}</p>
+                  </td>
+                  <td className="px-5 py-3 text-right font-mono text-xs text-navy">{pos.security_token_count}</td>
+                  <td className="px-5 py-3 text-right font-mono text-xs text-purple-700">{pos.synthetic_token_count}</td>
+                  <td className="px-5 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
+                      pos.status === "locked"
+                        ? "bg-purple-50 text-purple-700 border border-purple-200"
+                        : "bg-gray-100 text-gray-500"
+                    }`}>
+                      {pos.status === "locked" ? "Verrouillé" : "Déverrouillé"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3">
+                    <a
+                      href={getExplorerUrl(pos.lock_tx_hash, "preprod")}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[10px] font-mono text-gold hover:text-navy transition-colors"
+                    >
+                      {shortenHash(pos.lock_tx_hash, 6)}
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                    </a>
+                  </td>
+                  <td className="px-5 py-3 text-gray-400 text-xs">{pos.locked_at ? new Date(pos.locked_at).toLocaleDateString("fr-FR") : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -170,30 +268,65 @@ export default function InvestorDashboard({ onViewFund }) {
         )}
       </div>
 
-      {/* Collateral positions */}
-      {myCollateral.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
-          <h3 className="text-sm font-semibold text-navy mb-4">Positions collatérales</h3>
+      {/* On-chain activity */}
+      {tokenTransfers.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <h3 className="text-sm font-semibold text-navy">Activité on-chain</h3>
+            </div>
+            <span className="text-xs text-gray-400">Cardano Preprod</span>
+          </div>
           <table className="w-full text-sm text-left">
             <thead>
               <tr className="border-b border-gray-100">
-                <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Type</th>
-                <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Pool</th>
-                <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Tokens</th>
-                <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">APY</th>
-                <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Type</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Asset</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Tokens</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Transaction</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
               </tr>
             </thead>
             <tbody>
-              {myCollateral.map((p) => (
-                <tr key={p.id} className="border-b border-gray-50">
-                  <td className="py-2 text-navy text-xs font-medium">{p.type || "Staking"}</td>
-                  <td className="py-2 text-xs text-gray-500">{p.pool || "BF/ADA"}</td>
-                  <td className="py-2 text-right font-mono text-xs text-navy">{p.tokens} BF</td>
-                  <td className="py-2 text-right text-emerald-600 text-xs font-medium">{p.apy}%</td>
-                  <td className="py-2 text-gray-400 text-xs">{p.date}</td>
-                </tr>
-              ))}
+              {tokenTransfers.map((t) => {
+                const isIncoming = t.to_address === profile?.wallet_address;
+                const typeLabels = {
+                  mint: "Mint",
+                  transfer: isIncoming ? "Reçu" : "Envoyé",
+                  vault_lock: "Vault Lock",
+                  vault_unlock: "Vault Unlock",
+                };
+                const typeColors = {
+                  mint: "bg-emerald-50 text-emerald-700",
+                  transfer: isIncoming ? "bg-blue-50 text-blue-700" : "bg-orange-50 text-orange-700",
+                  vault_lock: "bg-purple-50 text-purple-700",
+                  vault_unlock: "bg-amber-50 text-amber-700",
+                };
+                return (
+                  <tr key={t.id} className="border-b border-gray-50 hover:bg-cream/50 transition-colors">
+                    <td className="px-5 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${typeColors[t.transfer_type] || "bg-gray-100 text-gray-600"}`}>
+                        {typeLabels[t.transfer_type] || t.transfer_type}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-xs font-medium text-navy">{t.asset_name || "—"}</td>
+                    <td className="px-5 py-3 text-right font-mono text-xs text-navy">{t.token_count}</td>
+                    <td className="px-5 py-3">
+                      <a
+                        href={getExplorerUrl(t.tx_hash, "preprod")}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[10px] font-mono text-gold hover:text-navy transition-colors"
+                      >
+                        {shortenHash(t.tx_hash, 6)}
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                      </a>
+                    </td>
+                    <td className="px-5 py-3 text-gray-400 text-xs">{t.created_at ? new Date(t.created_at).toLocaleDateString("fr-FR") : "—"}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

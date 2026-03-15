@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
+import { shortenHash, getExplorerUrl } from "../services/cardanoService";
 
 const COUNTRIES = ["France", "Luxembourg", "Suisse", "Belgique", "Monaco", "Allemagne", "Italie", "Espagne", "Royaume-Uni", "États-Unis", "Autre"];
 const INVESTOR_TYPES = ["Professionnel", "Averti", "Institutionnel"];
@@ -9,6 +10,8 @@ export default function InvestorProfile({ toast }) {
   const { profile, refreshProfile } = useAuth();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [whitelistStatus, setWhitelistStatus] = useState([]);
+  const [frozenFunds, setFrozenFunds] = useState([]);
   const [form, setForm] = useState({
     full_name: profile?.full_name || "",
     email: profile?.email || "",
@@ -22,6 +25,19 @@ export default function InvestorProfile({ toast }) {
     date_of_birth: profile?.date_of_birth || "",
     investor_type: profile?.investor_type || "Professionnel",
   });
+
+  // Load whitelist & freeze status
+  useEffect(() => {
+    if (!supabase || !profile?.wallet_address) return;
+    supabase.from("token_whitelist")
+      .select("fund_id, kyc_status, created_at")
+      .eq("wallet_address", profile.wallet_address)
+      .then(({ data }) => { if (data) setWhitelistStatus(data); });
+    supabase.from("token_freeze")
+      .select("fund_id, reason, created_at")
+      .eq("wallet_address", profile.wallet_address)
+      .then(({ data }) => { if (data) setFrozenFunds(data); });
+  }, [profile?.wallet_address]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -59,7 +75,6 @@ export default function InvestorProfile({ toast }) {
   const kycLabel = kycStatus === "approved" ? "Vérifié" : kycStatus === "rejected" ? "Rejeté" : "En attente";
 
   const inputCls = "w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20 transition-all";
-  const inputDisabled = "w-full px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-100 text-sm text-gray-500";
   const labelCls = "block text-xs font-medium text-gray-500 mb-1.5";
 
   return (
@@ -104,6 +119,19 @@ export default function InvestorProfile({ toast }) {
         </div>
       </div>
 
+      {/* Freeze alert */}
+      {frozenFunds.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3">
+          <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-red-800">Adresse gelée sur {frozenFunds.length} fonds</p>
+            <p className="text-xs text-red-600 mt-0.5">Votre adresse est temporairement gelée pour certains fonds. Contactez votre administrateur.</p>
+          </div>
+        </div>
+      )}
+
       {/* Personal information */}
       <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
         <h3 className="text-sm font-semibold text-navy mb-5">Informations personnelles</h3>
@@ -118,7 +146,7 @@ export default function InvestorProfile({ toast }) {
           </div>
           <div>
             <label className={labelCls}>Email</label>
-            <p className={`text-sm text-gray-500 py-2.5 ${!editing ? "" : ""}`}>{profile?.email || "—"}</p>
+            <p className="text-sm text-gray-500 py-2.5">{profile?.email || "—"}</p>
           </div>
           <div>
             <label className={labelCls}>Téléphone</label>
@@ -270,6 +298,79 @@ export default function InvestorProfile({ toast }) {
           <div className="mt-4 bg-cream rounded-xl p-3">
             <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-1">Adresse complète</p>
             <p className="font-mono text-xs text-navy break-all leading-relaxed">{profile.wallet_address}</p>
+          </div>
+        )}
+      </div>
+
+      {/* CIP-113 Compliance Status */}
+      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
+        <h3 className="text-sm font-semibold text-navy mb-5">Statut compliance (CIP-113)</h3>
+        <div className="space-y-3">
+          {/* Whitelist status */}
+          <div className="flex items-center justify-between py-3 border-b border-gray-50">
+            <div>
+              <p className="text-sm text-navy font-medium">Whitelist on-chain</p>
+              <p className="text-xs text-gray-400 mt-0.5">Fonds autorisés pour votre adresse</p>
+            </div>
+            {whitelistStatus.length > 0 ? (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                {whitelistStatus.length} fonds autorisé{whitelistStatus.length > 1 ? "s" : ""}
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-500">
+                Aucun
+              </span>
+            )}
+          </div>
+
+          {/* Freeze status */}
+          <div className="flex items-center justify-between py-3 border-b border-gray-50">
+            <div>
+              <p className="text-sm text-navy font-medium">Statut Freeze</p>
+              <p className="text-xs text-gray-400 mt-0.5">Restrictions de transfert actives</p>
+            </div>
+            {frozenFunds.length > 0 ? (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+                {frozenFunds.length} fonds gelé{frozenFunds.length > 1 ? "s" : ""}
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Aucune restriction
+              </span>
+            )}
+          </div>
+
+          {/* Standard */}
+          <div className="flex items-center justify-between py-3">
+            <div>
+              <p className="text-sm text-navy font-medium">Standard</p>
+              <p className="text-xs text-gray-400 mt-0.5">Framework de compliance utilisé</p>
+            </div>
+            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-navy/10 text-navy">
+              CIP-113 / AMLD5 / MiFID2
+            </span>
+          </div>
+        </div>
+
+        {/* Whitelist details */}
+        {whitelistStatus.length > 0 && (
+          <div className="mt-4 bg-cream rounded-xl p-4">
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-3">Détail des autorisations</p>
+            <div className="space-y-2">
+              {whitelistStatus.map((w, i) => (
+                <div key={i} className="flex items-center justify-between text-xs">
+                  <span className="font-mono text-gray-500">{shortenHash(w.fund_id, 6)}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                      w.kyc_status === "validated" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+                    }`}>
+                      {w.kyc_status === "validated" ? "KYC OK" : w.kyc_status}
+                    </span>
+                    <span className="text-gray-400">{w.created_at ? new Date(w.created_at).toLocaleDateString("fr-FR") : ""}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

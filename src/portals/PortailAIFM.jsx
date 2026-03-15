@@ -5,6 +5,7 @@ import {
 import { NAV_PER_PART } from "../data";
 import { useAppContext } from "../context/AppContext";
 import { KPICard, Badge, fmt, fmtFull } from "../components/shared";
+import { getExplorerUrl, shortenHash } from "../services/cardanoService";
 
 /* ─── Sub-tab: Ordres à valider ─── */
 function ValidationOrdres({ toast }) {
@@ -17,11 +18,14 @@ function ValidationOrdres({ toast }) {
   const validatedOrders = orders.filter((o) => o.status === "validated");
   const rejectedOrders = orders.filter((o) => o.status === "rejected");
 
+  const [lastMintResult, setLastMintResult] = useState(null);
+
   const handleValidate = async (orderId) => {
     try {
       const result = await validateOrder(orderId);
       if (result.mintResult?.txHash) {
-        toast(`Ordre ${orderId} validé — ${result.mintResult.tokenCount} token(s) envoyé(s) au wallet investisseur (tx: ${result.mintResult.txHash.slice(0, 12)}...)`);
+        setLastMintResult(result.mintResult);
+        toast(`Ordre validé — ${result.mintResult.tokenCount} token(s) CIP-113 envoyé(s) on-chain`);
       } else {
         toast("Ordre " + orderId + " validé — émission des tokens initiée");
       }
@@ -56,6 +60,54 @@ function ValidationOrdres({ toast }) {
         <KPICard label="Ordres validés" value={validatedOrders.length} />
         <KPICard label="Ordres rejetés" value={rejectedOrders.length} />
       </div>
+
+      {/* Last mint result banner */}
+      {lastMintResult && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-6 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+                <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-emerald-800">Token CIP-113 émis avec succès</p>
+                <p className="text-xs text-emerald-600 mt-0.5">
+                  {lastMintResult.tokenCount} token(s) — Policy: {shortenHash(lastMintResult.policyId, 8)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <a
+                href={lastMintResult.explorerUrl || getExplorerUrl(lastMintResult.txHash, "preprod")}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                Voir sur Cardanoscan
+              </a>
+              <button onClick={() => setLastMintResult(null)} className="text-emerald-400 hover:text-emerald-600 transition-colors p-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center gap-4 text-xs text-emerald-700">
+            <span className="font-mono bg-emerald-100 px-2 py-0.5 rounded">Tx: {shortenHash(lastMintResult.txHash, 10)}</span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Whitelist OK
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Freeze OK
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Supply cap OK
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Pending orders */}
       {pendingOrders.length > 0 && (
