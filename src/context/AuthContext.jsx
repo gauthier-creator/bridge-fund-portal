@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
@@ -7,6 +7,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const currentUserIdRef = useRef(null);
 
   // Fetch profile from profiles table
   const fetchProfile = useCallback(async (userId) => {
@@ -34,6 +35,7 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession().then(async ({ data: { session: s } }) => {
       setSession(s);
       if (s?.user) {
+        currentUserIdRef.current = s.user.id;
         const p = await fetchProfile(s.user.id);
         setProfile(p);
       }
@@ -43,32 +45,33 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    // Listen for auth changes — only react to real sign-in/sign-out events
-    // Track current user ID to avoid unnecessary profile re-fetches
-    let currentUserId = null;
-
+    // Listen for auth changes — defensive approach:
+    // 1. SIGNED_OUT: clear everything
+    // 2. All other events with null session: IGNORE (prevents tab-switch flicker)
+    // 3. Same user: just update session silently
+    // 4. Different user: update session + fetch profile
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, s) => {
-        // Ignore token refreshes — session object updates but user is the same
-        if (event === "TOKEN_REFRESHED") {
-          setSession(s);
+        // Only clear state on explicit sign-out
+        if (event === "SIGNED_OUT") {
+          currentUserIdRef.current = null;
+          setSession(null);
+          setProfile(null);
           return;
         }
 
-        // If user hasn't changed, just update session without re-fetching profile
-        if (s?.user?.id && s.user.id === currentUserId) {
-          setSession(s);
-          return;
-        }
+        // Ignore any event that arrives without a valid session
+        // (e.g. transient state during token refresh on tab visibility)
+        if (!s?.user) return;
 
+        // Always update session token (needed for API calls)
         setSession(s);
-        if (s?.user) {
-          currentUserId = s.user.id;
+
+        // Only re-fetch profile when a genuinely different user signs in
+        if (s.user.id !== currentUserIdRef.current) {
+          currentUserIdRef.current = s.user.id;
           const p = await fetchProfile(s.user.id);
           setProfile(p);
-        } else if (event === "SIGNED_OUT") {
-          currentUserId = null;
-          setProfile(null);
         }
       }
     );
@@ -101,22 +104,27 @@ export function AuthProvider({ children }) {
     setProfile(null);
   }, []);
 
-  const value = {
+  const refreshProfile = useCallback(async () => {
+    if (session?.user) {
+      const p = await fetchProfile(session.user.id);
+      setProfile(p);
+    }
+  }, [session, fetchProfile]);
+
+  // Memoize context value — only re-render consumers when meaningful data changes
+  const user = session?.user || null;
+  const role = profile?.role || null;
+  const value = useMemo(() => ({
     session,
-    user: session?.user || null,
+    user,
     profile,
-    role: profile?.role || null,
+    role,
     loading,
     signIn,
     signUp,
     signOut,
-    refreshProfile: async () => {
-      if (session?.user) {
-        const p = await fetchProfile(session.user.id);
-        setProfile(p);
-      }
-    },
-  };
+    refreshProfile,
+  }), [user?.id, profile, role, loading, signIn, signUp, signOut, refreshProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
