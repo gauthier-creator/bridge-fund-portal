@@ -937,9 +937,11 @@ function Collateral({ toast }) {
         <h3 className="text-sm font-semibold text-navy mb-1">Mint Synthetic Tokens</h3>
         <p className="text-xs text-gray-400 mb-4">Lock vos security tokens → Recevez des synthetic tokens 1:1</p>
 
-        {funds.length > 1 && (
-          <div className="mb-4">
-            <label className={labelCls}>Fonds</label>
+        <div className="mb-4">
+          <label className={labelCls}>Fonds</label>
+          {funds.length === 0 ? (
+            <p className="text-sm text-amber-600">Aucun fonds disponible — veuillez contacter l'administrateur</p>
+          ) : (
             <select
               value={selectedFund?.id || ""}
               onChange={(e) => setSelectedFund(funds.find((f) => f.id === e.target.value))}
@@ -947,8 +949,8 @@ function Collateral({ toast }) {
             >
               {funds.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="grid grid-cols-3 gap-4 items-end">
           <div>
