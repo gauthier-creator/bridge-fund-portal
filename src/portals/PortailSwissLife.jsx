@@ -10,7 +10,7 @@ import {
   KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls,
   Checkbox, ComplianceAlert, SignaturePad,
 } from "../components/shared";
-import { transferToken, mintSynthetic, burnSynthetic } from "../services/cardanoService";
+import { transferToken, mintSynthetic, burnSynthetic, generateWallet } from "../services/cardanoService";
 import FundCatalog from "../components/FundCatalog";
 import FundDetail from "../components/FundDetail";
 
@@ -1312,6 +1312,101 @@ function Custody({ toast, clients }) {
 /* ─────────────────────────────────────────────────────
    5. COLLATERAL & DEFI
    ───────────────────────────────────────────────────── */
+/* ─── Wallet Setup Component ─── */
+function WalletSetup({ toast }) {
+  const { user, profile, refreshProfile } = useAuth();
+  const [mode, setMode] = useState(null); // null | "generate" | "manual"
+  const [manualAddress, setManualAddress] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const handleGenerate = async () => {
+    setSaving(true);
+    try {
+      const { address } = await generateWallet(user?.id);
+      await updateUserProfile(user?.id, { wallet_address: address });
+      if (refreshProfile) await refreshProfile();
+      toast("Wallet Cardano Preprod généré et sauvegardé");
+    } catch (err) {
+      toast("Erreur : " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveManual = async () => {
+    if (!manualAddress || !manualAddress.startsWith("addr")) {
+      toast("Adresse invalide — doit commencer par addr_test1 ou addr1");
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateUserProfile(user?.id, { wallet_address: manualAddress.trim() });
+      if (refreshProfile) await refreshProfile();
+      toast("Wallet sauvegardé");
+    } catch (err) {
+      toast("Erreur : " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+      <p className="text-sm font-semibold text-amber-800 mb-2">Wallet custody non configuré</p>
+      <p className="text-xs text-amber-600 mb-4">Pour gérer la collateralisation, vous devez configurer un wallet Cardano.</p>
+
+      {!mode && (
+        <div className="flex gap-3">
+          <button
+            onClick={() => handleGenerate()}
+            disabled={saving}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-navy text-white rounded-xl text-sm font-medium hover:bg-navy-light transition-colors disabled:opacity-50"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+            {saving ? "Génération..." : "Générer un wallet automatiquement"}
+          </button>
+          <button
+            onClick={() => setMode("manual")}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 text-navy rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+            Connecter un wallet existant
+          </button>
+        </div>
+      )}
+
+      {mode === "manual" && (
+        <div className="flex gap-3 items-end">
+          <div className="flex-1">
+            <label className={labelCls}>Adresse wallet Cardano</label>
+            <input
+              type="text"
+              value={manualAddress}
+              onChange={(e) => setManualAddress(e.target.value)}
+              placeholder="addr_test1q..."
+              className={inputCls}
+            />
+            <p className="text-[10px] text-gray-400 mt-1">Preprod: addr_test1... | Mainnet: addr1...</p>
+          </div>
+          <button
+            onClick={handleSaveManual}
+            disabled={saving || !manualAddress}
+            className="px-5 py-2.5 bg-navy text-white rounded-xl text-sm font-medium hover:bg-navy-light transition-colors disabled:opacity-50"
+          >
+            {saving ? "..." : "Sauvegarder"}
+          </button>
+          <button
+            onClick={() => setMode(null)}
+            className="px-3 py-2.5 text-gray-400 hover:text-gray-600 text-sm"
+          >
+            Retour
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CollateralClients({ toast, clients }) {
   const { orders } = useAppContext();
   const { user, profile } = useAuth();
@@ -1583,7 +1678,7 @@ function CollateralClients({ toast, clients }) {
           </div>
 
           {!profile?.wallet_address && (
-            <p className="text-xs text-amber-600 mt-3">Wallet custody non configuré dans votre profil</p>
+            <WalletSetup toast={toast} />
           )}
         </div>
       )}

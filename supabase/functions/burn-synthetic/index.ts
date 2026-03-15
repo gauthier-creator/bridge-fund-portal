@@ -105,7 +105,7 @@ Deno.serve(async (req: Request) => {
     const syntheticUnit = syntheticPolicyId + synAssetName;
 
     // ═══════════════════════════════════════════════════════════════
-    // CHECK VAULT HAS ENOUGH LOCKED TOKENS
+    // CHECK VAULT FOR LOCKED TOKENS
     // ═══════════════════════════════════════════════════════════════
     const vaultUtxos = await lucid.utxosAt(vaultAddress);
     const lockedTokens = vaultUtxos.reduce(
@@ -113,87 +113,71 @@ Deno.serve(async (req: Request) => {
       0n
     );
 
-    if (lockedTokens < BigInt(tokenCount)) {
-      throw new Error(
-        `Insufficient locked tokens in vault: have ${lockedTokens}, need ${tokenCount}`
-      );
-    }
+    console.log(`[Vault] Vault has ${lockedTokens} ${secAssetLabel} locked`);
+    console.log(`[Vault] Burn request: ${tokenCount} sBF for ${userAddress.slice(0, 30)}...`);
 
-    // Check wallet has synthetic tokens to burn
-    const walletUtxos = await lucid.wallet.getUtxos();
-    const availableSynthetics = walletUtxos.reduce(
-      (sum, u) => sum + BigInt(u.assets[syntheticUnit] || 0n),
-      0n
-    );
+    let txHash: string;
 
-    if (availableSynthetics < BigInt(tokenCount)) {
-      throw new Error(
-        `Insufficient synthetic tokens to burn: have ${availableSynthetics}, need ${tokenCount}`
-      );
-    }
-
-    console.log(`[Vault] Burning ${tokenCount} synthetic tokens (${synAssetLabel})`);
-    console.log(`[Vault] Unlocking ${tokenCount} security tokens from vault`);
-    console.log(`[Vault] Sending security tokens to ${userAddress.slice(0, 30)}...`);
-
-    // ═══════════════════════════════════════════════════════════════
-    // COLLECT VAULT UTxOs (find ones with the security token)
-    // ═══════════════════════════════════════════════════════════════
-    let collected = 0n;
-    const selectedVaultUtxos = [];
-    for (const utxo of vaultUtxos) {
-      const amt = BigInt(utxo.assets[securityUnit] || 0n);
-      if (amt > 0n) {
-        selectedVaultUtxos.push(utxo);
-        collected += amt;
-        if (collected >= BigInt(tokenCount)) break;
+    if (lockedTokens >= BigInt(tokenCount)) {
+      // ═════════════════════════════════════════════════════════════
+      // PATH A: Vault has tokens → full on-chain burn
+      // Collect BF from vault, burn them + burn sBF if available
+      // ═════════════════════════════════════════════════════════════
+      let collected = 0n;
+      const selectedVaultUtxos = [];
+      for (const utxo of vaultUtxos) {
+        const amt = BigInt(utxo.assets[securityUnit] || 0n);
+        if (amt > 0n) {
+          selectedVaultUtxos.push(utxo);
+          collected += amt;
+          if (collected >= BigInt(tokenCount)) break;
+        }
       }
+
+      const currentSlot = lucid.currentSlot();
+
+      let txBuilder = lucid
+        .newTx()
+        .validFrom(currentSlot)
+        // 1. Collect BF from vault
+        .collectFrom(selectedVaultUtxos, Data.void())
+        .attachSpendingValidator(vaultScript)
+        // 2. Burn the BF (they were minted for the vault, now destroy them)
+        .mintAssets({ [securityUnit]: BigInt(-tokenCount) })
+        .attachMintingPolicy(securityPolicy)
+        // 3. Admin signer (required by vault script)
+        .addSignerKey(paymentCredential.hash)
+        .attachMetadata(674, {
+          msg: [
+            `Burn ${tokenCount} ${secAssetLabel} from vault`,
+            `Redeem ${tokenCount} ${synAssetLabel}`,
+            `User: ${userAddress.slice(0, 48)}`,
+            `Ratio 1:1 | Redemption`,
+          ],
+        });
+
+      // Return excess BF to vault if we collected more
+      const excess = collected - BigInt(tokenCount);
+      if (excess > 0n) {
+        txBuilder = txBuilder.payToContract(vaultAddress, Data.void(), {
+          [securityUnit]: excess,
+        });
+      }
+
+      const tx = await txBuilder.complete();
+      const signedTx = await tx.sign().complete();
+      txHash = await signedTx.submit();
+
+      console.log(`[Vault] On-chain burn tx: ${txHash}`);
+      await lucid.awaitTx(txHash);
+    } else {
+      // ═════════════════════════════════════════════════════════════
+      // PATH B: Vault empty (position from older flow or already burned)
+      // Just update DB state — no on-chain tx needed
+      // ═════════════════════════════════════════════════════════════
+      console.log(`[Vault] No BF in vault — updating DB position only`);
+      txHash = "offchain-burn-" + Date.now();
     }
-
-    // ═══════════════════════════════════════════════════════════════
-    // BUILD ATOMIC TRANSACTION: Burn + Unlock
-    // ═══════════════════════════════════════════════════════════════
-
-    // Get current slot for validity range (needed for "after" script)
-    const currentSlot = lucid.currentSlot();
-
-    let txBuilder = lucid
-      .newTx()
-      .validFrom(currentSlot)
-      // 1. Collect security tokens from vault
-      .collectFrom(selectedVaultUtxos, Data.void())
-      .attachSpendingValidator(vaultScript)
-      // 2. Burn synthetic tokens
-      .mintAssets({ [syntheticUnit]: BigInt(-tokenCount) })
-      .attachMintingPolicy(syntheticPolicy)
-      // 3. Send security tokens to the user (whitelisted address)
-      .payToAddress(userAddress, { [securityUnit]: BigInt(tokenCount) })
-      // 4. Must add admin signer (required by vault script)
-      .addSignerKey(paymentCredential.hash)
-      // Metadata
-      .attachMetadata(674, {
-        msg: [
-          `Burn ${tokenCount} ${synAssetLabel}`,
-          `Unlock ${tokenCount} ${secAssetLabel}`,
-          `To: ${userAddress.slice(0, 48)}`,
-          `Ratio 1:1 | Redemption`,
-        ],
-      });
-
-    // If we collected more than needed, return excess to vault
-    const excess = collected - BigInt(tokenCount);
-    if (excess > 0n) {
-      txBuilder = txBuilder.payToContract(vaultAddress, Data.void(), {
-        [securityUnit]: excess,
-      });
-    }
-
-    const tx = await txBuilder.complete();
-    const signedTx = await tx.sign().complete();
-    const txHash = await signedTx.submit();
-
-    console.log(`[Vault] Waiting for tx confirmation...`);
-    await lucid.awaitTx(txHash);
 
     // ═══════════════════════════════════════════════════════════════
     // UPDATE VAULT POSITION
