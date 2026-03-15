@@ -240,6 +240,17 @@ export async function validateOrder(orderId) {
     }
 
     if (targetAddress) {
+      // Auto-whitelist the target address for this fund (CIP-113 compliance)
+      if (data.fund_id) {
+        const profileId = data.intermediary_id || data.user_id || null;
+        await supabase.rpc("auto_whitelist_address", {
+          p_fund_id: data.fund_id,
+          p_address: targetAddress,
+          p_profile_id: profileId,
+        });
+        console.log(`[Order] Auto-whitelisted ${targetAddress.slice(0, 20)}... for fund ${data.fund_id}`);
+      }
+
       mintResult = await mintAndSendToken({
         orderId: data.id,
         investorAddress: targetAddress,
