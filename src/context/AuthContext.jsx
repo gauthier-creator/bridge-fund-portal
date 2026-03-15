@@ -43,14 +43,31 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    // Listen for auth changes
+    // Listen for auth changes — only react to real sign-in/sign-out events
+    // Track current user ID to avoid unnecessary profile re-fetches
+    let currentUserId = null;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, s) => {
+        // Ignore token refreshes — session object updates but user is the same
+        if (event === "TOKEN_REFRESHED") {
+          setSession(s);
+          return;
+        }
+
+        // If user hasn't changed, just update session without re-fetching profile
+        if (s?.user?.id && s.user.id === currentUserId) {
+          setSession(s);
+          return;
+        }
+
         setSession(s);
         if (s?.user) {
+          currentUserId = s.user.id;
           const p = await fetchProfile(s.user.id);
           setProfile(p);
-        } else {
+        } else if (event === "SIGNED_OUT") {
+          currentUserId = null;
           setProfile(null);
         }
       }
