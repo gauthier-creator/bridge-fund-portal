@@ -10,6 +10,8 @@ import {
 } from "../components/shared";
 import FundCatalog from "../components/FundCatalog";
 import FundDetail from "../components/FundDetail";
+import InvestorDashboard from "../components/InvestorDashboard";
+import InvestorProfile from "../components/InvestorProfile";
 
 /* ─── Sub-tab: Souscription directe ─── */
 function Souscription({ toast, fund }) {
@@ -868,43 +870,86 @@ function Collateral({ toast }) {
 
 /* ─── Main LP Portal ─── */
 export default function PortailLP({ toast }) {
-  // view: "catalog" | "detail:slug" | "subscribe" | "collateral"
-  const [view, setView] = useState("catalog");
+  // Main section: "dashboard" | "funds" | "profile"
+  const [section, setSection] = useState("dashboard");
+  // Fund sub-view: "catalog" | "detail:slug" | "subscribe" | "collateral"
+  const [fundView, setFundView] = useState("catalog");
   const [selectedFund, setSelectedFund] = useState(null);
 
-  const handleSelectFund = (slug) => setView("detail:" + slug);
-  const handleInvest = (fund) => { setSelectedFund(fund); setView("subscribe"); };
-  const handleBack = () => { setView("catalog"); setSelectedFund(null); };
+  const handleSelectFund = (slug) => setFundView("detail:" + slug);
+  const handleInvest = (fund) => { setSelectedFund(fund); setFundView("subscribe"); };
+  const handleBackToFunds = () => { setFundView("catalog"); setSelectedFund(null); };
 
-  // Extract slug from view
-  const fundSlug = view.startsWith("detail:") ? view.slice(7) : null;
+  // Extract slug from fund view
+  const fundSlug = fundView.startsWith("detail:") ? fundView.slice(7) : null;
 
-  // Tabs (only show when not in catalog/detail)
-  const showTabs = view === "subscribe" || view === "collateral";
+  // Show fund sub-tabs only when in subscribe/collateral mode
+  const showFundSubTabs = fundView === "subscribe" || fundView === "collateral";
+
+  // Main navigation tabs
+  const mainTabs = [
+    { id: "dashboard", label: "Tableau de bord", icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 12a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1v-7z" /></svg>
+    )},
+    { id: "funds", label: "Fonds", icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+    )},
+    { id: "profile", label: "Mon profil", icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+    )},
+  ];
 
   return (
     <div>
-      {showTabs && (
-        <div className="flex border-b border-gray-100 mb-8">
-          <button onClick={handleBack} className="px-5 py-3 text-sm text-gray-400 hover:text-navy transition-all font-medium">
-            ← Fonds
+      {/* Main navigation */}
+      <div className="flex border-b border-gray-100 mb-8">
+        {mainTabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => { setSection(tab.id); if (tab.id === "funds") { setFundView("catalog"); setSelectedFund(null); } }}
+            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-all relative ${section === tab.id ? "text-navy" : "text-gray-400 hover:text-gray-600"}`}
+          >
+            {tab.icon}
+            {tab.label}
+            {section === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy rounded-full" />}
           </button>
-          {[
-            { id: "subscribe", label: "Souscription directe" },
-            { id: "collateral", label: "Collatéral & DeFi" },
-          ].map((tab) => (
-            <button key={tab.id} onClick={() => setView(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${view === tab.id ? "text-navy" : "text-gray-400 hover:text-gray-600"}`}>
-              {tab.label}
-              {view === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy rounded-full" />}
-            </button>
-          ))}
-        </div>
+        ))}
+      </div>
+
+      {/* Dashboard */}
+      {section === "dashboard" && (
+        <InvestorDashboard onViewFund={(slug) => { setSection("funds"); setFundView("detail:" + slug); }} />
       )}
 
-      {view === "catalog" && <FundCatalog onSelectFund={handleSelectFund} />}
-      {fundSlug && <FundDetail fundSlug={fundSlug} onBack={handleBack} onInvest={handleInvest} />}
-      {view === "subscribe" && <Souscription toast={toast} fund={selectedFund} />}
-      {view === "collateral" && <Collateral toast={toast} />}
+      {/* Funds section */}
+      {section === "funds" && (
+        <>
+          {showFundSubTabs && (
+            <div className="flex border-b border-gray-100 mb-8">
+              <button onClick={handleBackToFunds} className="px-5 py-3 text-sm text-gray-400 hover:text-navy transition-all font-medium">
+                ← Fonds
+              </button>
+              {[
+                { id: "subscribe", label: "Souscription directe" },
+                { id: "collateral", label: "Collatéral & DeFi" },
+              ].map((tab) => (
+                <button key={tab.id} onClick={() => setFundView(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${fundView === tab.id ? "text-navy" : "text-gray-400 hover:text-gray-600"}`}>
+                  {tab.label}
+                  {fundView === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy rounded-full" />}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {fundView === "catalog" && <FundCatalog onSelectFund={handleSelectFund} />}
+          {fundSlug && <FundDetail fundSlug={fundSlug} onBack={handleBackToFunds} onInvest={handleInvest} />}
+          {fundView === "subscribe" && <Souscription toast={toast} fund={selectedFund} />}
+          {fundView === "collateral" && <Collateral toast={toast} />}
+        </>
+      )}
+
+      {/* Profile */}
+      {section === "profile" && <InvestorProfile toast={toast} />}
     </div>
   );
 }
