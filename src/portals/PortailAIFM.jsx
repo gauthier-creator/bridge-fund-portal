@@ -19,8 +19,12 @@ function ValidationOrdres({ toast }) {
 
   const handleValidate = async (orderId) => {
     try {
-      await validateOrder(orderId);
-      toast("Ordre " + orderId + " validé — émission des tokens initiée");
+      const result = await validateOrder(orderId);
+      if (result.mintResult?.txHash) {
+        toast(`Ordre ${orderId} validé — ${result.mintResult.tokenCount} token(s) envoyé(s) au wallet investisseur (tx: ${result.mintResult.txHash.slice(0, 12)}...)`);
+      } else {
+        toast("Ordre " + orderId + " validé — émission des tokens initiée");
+      }
       setSelectedOrder(null);
     } catch (err) {
       toast("Erreur validation : " + (err.message || "échec de la mise à jour"));

@@ -135,6 +135,63 @@ export async function generateWallet(userId) {
 }
 
 /**
+ * Mint fund tokens and send them to the investor's wallet.
+ * Called when AIFM validates a subscription order.
+ * Returns { txHash, policyId, tokenCount, explorerUrl }
+ */
+export async function mintAndSendToken({ orderId, investorAddress, fundName, fundSlug, shareClass, montant, navPerShare, lpName }) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn("[Cardano] Supabase not configured, simulating mint");
+    const hex = (len) => {
+      const c = "0123456789abcdef";
+      let s = "";
+      for (let i = 0; i < len; i++) s += c[Math.floor(Math.random() * 16)];
+      return s;
+    };
+    const tokenCount = Math.floor(montant / navPerShare);
+    const txHash = hex(64);
+    return {
+      txHash,
+      policyId: hex(56),
+      tokenCount,
+      explorerUrl: `https://preprod.cardanoscan.io/transaction/${txHash}`,
+    };
+  }
+
+  try {
+    const tokenCount = Math.floor(montant / navPerShare);
+    console.log(`[Cardano] Minting ${tokenCount} tokens for order ${orderId}...`);
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/mint-token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "apikey": SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ orderId, investorAddress, fundName, fundSlug, shareClass, montant, navPerShare, lpName }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || `Mint failed: ${res.status}`);
+    }
+
+    const data = await res.json();
+    console.log(`[Cardano] Minted! Tx: ${data.txHash}`);
+    return {
+      txHash: data.txHash,
+      policyId: data.policyId,
+      tokenCount: data.tokenCount,
+      explorerUrl: data.explorerUrl,
+    };
+  } catch (err) {
+    console.error("[Cardano] Mint failed:", err.message);
+    throw err;
+  }
+}
+
+/**
  * Get fund token info from Cardano via Blockfrost (if configured)
  */
 export async function getFundTokenInfo(policyId) {

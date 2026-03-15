@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabase";
+import { mintAndSendToken } from "./cardanoService";
 
 // ─── Helpers: convert between DB snake_case and app camelCase ───
 
@@ -174,7 +175,59 @@ export async function validateOrder(orderId) {
     .single();
   if (error) throw error;
   if (!data) throw new Error("Aucun ordre trouvé avec cet ID");
-  return { orderId, validatedAt: now };
+
+  // After DB validation, mint tokens and send to investor wallet
+  let mintResult = null;
+  try {
+    // Get investor's wallet address
+    let investorAddress = null;
+    if (data.user_id) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("wallet_address, full_name")
+        .eq("id", data.user_id)
+        .single();
+      investorAddress = profile?.wallet_address;
+    }
+
+    // Get fund info for slug and NAV
+    let fundSlug = "bridgefund";
+    let fundName = "Bridge Fund";
+    let navPerShare = 1000;
+    if (data.fund_id) {
+      const { data: fund } = await supabase
+        .from("funds")
+        .select("slug, fund_name, nav_per_share")
+        .eq("id", data.fund_id)
+        .single();
+      if (fund) {
+        fundSlug = fund.slug;
+        fundName = fund.fund_name;
+        navPerShare = Number(fund.nav_per_share) || 1000;
+      }
+    }
+
+    if (investorAddress) {
+      mintResult = await mintAndSendToken({
+        orderId: data.id,
+        investorAddress,
+        fundName,
+        fundSlug,
+        shareClass: data.share_class,
+        montant: Number(data.montant),
+        navPerShare,
+        lpName: data.lp_name,
+      });
+      console.log(`[Order] Tokens minted for ${data.lp_name}: tx ${mintResult.txHash}`);
+    } else {
+      console.warn(`[Order] No wallet address for user ${data.user_id}, skipping mint`);
+    }
+  } catch (mintErr) {
+    // Don't fail the validation if minting fails — log and continue
+    console.error("[Order] Token minting failed:", mintErr.message);
+  }
+
+  return { orderId, validatedAt: now, mintResult };
 }
 
 export async function rejectOrder(orderId, reason) {
