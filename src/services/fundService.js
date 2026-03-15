@@ -129,8 +129,8 @@ export async function createFund(fund) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
-  // Deploy Cardano registry smart contract
-  const cardano = await deployFundRegistry(fund.fundName);
+  // Deploy Cardano registry smart contract on Preprod testnet
+  const cardano = await deployFundRegistry(fund.fundName, slug);
 
   const dbRow = {
     ...fundToDb(fund),

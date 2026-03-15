@@ -75,7 +75,7 @@ function AuthenticatedApp() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-xs text-gray-400 hidden lg:block">Réseau : Cardano Mainnet</span>
+              <span className="text-xs text-gray-400 hidden lg:block">Réseau : Cardano Preprod Testnet</span>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500 hidden md:block">{profile?.full_name || profile?.email}</span>
                 <div className={`w-8 h-8 ${config.color} rounded-full flex items-center justify-center text-xs text-white font-medium`}>

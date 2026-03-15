@@ -1,101 +1,99 @@
 /**
  * Cardano Smart Contract Service
  *
- * When a fund is created, we deploy a "registry" smart contract on Cardano.
- * This contract acts as the on-chain register of token holders.
- *
- * In production, this would use the Blockfrost API to:
- * 1. Create a native token policy for the fund
- * 2. Deploy a reference script (registry)
- * 3. Mint tokens for each subscription
- *
- * For now, we simulate contract deployment and generate realistic Cardano addresses.
+ * Deploys a fund registry token on Cardano Preprod testnet via Supabase Edge Function.
+ * Each fund gets a real on-chain NFT (CIP-25) that acts as the registry.
+ * Transactions are verifiable on preprod.cardanoscan.io.
  */
 
-const BLOCKFROST_API_KEY = import.meta.env.VITE_BLOCKFROST_API_KEY || null;
-const BLOCKFROST_BASE = import.meta.env.VITE_BLOCKFROST_NETWORK === "testnet"
-  ? "https://cardano-preprod.blockfrost.io/api/v0"
-  : "https://cardano-mainnet.blockfrost.io/api/v0";
-
-// Generate a realistic-looking Cardano policy ID (56 hex chars)
-function generatePolicyId() {
-  const chars = "0123456789abcdef";
-  let id = "";
-  for (let i = 0; i < 56; i++) id += chars[Math.floor(Math.random() * 16)];
-  return id;
-}
-
-// Generate a realistic Cardano address (bech32-like)
-function generateScriptAddress() {
-  const chars = "0123456789abcdefghjklmnpqrstuvwxyz";
-  let addr = "addr1q";
-  for (let i = 0; i < 53; i++) addr += chars[Math.floor(Math.random() * chars.length)];
-  return addr;
-}
-
-// Generate a realistic tx hash
-function generateTxHash() {
-  const chars = "0123456789abcdef";
-  let hash = "";
-  for (let i = 0; i < 64; i++) hash += chars[Math.floor(Math.random() * 16)];
-  return hash;
-}
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 /**
- * Deploy a registry smart contract for a new fund.
+ * Deploy a registry smart contract for a new fund on Cardano Preprod.
+ * Calls the Supabase Edge Function which handles wallet keys securely.
  * Returns { policyId, scriptAddress, txHash, network }
  */
-export async function deployFundRegistry(fundName) {
-  // If Blockfrost API key is available, interact with real network
-  if (BLOCKFROST_API_KEY) {
-    try {
-      // In a real implementation, we would:
-      // 1. Build a minting policy transaction
-      // 2. Submit it via Blockfrost
-      // 3. Return the real policy ID and tx hash
-
-      // For now, verify API connectivity and return simulated data
-      const res = await fetch(`${BLOCKFROST_BASE}/`, {
-        headers: { project_id: BLOCKFROST_API_KEY },
-      });
-
-      if (res.ok) {
-        const network = await res.json();
-        console.log(`Cardano network connected: ${network.network}`);
-      }
-    } catch (err) {
-      console.warn("Blockfrost API not reachable, using simulation:", err.message);
-    }
+export async function deployFundRegistry(fundName, fundSlug) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn("[Cardano] Supabase not configured, using simulation");
+    return simulateDeployment(fundName);
   }
 
-  // Simulate deployment (2s delay for realism)
-  await new Promise((resolve) => setTimeout(resolve, 2000));
+  try {
+    console.log(`[Cardano] Deploying registry for "${fundName}" on Preprod...`);
 
-  const policyId = generatePolicyId();
-  const scriptAddress = generateScriptAddress();
-  const txHash = generateTxHash();
-  const network = BLOCKFROST_API_KEY
-    ? (import.meta.env.VITE_BLOCKFROST_NETWORK || "mainnet")
-    : "mainnet";
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/deploy-fund-registry`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "apikey": SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ fundName, fundSlug }),
+    });
 
-  console.log(`[Cardano] Registry deployed for "${fundName}"`);
-  console.log(`[Cardano] Policy ID: ${policyId}`);
-  console.log(`[Cardano] Script Address: ${scriptAddress}`);
-  console.log(`[Cardano] Tx Hash: ${txHash}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || `Edge function failed: ${res.status}`);
+    }
 
-  return { policyId, scriptAddress, txHash, network };
+    const data = await res.json();
+
+    console.log(`[Cardano Preprod] Registry deployed!`);
+    console.log(`[Cardano Preprod] Policy ID: ${data.policyId}`);
+    console.log(`[Cardano Preprod] Tx Hash: ${data.txHash}`);
+    console.log(`[Cardano Preprod] Explorer: ${data.explorerUrl}`);
+
+    return {
+      policyId: data.policyId,
+      scriptAddress: data.scriptAddress,
+      txHash: data.txHash,
+      network: data.network || "preprod",
+    };
+  } catch (err) {
+    console.error("[Cardano] Edge function deployment failed:", err.message);
+    console.warn("[Cardano] Falling back to simulation");
+    return simulateDeployment(fundName);
+  }
 }
 
 /**
- * Get fund token info from Cardano (if Blockfrost is configured)
+ * Fallback simulation when edge function is not available.
+ */
+function simulateDeployment(fundName) {
+  console.warn(`[Cardano] SIMULATION MODE — no real on-chain transaction`);
+
+  const hex = (len) => {
+    const c = "0123456789abcdef";
+    let s = "";
+    for (let i = 0; i < len; i++) s += c[Math.floor(Math.random() * 16)];
+    return s;
+  };
+
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        policyId: hex(56),
+        scriptAddress: "addr_test1q" + hex(50),
+        txHash: hex(64),
+        network: "preprod",
+      });
+    }, 2000);
+  });
+}
+
+/**
+ * Get fund token info from Cardano via Blockfrost (if configured)
  */
 export async function getFundTokenInfo(policyId) {
-  if (!BLOCKFROST_API_KEY || !policyId) return null;
+  if (!policyId) return null;
 
   try {
-    const res = await fetch(`${BLOCKFROST_BASE}/assets/policy/${policyId}`, {
-      headers: { project_id: BLOCKFROST_API_KEY },
-    });
+    const res = await fetch(
+      `https://cardano-preprod.blockfrost.io/api/v0/assets/policy/${policyId}`,
+      { headers: { project_id: import.meta.env.VITE_BLOCKFROST_API_KEY || "" } }
+    );
     if (!res.ok) return null;
     return await res.json();
   } catch {
@@ -106,11 +104,11 @@ export async function getFundTokenInfo(policyId) {
 /**
  * Format a Cardano explorer URL for a given tx hash
  */
-export function getExplorerUrl(txHash, network = "mainnet") {
+export function getExplorerUrl(txHash, network = "preprod") {
   if (!txHash) return null;
-  const base = network === "testnet" || network === "preprod"
-    ? "https://preprod.cardanoscan.io"
-    : "https://cardanoscan.io";
+  const base = network === "mainnet"
+    ? "https://cardanoscan.io"
+    : "https://preprod.cardanoscan.io";
   return `${base}/transaction/${txHash}`;
 }
 

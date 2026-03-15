@@ -64,7 +64,7 @@ export default function FundEditor({ toast }) {
 
       if (editing === "new") {
         await createFund(payload);
-        toast(`Fonds "${form.fundName}" créé — Smart contract déployé sur Cardano`);
+        toast(`Fonds "${form.fundName}" créé — Token registre déployé sur Cardano Preprod`);
       } else {
         await updateFund(editing.id, payload);
         toast(`Fonds "${form.fundName}" mis à jour`);
@@ -98,13 +98,16 @@ export default function FundEditor({ toast }) {
         <div className="w-20 h-20 bg-navy/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
           <div className="w-10 h-10 border-4 border-navy/20 border-t-gold rounded-full animate-spin" />
         </div>
-        <h3 className="text-lg font-semibold text-navy mb-2">Déploiement du smart contract…</h3>
+        <h3 className="text-lg font-semibold text-navy mb-2">Déploiement sur Cardano Preprod…</h3>
         <p className="text-sm text-gray-400 max-w-md mx-auto">
-          Création du registre on-chain sur Cardano pour "{form.fundName}". Ce contrat intelligent servira de registre des détenteurs de tokens.
+          Mint du token registre (CIP-25) pour "{form.fundName}" sur le réseau Cardano Preprod. La transaction sera vérifiable sur preprod.cardanoscan.io.
         </p>
-        <div className="mt-6 flex items-center justify-center gap-2 text-xs text-gray-400">
-          <span className="w-2 h-2 rounded-full bg-gold animate-pulse" />
-          Transaction en cours sur le réseau Cardano…
+        <div className="mt-6 space-y-2">
+          <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+            <span className="w-2 h-2 rounded-full bg-gold animate-pulse" />
+            Construction et soumission de la transaction…
+          </div>
+          <p className="text-xs text-gray-300">Réseau : Cardano Preprod Testnet</p>
         </div>
       </div>
     );
