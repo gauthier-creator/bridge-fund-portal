@@ -661,7 +661,7 @@ function ComplianceManager({ toast }) {
                 {whitelist.map((w) => (
                   <tr key={w.id} className="border-b border-gray-50 hover:bg-cream/50">
                     <td className="px-5 py-3 font-mono text-xs text-navy" title={w.wallet_address}>{short(w.wallet_address)}</td>
-                    <td className="px-5 py-3"><Badge status={w.kyc_status === "validated" ? "Validé" : "En attente"} /></td>
+                    <td className="px-5 py-3"><Badge status={["validated", "verified"].includes(w.kyc_status) ? "Validé" : "En attente"} /></td>
                     <td className="px-5 py-3 text-gray-400 text-xs">{w.approved_at?.split("T")[0]}</td>
                     <td className="px-5 py-3 text-right">
                       <button onClick={() => handleRevoke(w.id)} className="text-xs text-red-500 hover:text-red-700 font-medium">Révoquer</button>

@@ -835,7 +835,7 @@ function Collateral({ toast }) {
     (async () => {
       setLoading(true);
       const [fundsRes, vaultRes] = await Promise.all([
-        supabase.from("funds").select("id, name, slug, policy_id").order("name"),
+        supabase.from("funds").select("id, name, slug, cardano_policy_id").order("name"),
         supabase.from("vault_positions").select("*").eq("user_id", user?.id).order("created_at", { ascending: false }),
       ]);
       if (fundsRes.data) {
