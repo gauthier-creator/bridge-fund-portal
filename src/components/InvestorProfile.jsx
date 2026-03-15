@@ -231,23 +231,47 @@ export default function InvestorProfile({ toast }) {
         </div>
       </div>
 
-      {/* Account info */}
+      {/* Wallet & Blockchain */}
       <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
-        <h3 className="text-sm font-semibold text-navy mb-4">Compte</h3>
+        <h3 className="text-sm font-semibold text-navy mb-5">Portefeuille Cardano</h3>
         <div className="space-y-3 text-sm">
           <div className="flex items-center justify-between py-2 border-b border-gray-50">
-            <span className="text-gray-500">Identifiant</span>
-            <span className="font-mono text-xs text-gray-400">{profile?.id?.slice(0, 8)}...{profile?.id?.slice(-4)}</span>
+            <span className="text-gray-500">Adresse publique</span>
+            {profile?.wallet_address ? (
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs text-navy bg-cream px-2 py-1 rounded-lg">
+                  {profile.wallet_address.slice(0, 16)}...{profile.wallet_address.slice(-8)}
+                </span>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(profile.wallet_address); toast("Adresse copiée"); }}
+                  className="text-xs text-gold hover:text-gold/80 transition-colors font-medium"
+                >
+                  Copier
+                </button>
+              </div>
+            ) : (
+              <span className="text-xs text-gray-400">Non généré</span>
+            )}
+          </div>
+          <div className="flex items-center justify-between py-2 border-b border-gray-50">
+            <span className="text-gray-500">Réseau</span>
+            <span className="text-xs text-gray-400">Cardano Preprod Testnet</span>
           </div>
           <div className="flex items-center justify-between py-2 border-b border-gray-50">
             <span className="text-gray-500">Email vérifié</span>
             <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700">Oui</span>
           </div>
           <div className="flex items-center justify-between py-2">
-            <span className="text-gray-500">Réseau blockchain</span>
-            <span className="text-xs text-gray-400">Cardano Preprod Testnet</span>
+            <span className="text-gray-500">Identifiant</span>
+            <span className="font-mono text-xs text-gray-400">{profile?.id?.slice(0, 8)}...{profile?.id?.slice(-4)}</span>
           </div>
         </div>
+        {profile?.wallet_address && (
+          <div className="mt-4 bg-cream rounded-xl p-3">
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-1">Adresse complète</p>
+            <p className="font-mono text-xs text-navy break-all leading-relaxed">{profile.wallet_address}</p>
+          </div>
+        )}
       </div>
     </div>
   );

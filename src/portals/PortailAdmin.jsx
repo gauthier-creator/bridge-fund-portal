@@ -420,6 +420,7 @@ function UserManagement({ toast }) {
                 <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Nom</th>
                 <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Email</th>
                 <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Rôle</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Wallet Cardano</th>
                 <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Société</th>
                 <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Rattaché à</th>
                 <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Créé le</th>
@@ -454,6 +455,15 @@ function UserManagement({ toast }) {
                         }`}>
                           {ROLE_LABELS[u.role] || u.role}
                         </span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3">
+                      {u.wallet_address ? (
+                        <span className="font-mono text-[10px] text-navy bg-cream px-1.5 py-0.5 rounded" title={u.wallet_address}>
+                          {u.wallet_address.slice(0, 12)}...{u.wallet_address.slice(-6)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
                       )}
                     </td>
                     <td className="px-5 py-3 text-gray-500 text-xs">{u.company || "—"}</td>

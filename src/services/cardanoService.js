@@ -84,6 +84,57 @@ function simulateDeployment(fundName) {
 }
 
 /**
+ * Generate a Cardano wallet for a new investor.
+ * Calls the Edge Function which generates a seed phrase and derives the address.
+ * Returns { address, network }
+ */
+export async function generateWallet(userId) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn("[Cardano] Supabase not configured, using simulated wallet");
+    const hex = (len) => {
+      const c = "0123456789abcdef";
+      let s = "";
+      for (let i = 0; i < len; i++) s += c[Math.floor(Math.random() * 16)];
+      return s;
+    };
+    return { address: "addr_test1q" + hex(50), network: "preprod" };
+  }
+
+  try {
+    console.log(`[Cardano] Generating wallet for user ${userId}...`);
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-wallet`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "apikey": SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ userId }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || `Edge function failed: ${res.status}`);
+    }
+
+    const data = await res.json();
+    console.log(`[Cardano] Wallet generated: ${data.address}`);
+    return { address: data.address, network: data.network || "preprod" };
+  } catch (err) {
+    console.error("[Cardano] Wallet generation failed:", err.message);
+    // Fallback: generate a simulated address
+    const hex = (len) => {
+      const c = "0123456789abcdef";
+      let s = "";
+      for (let i = 0; i < len; i++) s += c[Math.floor(Math.random() * 16)];
+      return s;
+    };
+    return { address: "addr_test1q" + hex(50), network: "preprod" };
+  }
+}
+
+/**
  * Get fund token info from Cardano via Blockfrost (if configured)
  */
 export async function getFundTokenInfo(policyId) {
