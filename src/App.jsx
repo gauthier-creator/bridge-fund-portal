@@ -83,7 +83,7 @@ function AuthenticatedApp() {
                 </div>
               </div>
               <button
-                onClick={() => { signOut(); navigate("/"); }}
+                onClick={async () => { await signOut(); navigate("/"); }}
                 className="text-xs text-gray-400 hover:text-red-500 transition-colors ml-2"
               >
                 Déconnexion

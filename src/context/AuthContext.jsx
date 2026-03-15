@@ -46,10 +46,10 @@ export function AuthProvider({ children }) {
     });
 
     // Listen for auth changes — defensive approach:
-    // 1. SIGNED_OUT: clear everything
-    // 2. All other events with null session: IGNORE (prevents tab-switch flicker)
-    // 3. Same user: just update session silently
-    // 4. Different user: update session + fetch profile
+    // User switches are ONLY handled by signIn/signOut directly.
+    // onAuthStateChange only handles: sign-out events and token refreshes
+    // for the SAME user. This prevents signUp (admin creating users) from
+    // hijacking the session.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, s) => {
         // Only clear state on explicit sign-out
@@ -61,18 +61,15 @@ export function AuthProvider({ children }) {
         }
 
         // Ignore any event that arrives without a valid session
-        // (e.g. transient state during token refresh on tab visibility)
         if (!s?.user) return;
 
-        // Always update session token (needed for API calls)
-        setSession(s);
+        // IGNORE user switches from onAuthStateChange entirely.
+        // Legitimate logins are handled by signIn() which updates state directly.
+        // This prevents signUp() (admin creating users) from hijacking the session.
+        if (s.user.id !== currentUserIdRef.current) return;
 
-        // Only re-fetch profile when a genuinely different user signs in
-        if (s.user.id !== currentUserIdRef.current) {
-          currentUserIdRef.current = s.user.id;
-          const p = await fetchProfile(s.user.id);
-          setProfile(p);
-        }
+        // Same user — just update the session token (needed for API calls)
+        setSession(s);
       }
     );
 
@@ -83,8 +80,15 @@ export function AuthProvider({ children }) {
     if (!supabase) throw new Error("Supabase non configuré");
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    // Handle user switch directly here — don't rely on onAuthStateChange
+    setSession(data.session);
+    if (data.user) {
+      currentUserIdRef.current = data.user.id;
+      const p = await fetchProfile(data.user.id);
+      setProfile(p);
+    }
     return data;
-  }, []);
+  }, [fetchProfile]);
 
   const signUp = useCallback(async (email, password, metadata = {}) => {
     if (!supabase) throw new Error("Supabase non configuré");
@@ -99,9 +103,15 @@ export function AuthProvider({ children }) {
 
   const signOut = useCallback(async () => {
     if (!supabase) return;
-    await supabase.auth.signOut();
+    // Clear state immediately so UI reacts before the async call
+    currentUserIdRef.current = null;
     setSession(null);
     setProfile(null);
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("signOut error:", err);
+    }
   }, []);
 
   const refreshProfile = useCallback(async () => {

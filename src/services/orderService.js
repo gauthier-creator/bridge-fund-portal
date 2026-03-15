@@ -166,21 +166,27 @@ export async function createOrder(order) {
 
 export async function validateOrder(orderId) {
   const now = new Date().toISOString();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("orders")
     .update({ status: "validated", validated_at: now })
-    .eq("id", orderId);
+    .eq("id", orderId)
+    .select()
+    .single();
   if (error) throw error;
+  if (!data) throw new Error("Aucun ordre trouvé avec cet ID");
   return { orderId, validatedAt: now };
 }
 
 export async function rejectOrder(orderId, reason) {
   const now = new Date().toISOString();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("orders")
     .update({ status: "rejected", rejected_at: now, reject_reason: reason })
-    .eq("id", orderId);
+    .eq("id", orderId)
+    .select()
+    .single();
   if (error) throw error;
+  if (!data) throw new Error("Aucun ordre trouvé avec cet ID");
   return { orderId, rejectedAt: now, reason };
 }
 

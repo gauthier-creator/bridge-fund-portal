@@ -135,12 +135,8 @@ export function AppProvider({ children }) {
   const validateOrder = useCallback(async (orderId) => {
     let validatedAt = new Date().toISOString();
     if (isSupabase) {
-      try {
-        const result = await orderService.validateOrder(orderId);
-        validatedAt = result.validatedAt;
-      } catch (err) {
-        console.error("Failed to validate order:", err);
-      }
+      const result = await orderService.validateOrder(orderId);
+      validatedAt = result.validatedAt;
     }
     dispatch({ type: "VALIDATE_ORDER", payload: { id: orderId, validatedAt } });
   }, [isSupabase]);
@@ -148,12 +144,8 @@ export function AppProvider({ children }) {
   const rejectOrder = useCallback(async (orderId, reason) => {
     let rejectedAt = new Date().toISOString();
     if (isSupabase) {
-      try {
-        const result = await orderService.rejectOrder(orderId, reason);
-        rejectedAt = result.rejectedAt;
-      } catch (err) {
-        console.error("Failed to reject order:", err);
-      }
+      const result = await orderService.rejectOrder(orderId, reason);
+      rejectedAt = result.rejectedAt;
     }
     dispatch({ type: "REJECT_ORDER", payload: { id: orderId, reason, rejectedAt } });
   }, [isSupabase]);

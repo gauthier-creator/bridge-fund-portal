@@ -17,19 +17,27 @@ function ValidationOrdres({ toast }) {
   const validatedOrders = orders.filter((o) => o.status === "validated");
   const rejectedOrders = orders.filter((o) => o.status === "rejected");
 
-  const handleValidate = (orderId) => {
-    validateOrder(orderId);
-    toast("Ordre " + orderId + " validé — émission des tokens initiée");
-    setSelectedOrder(null);
+  const handleValidate = async (orderId) => {
+    try {
+      await validateOrder(orderId);
+      toast("Ordre " + orderId + " validé — émission des tokens initiée");
+      setSelectedOrder(null);
+    } catch (err) {
+      toast("Erreur validation : " + (err.message || "échec de la mise à jour"));
+    }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!selectedOrder) return;
-    rejectOrder(selectedOrder.id, rejectReason);
-    toast("Ordre " + selectedOrder.id + " rejeté — " + rejectReason);
-    setShowRejectModal(false);
-    setSelectedOrder(null);
-    setRejectReason("");
+    try {
+      await rejectOrder(selectedOrder.id, rejectReason);
+      toast("Ordre " + selectedOrder.id + " rejeté — " + rejectReason);
+      setShowRejectModal(false);
+      setSelectedOrder(null);
+      setRejectReason("");
+    } catch (err) {
+      toast("Erreur rejet : " + (err.message || "échec de la mise à jour"));
+    }
   };
 
   const statusBadge = (status) => {

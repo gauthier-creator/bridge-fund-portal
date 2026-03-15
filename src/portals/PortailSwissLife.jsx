@@ -13,7 +13,98 @@ import {
 import FundCatalog from "../components/FundCatalog";
 import FundDetail from "../components/FundDetail";
 
-/* ─── Sub-tab: Souscription intermédiée ─── */
+/* ─────────────────────────────────────────────────────
+   1. TABLEAU DE BORD
+   ───────────────────────────────────────────────────── */
+function DashboardIntermediaire({ toast, onViewClients, onViewCustody }) {
+  const { orders, collateralPositions } = useAppContext();
+  const { user, profile } = useAuth();
+
+  const myOrders = orders.filter((o) => o.intermediaryId === user?.id || o.intermediaire);
+  const validatedOrders = myOrders.filter((o) => o.status === "validated");
+  const pendingOrders = myOrders.filter((o) => o.status === "pending");
+
+  const totalAUM = validatedOrders.reduce((s, o) => s + o.montant, 0);
+  const totalPending = pendingOrders.reduce((s, o) => s + o.montant, 0);
+  const totalTokens = validatedOrders.reduce((s, o) => s + Math.floor(o.montant / NAV_PER_PART), 0);
+  const totalStaked = collateralPositions.reduce((s, p) => s + p.tokens, 0);
+
+  const statusLabel = (s) => s === "pending" ? "En attente" : s === "validated" ? "Approuvé" : "Rejeté";
+
+  return (
+    <div className="animate-fade-in space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold text-navy">Bonjour, {profile?.full_name?.split(" ")[0] || "Intermédiaire"}</h2>
+        <p className="text-sm text-gray-400 mt-1">Pilotez votre activité d'intermédiation</p>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-4 gap-4">
+        <KPICard label="AUM total" value={fmt(totalAUM)} sub={`${totalTokens} tokens BF`} />
+        <KPICard label="En attente" value={fmt(totalPending)} sub={`${pendingOrders.length} souscription${pendingOrders.length > 1 ? "s" : ""}`} />
+        <KPICard label="Souscriptions validées" value={validatedOrders.length} sub="Tous fonds confondus" />
+        <KPICard label="Tokens stakés" value={`${totalStaked} BF`} sub={`${collateralPositions.length} position${collateralPositions.length > 1 ? "s" : ""}`} />
+      </div>
+
+      {/* Recent subscriptions */}
+      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-navy">Souscriptions récentes</h3>
+          <span className="text-xs text-gray-400">{myOrders.length} souscription{myOrders.length > 1 ? "s" : ""}</span>
+        </div>
+
+        {myOrders.length === 0 ? (
+          <div className="p-8 text-center">
+            <div className="w-12 h-12 bg-cream rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+            </div>
+            <p className="text-sm text-gray-400">Aucune souscription pour le moment</p>
+            <p className="text-xs text-gray-300 mt-1">Souscrivez pour le compte de vos clients depuis le catalogue de fonds</p>
+          </div>
+        ) : (
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Ref</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Client</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Classe</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Montant</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Paiement</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Statut</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {myOrders.sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 10).map((o) => (
+                <tr key={o.id} className="border-b border-gray-50 hover:bg-cream/50 transition-colors">
+                  <td className="px-5 py-3 font-mono text-xs text-navy">{o.id?.slice(0, 12)}...</td>
+                  <td className="px-5 py-3 text-navy font-medium text-xs">{o.lpName}</td>
+                  <td className="px-5 py-3">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-navy/10 text-navy">
+                      Classe {o.shareClass || 1}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 text-right font-medium">{fmt(o.montant)}</td>
+                  <td className="px-5 py-3">
+                    <span className={`text-xs font-medium ${o.paymentMethod === "crypto" ? "text-gold" : "text-gray-500"}`}>
+                      {o.paymentMethod === "crypto" ? "Crypto (ADA)" : "Virement"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3"><Badge status={statusLabel(o.status)} /></td>
+                  <td className="px-5 py-3 text-gray-400 text-xs">{o.date}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────
+   2. SOUSCRIPTION INTERMEDIEE
+   ───────────────────────────────────────────────────── */
 function SouscriptionIntermediee({ toast }) {
   const { submitOrder } = useAppContext();
   const { profile, user } = useAuth();
@@ -67,7 +158,7 @@ function SouscriptionIntermediee({ toast }) {
   const steps = ["Client & KYC", "Virement", "Signature", "Confirmation"];
 
   const handleKyc = () => {
-    toast("KYC client lancé par SwissLife — vérification en cours");
+    toast("KYC client lancé — vérification en cours");
     setTimeout(() => { setKycDone(true); toast("KYC validé pour " + (formData.prenom + " " + formData.nom).trim()); }, 2000);
   };
 
@@ -129,7 +220,7 @@ function SouscriptionIntermediee({ toast }) {
         {/* Intermediary banner */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-6 flex items-center gap-2 text-xs text-blue-800">
           <span className="font-bold text-sm">SL</span>
-          <span>Souscription intermédiée par <strong>SwissLife Banque Privée</strong> — dépositaire / custodian</span>
+          <span>Souscription intermédiée par <strong>{intermediaireName}</strong> — dépositaire / custodian</span>
         </div>
 
         {/* Step 0: Client info */}
@@ -197,102 +288,52 @@ function SouscriptionIntermediee({ toast }) {
               <label className={labelCls}>Pièces justificatives du client <span className="text-red-400">*</span></label>
               <p className="text-xs text-gray-400 mb-3">Déposez les documents KYC/KYB du client — AMLD5 & CSSF 12-02</p>
               <div className="space-y-2">
-                {/* Pièce d'identité */}
-                {documents.find((d) => d.type === "Pièce d'identité") ? (
-                  <div className="flex items-center gap-2 border border-emerald-200 bg-emerald-50/50 rounded-xl p-3 text-sm">
-                    <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span className="text-emerald-700 font-medium flex-1">{documents.find((d) => d.type === "Pièce d'identité").name}</span>
-                    <span className="text-xs text-emerald-500">{documents.find((d) => d.type === "Pièce d'identité").size}</span>
-                    <button onClick={() => window.open(documents.find((d) => d.type === "Pièce d'identité").url, "_blank")} className="text-xs font-medium text-navy hover:text-gold transition-colors">Consulter</button>
-                  </div>
-                ) : (
-                  <>
-                    <input type="file" ref={fileRefs.id} onChange={handleFileSelect("Pièce d'identité")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
-                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
-                      onClick={() => fileRefs.id.current?.click()}>
-                      <p className="text-sm text-gray-400">{personType === "physique" ? "Passeport ou carte d'identité" : "K-bis / Registre de commerce"}</p>
-                      <p className="text-xs text-gray-300 mt-0.5">Cliquez pour sélectionner · PDF, JPG, PNG — max 10 Mo</p>
+                {[
+                  { type: "Pièce d'identité", ref: fileRefs.id, label: personType === "physique" ? "Passeport ou carte d'identité" : "K-bis / Registre de commerce", sub: "Cliquez pour sélectionner · PDF, JPG, PNG — max 10 Mo" },
+                  { type: "Justificatif de domicile", ref: fileRefs.domicile, label: "Justificatif de domicile (moins de 3 mois)", sub: "Facture énergie, téléphone, avis d'imposition" },
+                  { type: "Justificatif origine des fonds", ref: fileRefs.fonds, label: "Justificatif d'origine des fonds", sub: "Relevé bancaire, acte de cession, attestation employeur" },
+                ].map(({ type, ref, label, sub }) => {
+                  const doc = documents.find((d) => d.type === type);
+                  return doc ? (
+                    <div key={type} className="flex items-center gap-2 border border-emerald-200 bg-emerald-50/50 rounded-xl p-3 text-sm">
+                      <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      <span className="text-emerald-700 font-medium flex-1">{doc.name}</span>
+                      <span className="text-xs text-emerald-500">{doc.size}</span>
+                      <button onClick={() => window.open(doc.url, "_blank")} className="text-xs font-medium text-navy hover:text-gold transition-colors">Consulter</button>
                     </div>
-                  </>
-                )}
-
-                {/* Justificatif de domicile */}
-                {documents.find((d) => d.type === "Justificatif de domicile") ? (
-                  <div className="flex items-center gap-2 border border-emerald-200 bg-emerald-50/50 rounded-xl p-3 text-sm">
-                    <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span className="text-emerald-700 font-medium flex-1">{documents.find((d) => d.type === "Justificatif de domicile").name}</span>
-                    <span className="text-xs text-emerald-500">{documents.find((d) => d.type === "Justificatif de domicile").size}</span>
-                    <button onClick={() => window.open(documents.find((d) => d.type === "Justificatif de domicile").url, "_blank")} className="text-xs font-medium text-navy hover:text-gold transition-colors">Consulter</button>
-                  </div>
-                ) : (
-                  <>
-                    <input type="file" ref={fileRefs.domicile} onChange={handleFileSelect("Justificatif de domicile")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
-                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
-                      onClick={() => fileRefs.domicile.current?.click()}>
-                      <p className="text-sm text-gray-400">Justificatif de domicile (moins de 3 mois)</p>
-                      <p className="text-xs text-gray-300 mt-0.5">Facture énergie, téléphone, avis d'imposition</p>
-                    </div>
-                  </>
-                )}
-
-                {/* Justificatif origine des fonds */}
-                {documents.find((d) => d.type === "Justificatif origine des fonds") ? (
-                  <div className="flex items-center gap-2 border border-emerald-200 bg-emerald-50/50 rounded-xl p-3 text-sm">
-                    <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                    <span className="text-emerald-700 font-medium flex-1">{documents.find((d) => d.type === "Justificatif origine des fonds").name}</span>
-                    <span className="text-xs text-emerald-500">{documents.find((d) => d.type === "Justificatif origine des fonds").size}</span>
-                    <button onClick={() => window.open(documents.find((d) => d.type === "Justificatif origine des fonds").url, "_blank")} className="text-xs font-medium text-navy hover:text-gold transition-colors">Consulter</button>
-                  </div>
-                ) : (
-                  <>
-                    <input type="file" ref={fileRefs.fonds} onChange={handleFileSelect("Justificatif origine des fonds")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
-                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
-                      onClick={() => fileRefs.fonds.current?.click()}>
-                      <p className="text-sm text-gray-400">Justificatif d'origine des fonds</p>
-                      <p className="text-xs text-gray-300 mt-0.5">Relevé bancaire, acte de cession, attestation employeur</p>
-                    </div>
-                  </>
-                )}
-
-                {/* Statuts / UBO (personne morale) */}
-                {personType === "morale" && (
-                  <>
-                    {documents.find((d) => d.type === "Statuts société") ? (
-                      <div className="flex items-center gap-2 border border-emerald-200 bg-emerald-50/50 rounded-xl p-3 text-sm">
-                        <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                        <span className="text-emerald-700 font-medium flex-1">{documents.find((d) => d.type === "Statuts société").name}</span>
-                        <span className="text-xs text-emerald-500">{documents.find((d) => d.type === "Statuts société").size}</span>
-                        <button onClick={() => window.open(documents.find((d) => d.type === "Statuts société").url, "_blank")} className="text-xs font-medium text-navy hover:text-gold transition-colors">Consulter</button>
+                  ) : (
+                    <div key={type}>
+                      <input type="file" ref={ref} onChange={handleFileSelect(type)} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
+                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer" onClick={() => ref.current?.click()}>
+                        <p className="text-sm text-gray-400">{label}</p>
+                        <p className="text-xs text-gray-300 mt-0.5">{sub}</p>
                       </div>
-                    ) : (
-                      <>
-                        <input type="file" ref={fileRefs.statuts} onChange={handleFileSelect("Statuts société")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
-                        <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
-                          onClick={() => fileRefs.statuts.current?.click()}>
-                          <p className="text-sm text-gray-400">Statuts à jour de la société</p>
-                          <p className="text-xs text-gray-300 mt-0.5">Dernière version certifiée conforme</p>
-                        </div>
-                      </>
-                    )}
-                    {documents.find((d) => d.type === "Déclaration UBO") ? (
-                      <div className="flex items-center gap-2 border border-emerald-200 bg-emerald-50/50 rounded-xl p-3 text-sm">
-                        <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                        <span className="text-emerald-700 font-medium flex-1">{documents.find((d) => d.type === "Déclaration UBO").name}</span>
-                        <span className="text-xs text-emerald-500">{documents.find((d) => d.type === "Déclaration UBO").size}</span>
-                        <button onClick={() => window.open(documents.find((d) => d.type === "Déclaration UBO").url, "_blank")} className="text-xs font-medium text-navy hover:text-gold transition-colors">Consulter</button>
+                    </div>
+                  );
+                })}
+
+                {personType === "morale" && [
+                  { type: "Statuts société", ref: fileRefs.statuts, label: "Statuts à jour de la société", sub: "Dernière version certifiée conforme" },
+                  { type: "Déclaration UBO", ref: fileRefs.ubo, label: "Déclaration des bénéficiaires effectifs (UBO)", sub: "Formulaire UBO + pièces d'identité des UBO > 25%" },
+                ].map(({ type, ref, label, sub }) => {
+                  const doc = documents.find((d) => d.type === type);
+                  return doc ? (
+                    <div key={type} className="flex items-center gap-2 border border-emerald-200 bg-emerald-50/50 rounded-xl p-3 text-sm">
+                      <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      <span className="text-emerald-700 font-medium flex-1">{doc.name}</span>
+                      <span className="text-xs text-emerald-500">{doc.size}</span>
+                      <button onClick={() => window.open(doc.url, "_blank")} className="text-xs font-medium text-navy hover:text-gold transition-colors">Consulter</button>
+                    </div>
+                  ) : (
+                    <div key={type}>
+                      <input type="file" ref={ref} onChange={handleFileSelect(type)} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
+                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer" onClick={() => ref.current?.click()}>
+                        <p className="text-sm text-gray-400">{label}</p>
+                        <p className="text-xs text-gray-300 mt-0.5">{sub}</p>
                       </div>
-                    ) : (
-                      <>
-                        <input type="file" ref={fileRefs.ubo} onChange={handleFileSelect("Déclaration UBO")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
-                        <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer"
-                          onClick={() => fileRefs.ubo.current?.click()}>
-                          <p className="text-sm text-gray-400">Déclaration des bénéficiaires effectifs (UBO)</p>
-                          <p className="text-xs text-gray-300 mt-0.5">Formulaire UBO + pièces d'identité des UBO &gt; 25%</p>
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
+                    </div>
+                  );
+                })}
               </div>
 
               {documents.length > 0 && (
@@ -369,13 +410,13 @@ function SouscriptionIntermediee({ toast }) {
         {step === 2 && (
           <div className="animate-fade-in">
             <h3 className="text-lg font-semibold text-navy mb-2">Signature du bulletin</h3>
-            <p className="text-xs text-gray-400 mb-5">Souscription intermédiée — signature du représentant SwissLife</p>
+            <p className="text-xs text-gray-400 mb-5">Souscription intermédiée — signature du représentant</p>
 
             <div className="bg-cream rounded-xl p-5 text-left text-sm space-y-2 mb-6">
               <div className="flex justify-between"><span className="text-gray-500">Client</span><span className="text-navy font-medium">{(formData.prenom + " " + formData.nom).trim()}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Montant</span><span className="text-navy font-medium">{fmt(formData.montant)}</span></div>
               <div className="flex justify-between"><span className="text-gray-500">Share Class</span><span className="text-navy">Classe {formData.shareClass}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Intermédiaire</span><span className="text-navy font-medium">SwissLife Banque Privée</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Intermédiaire</span><span className="text-navy font-medium">{intermediaireName}</span></div>
             </div>
 
             <div className="text-left space-y-3 mb-6">
@@ -437,134 +478,12 @@ function SouscriptionIntermediee({ toast }) {
   );
 }
 
-/* ─── Sub-tab: Custody ─── */
-function Custody({ toast }) {
-  const { orders } = useAppContext();
-  const validatedOrders = orders.filter((o) => o.status === "validated" && o.intermediaire);
-  const totalTokens = validatedOrders.reduce((s, o) => s + Math.floor(o.montant / NAV_PER_PART), 0);
-  const totalNav = validatedOrders.reduce((s, o) => s + o.montant, 0);
-
-  return (
-    <div className="animate-fade-in">
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        <KPICard label="Tokens sous custody" value={totalTokens.toLocaleString("fr-FR")} />
-        <KPICard label="Valeur totale AUM" value={fmt(totalNav)} />
-        <KPICard label="Clients" value={validatedOrders.length} />
-        <KPICard label="Dernière NAV" value={fmtFull(NAV_PER_PART)} />
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
-        {validatedOrders.length === 0 ? (
-          <p className="text-sm text-gray-400 py-8 text-center">Aucun client en custody — les souscriptions validées apparaîtront ici</p>
-        ) : (
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Client</th>
-                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Tokens</th>
-                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Valeur NAV</th>
-                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
-                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Statut</th>
-              </tr>
-            </thead>
-            <tbody>
-              {validatedOrders.map((o) => (
-                <tr key={o.id} className="border-b border-gray-50 hover:bg-cream/50 transition-colors">
-                  <td className="px-5 py-3.5 font-medium text-navy">{o.lpName}</td>
-                  <td className="px-5 py-3.5 text-right font-mono">{Math.floor(o.montant / NAV_PER_PART).toLocaleString("fr-FR")}</td>
-                  <td className="px-5 py-3.5 text-right">{fmt(o.montant)}</td>
-                  <td className="px-5 py-3.5 text-gray-500">{o.date}</td>
-                  <td className="px-5 py-3.5"><Badge status="Actif" /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ─── Sub-tab: Collatéral clients ─── */
-function CollateralClients({ toast }) {
-  const { orders, collateralPositions, addCollateral } = useAppContext();
-  const [selectedClient, setSelectedClient] = useState("");
-  const [stakeAmount, setStakeAmount] = useState(100);
-
-  const validatedClients = orders.filter((o) => o.status === "validated");
-
-  return (
-    <div className="animate-fade-in">
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <KPICard label="Positions collatérales" value={collateralPositions.length} />
-        <KPICard label="Total tokens stakés" value={collateralPositions.reduce((s, p) => s + p.tokens, 0).toLocaleString("fr-FR")} />
-        <KPICard label="APY moyen" value="7.6%" />
-      </div>
-
-      {/* Existing positions */}
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6 mb-6">
-        <h3 className="text-sm font-semibold text-navy mb-4">Positions actives</h3>
-        <table className="w-full text-sm text-left">
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Client</th>
-              <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Tokens</th>
-              <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Type</th>
-              <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Pool</th>
-              <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">APY</th>
-              <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {collateralPositions.map((p) => (
-              <tr key={p.id} className="border-b border-gray-50">
-                <td className="py-2.5 font-medium text-navy">{p.owner}</td>
-                <td className="py-2.5 text-right font-mono">{p.tokens}</td>
-                <td className="py-2.5"><span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${p.type === "Staking" ? "bg-navy/10 text-navy" : "bg-gold/10 text-gold"}`}>{p.type}</span></td>
-                <td className="py-2.5 text-gray-500">{p.pool}</td>
-                <td className="py-2.5 text-right text-emerald-600 font-medium">{p.apy}%</td>
-                <td className="py-2.5 text-gray-500">{p.date}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* New position */}
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
-        <h3 className="text-sm font-semibold text-navy mb-4">Nouvelle mise en collatéral</h3>
-        <div className="grid grid-cols-2 gap-4 text-left">
-          <div>
-            <label className={labelCls}>Client</label>
-            <select value={selectedClient} onChange={(e) => setSelectedClient(e.target.value)} className={selectCls}>
-              <option value="">Sélectionnez un client...</option>
-              {validatedClients.map((c) => <option key={c.id} value={c.lpName}>{c.lpName} ({Math.floor(c.montant / NAV_PER_PART)} BF)</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={labelCls}>Montant (tokens)</label>
-            <input type="number" value={stakeAmount} onChange={(e) => setStakeAmount(Number(e.target.value))} min={1} className={inputCls} />
-          </div>
-        </div>
-        <button
-          onClick={() => {
-            if (!selectedClient) { toast("Veuillez sélectionner un client"); return; }
-            addCollateral({ owner: selectedClient, tokens: stakeAmount, type: "Staking", pool: "BF/ADA", apy: 8.2, date: new Date().toISOString().split("T")[0] });
-            toast(`${stakeAmount} BF mis en staking pour ${selectedClient}`);
-          }}
-          className="mt-4 bg-navy text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-navy-light transition-colors"
-        >
-          Staker pour le client
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Main SwissLife Portal ─── */
-/* ─── Mes Clients tab ─── */
+/* ─────────────────────────────────────────────────────
+   3. MES CLIENTS
+   ───────────────────────────────────────────────────── */
 function MesClients({ toast }) {
   const { profile, user } = useAuth();
+  const { orders } = useAppContext();
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -593,7 +512,6 @@ function MesClients({ toast }) {
       toast(`Compte client créé pour ${newClient.fullName}`);
       setNewClient({ email: "", fullName: "", company: "", password: "" });
       setShowForm(false);
-      // Refresh client list
       const updated = await listMyClients();
       setClients(updated);
     } catch (err) {
@@ -603,34 +521,52 @@ function MesClients({ toast }) {
     }
   };
 
+  // Enrich clients with order stats
+  const getClientStats = (clientId) => {
+    const clientOrders = orders.filter((o) => o.userId === clientId);
+    const validated = clientOrders.filter((o) => o.status === "validated");
+    const totalInvested = validated.reduce((s, o) => s + o.montant, 0);
+    return { orderCount: clientOrders.length, validatedCount: validated.length, totalInvested };
+  };
+
   return (
-    <div className="animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-sm font-semibold text-navy">Clients liés à votre compte</h3>
+    <div className="animate-fade-in space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-navy">Mes clients</h2>
+          <p className="text-sm text-gray-400 mt-1">Gérez les comptes investisseurs rattachés à votre espace</p>
+        </div>
         <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-navy text-white text-xs rounded-xl hover:bg-navy-light transition-colors">
           {showForm ? "Annuler" : "+ Nouveau client"}
         </button>
       </div>
 
+      {/* KPIs */}
+      <div className="grid grid-cols-3 gap-4">
+        <KPICard label="Clients enregistrés" value={clients.length} />
+        <KPICard label="Souscriptions clients" value={orders.filter((o) => o.intermediaryId === user?.id || o.intermediaire).length} />
+        <KPICard label="Volume total" value={fmt(orders.filter((o) => (o.intermediaryId === user?.id || o.intermediaire) && o.status === "validated").reduce((s, o) => s + o.montant, 0))} />
+      </div>
+
       {showForm && (
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6 mb-6">
+        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
           <h4 className="text-sm font-semibold text-navy mb-4">Créer un compte client</h4>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Nom complet *</label>
-              <input value={newClient.fullName} onChange={(e) => setNewClient((p) => ({ ...p, fullName: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20" placeholder="Jean Dupont" />
+              <input value={newClient.fullName} onChange={(e) => setNewClient((p) => ({ ...p, fullName: e.target.value }))} className={inputCls} placeholder="Jean Dupont" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Email *</label>
-              <input type="email" value={newClient.email} onChange={(e) => setNewClient((p) => ({ ...p, email: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20" placeholder="client@email.com" />
+              <input type="email" value={newClient.email} onChange={(e) => setNewClient((p) => ({ ...p, email: e.target.value }))} className={inputCls} placeholder="client@email.com" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Mot de passe *</label>
-              <input type="password" value={newClient.password} onChange={(e) => setNewClient((p) => ({ ...p, password: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20" placeholder="Min. 6 caractères" />
+              <input type="password" value={newClient.password} onChange={(e) => setNewClient((p) => ({ ...p, password: e.target.value }))} className={inputCls} placeholder="Min. 6 caractères" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Société</label>
-              <input value={newClient.company} onChange={(e) => setNewClient((p) => ({ ...p, company: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20" placeholder="Optionnel" />
+              <input value={newClient.company} onChange={(e) => setNewClient((p) => ({ ...p, company: e.target.value }))} className={inputCls} placeholder="Optionnel" />
             </div>
           </div>
           <button onClick={handleCreateClient} disabled={creating} className="px-6 py-2 bg-navy text-white text-sm rounded-xl hover:bg-navy-light transition-colors disabled:opacity-50">
@@ -643,7 +579,13 @@ function MesClients({ toast }) {
         {loading ? (
           <div className="p-8 text-center text-gray-400 text-sm">Chargement…</div>
         ) : clients.length === 0 ? (
-          <div className="p-8 text-center text-gray-400 text-sm">Aucun client enregistré — créez votre premier compte client</div>
+          <div className="p-8 text-center">
+            <div className="w-12 h-12 bg-cream rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </div>
+            <p className="text-sm text-gray-400">Aucun client enregistré</p>
+            <p className="text-xs text-gray-300 mt-1">Créez votre premier compte client pour commencer</p>
+          </div>
         ) : (
           <table className="w-full text-sm text-left">
             <thead>
@@ -651,16 +593,98 @@ function MesClients({ toast }) {
                 <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Nom</th>
                 <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Email</th>
                 <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Société</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Volume investi</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Souscriptions</th>
                 <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Créé le</th>
               </tr>
             </thead>
             <tbody>
-              {clients.map((c) => (
-                <tr key={c.id} className="border-b border-gray-50 hover:bg-cream/50">
-                  <td className="px-5 py-3 font-medium text-navy">{c.full_name}</td>
-                  <td className="px-5 py-3 text-gray-500">{c.email}</td>
-                  <td className="px-5 py-3 text-gray-500">{c.company || "—"}</td>
-                  <td className="px-5 py-3 text-gray-400">{c.created_at?.split("T")[0]}</td>
+              {clients.map((c) => {
+                const stats = getClientStats(c.id);
+                return (
+                  <tr key={c.id} className="border-b border-gray-50 hover:bg-cream/50 transition-colors">
+                    <td className="px-5 py-3 font-medium text-navy">{c.full_name}</td>
+                    <td className="px-5 py-3 text-gray-500">{c.email}</td>
+                    <td className="px-5 py-3 text-gray-500">{c.company || "—"}</td>
+                    <td className="px-5 py-3 text-right font-medium">{stats.totalInvested > 0 ? fmt(stats.totalInvested) : "—"}</td>
+                    <td className="px-5 py-3">
+                      {stats.orderCount > 0 ? (
+                        <span className="text-xs">{stats.validatedCount}/{stats.orderCount} validée{stats.validatedCount > 1 ? "s" : ""}</span>
+                      ) : (
+                        <span className="text-xs text-gray-400">Aucune</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-gray-400 text-xs">{c.created_at?.split("T")[0]}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────
+   4. CUSTODY
+   ───────────────────────────────────────────────────── */
+function Custody({ toast }) {
+  const { orders } = useAppContext();
+  const { user } = useAuth();
+  const validatedOrders = orders.filter((o) => o.status === "validated" && (o.intermediaryId === user?.id || o.intermediaire));
+  const totalTokens = validatedOrders.reduce((s, o) => s + Math.floor(o.montant / NAV_PER_PART), 0);
+  const totalNav = validatedOrders.reduce((s, o) => s + o.montant, 0);
+
+  return (
+    <div className="animate-fade-in space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold text-navy">Custody</h2>
+        <p className="text-sm text-gray-400 mt-1">Tokens sous garde pour le compte de vos clients</p>
+      </div>
+
+      <div className="grid grid-cols-4 gap-4">
+        <KPICard label="Tokens sous custody" value={totalTokens.toLocaleString("fr-FR")} sub="Bridge Fund tokens" />
+        <KPICard label="Valeur totale AUM" value={fmt(totalNav)} sub="Actifs sous gestion" />
+        <KPICard label="Clients en custody" value={validatedOrders.length} sub="Comptes actifs" />
+        <KPICard label="NAV / part" value={fmtFull(NAV_PER_PART)} sub="Dernière valorisation" />
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-navy">Positions clients</h3>
+        </div>
+        {validatedOrders.length === 0 ? (
+          <div className="p-8 text-center">
+            <div className="w-12 h-12 bg-cream rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+            </div>
+            <p className="text-sm text-gray-400">Aucun client en custody</p>
+            <p className="text-xs text-gray-300 mt-1">Les souscriptions validées apparaîtront ici</p>
+          </div>
+        ) : (
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Client</th>
+                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Tokens</th>
+                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Valeur NAV</th>
+                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Classe</th>
+                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
+                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              {validatedOrders.map((o) => (
+                <tr key={o.id} className="border-b border-gray-50 hover:bg-cream/50 transition-colors">
+                  <td className="px-5 py-3.5 font-medium text-navy">{o.lpName}</td>
+                  <td className="px-5 py-3.5 text-right font-mono">{Math.floor(o.montant / NAV_PER_PART).toLocaleString("fr-FR")}</td>
+                  <td className="px-5 py-3.5 text-right">{fmt(o.montant)}</td>
+                  <td className="px-5 py-3.5">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-navy/10 text-navy">Classe {o.shareClass || 1}</span>
+                  </td>
+                  <td className="px-5 py-3.5 text-gray-500">{o.date}</td>
+                  <td className="px-5 py-3.5"><Badge status="Actif" /></td>
                 </tr>
               ))}
             </tbody>
@@ -671,45 +695,158 @@ function MesClients({ toast }) {
   );
 }
 
+/* ─────────────────────────────────────────────────────
+   5. COLLATERAL & DEFI
+   ───────────────────────────────────────────────────── */
+function CollateralClients({ toast }) {
+  const { orders, collateralPositions, addCollateral } = useAppContext();
+  const { user } = useAuth();
+  const [selectedClient, setSelectedClient] = useState("");
+  const [stakeAmount, setStakeAmount] = useState(100);
+
+  const validatedClients = orders.filter((o) => o.status === "validated" && (o.intermediaryId === user?.id || o.intermediaire));
+  const myCollateral = collateralPositions;
+  const totalStaked = myCollateral.reduce((s, p) => s + p.tokens, 0);
+
+  return (
+    <div className="animate-fade-in space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold text-navy">Collatéral & DeFi</h2>
+        <p className="text-sm text-gray-400 mt-1">Mise en collatéral et staking pour le compte de vos clients</p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <KPICard label="Positions actives" value={myCollateral.length} sub="Tous clients confondus" />
+        <KPICard label="Total tokens stakés" value={`${totalStaked.toLocaleString("fr-FR")} BF`} sub="Bridge Fund tokens" />
+        <KPICard label="APY moyen" value="7.6%" sub="Rendement annuel estimé" />
+      </div>
+
+      {/* Existing positions */}
+      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-navy">Positions actives</h3>
+        </div>
+        {myCollateral.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="text-sm text-gray-400">Aucune position collatérale active</p>
+            <p className="text-xs text-gray-300 mt-1">Stakez des tokens pour vos clients ci-dessous</p>
+          </div>
+        ) : (
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Client</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Tokens</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Type</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Pool</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">APY</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {myCollateral.map((p) => (
+                <tr key={p.id} className="border-b border-gray-50">
+                  <td className="py-2.5 px-5 font-medium text-navy">{p.owner}</td>
+                  <td className="py-2.5 px-5 text-right font-mono">{p.tokens} BF</td>
+                  <td className="py-2.5 px-5"><span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${p.type === "Staking" ? "bg-navy/10 text-navy" : "bg-gold/10 text-gold"}`}>{p.type}</span></td>
+                  <td className="py-2.5 px-5 text-gray-500">{p.pool}</td>
+                  <td className="py-2.5 px-5 text-right text-emerald-600 font-medium">{p.apy}%</td>
+                  <td className="py-2.5 px-5 text-gray-500">{p.date}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* New position */}
+      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
+        <h3 className="text-sm font-semibold text-navy mb-4">Nouvelle mise en collatéral</h3>
+        <div className="grid grid-cols-2 gap-4 text-left">
+          <div>
+            <label className={labelCls}>Client</label>
+            <select value={selectedClient} onChange={(e) => setSelectedClient(e.target.value)} className={selectCls}>
+              <option value="">Sélectionnez un client...</option>
+              {validatedClients.map((c) => <option key={c.id} value={c.lpName}>{c.lpName} ({Math.floor(c.montant / NAV_PER_PART)} BF)</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>Montant (tokens)</label>
+            <input type="number" value={stakeAmount} onChange={(e) => setStakeAmount(Number(e.target.value))} min={1} className={inputCls} />
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            if (!selectedClient) { toast("Veuillez sélectionner un client"); return; }
+            addCollateral({ owner: selectedClient, tokens: stakeAmount, type: "Staking", pool: "BF/ADA", apy: 8.2, date: new Date().toISOString().split("T")[0], userId: user?.id });
+            toast(`${stakeAmount} BF mis en staking pour ${selectedClient}`);
+          }}
+          className="mt-4 bg-navy text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-navy-light transition-colors"
+        >
+          Staker pour le client
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────
+   PORTAIL PRINCIPAL
+   ───────────────────────────────────────────────────── */
+const TABS = [
+  { id: "dashboard", label: "Tableau de bord" },
+  { id: "fonds", label: "Fonds" },
+  { id: "clients", label: "Mes clients" },
+  { id: "custody", label: "Custody" },
+  { id: "collateral", label: "Collatéral & DeFi" },
+];
+
 export default function PortailSwissLife({ toast }) {
-  // view: "catalog" | "detail:slug" | "souscription" | "clients" | "custody" | "collateral"
-  const [view, setView] = useState("catalog");
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [fundView, setFundView] = useState("catalog"); // "catalog" | "detail:slug" | "souscription"
   const [selectedFund, setSelectedFund] = useState(null);
 
-  const handleSelectFund = (slug) => setView("detail:" + slug);
-  const handleInvest = (fund) => { setSelectedFund(fund); setView("souscription"); };
-  const handleBack = () => { setView("catalog"); setSelectedFund(null); };
+  const handleSelectFund = (slug) => setFundView("detail:" + slug);
+  const handleInvest = (fund) => { setSelectedFund(fund); setFundView("souscription"); };
+  const handleBackToFunds = () => { setFundView("catalog"); setSelectedFund(null); };
 
-  const fundSlug = view.startsWith("detail:") ? view.slice(7) : null;
-  const showTabs = !["catalog"].includes(view) && !fundSlug;
+  const fundSlug = fundView.startsWith("detail:") ? fundView.slice(7) : null;
 
   return (
     <div>
-      {showTabs && (
-        <div className="flex border-b border-gray-100 mb-8">
-          <button onClick={handleBack} className="px-5 py-3 text-sm text-gray-400 hover:text-navy transition-all font-medium">
-            ← Fonds
+      {/* Top-level navigation tabs */}
+      <div className="flex border-b border-gray-100 mb-8">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => { setActiveTab(tab.id); if (tab.id === "fonds") setFundView("catalog"); }}
+            className={`px-5 py-3 text-sm font-medium transition-all relative ${activeTab === tab.id ? "text-navy" : "text-gray-400 hover:text-gray-600"}`}
+          >
+            {tab.label}
+            {activeTab === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy rounded-full" />}
           </button>
-          {[
-            { id: "souscription", label: "Souscription intermédiée" },
-            { id: "clients", label: "Mes clients" },
-            { id: "custody", label: "Custody" },
-            { id: "collateral", label: "Collatéral clients" },
-          ].map((tab) => (
-            <button key={tab.id} onClick={() => setView(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${view === tab.id ? "text-navy" : "text-gray-400 hover:text-gray-600"}`}>
-              {tab.label}
-              {view === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy rounded-full" />}
-            </button>
-          ))}
-        </div>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      {activeTab === "dashboard" && <DashboardIntermediaire toast={toast} />}
+
+      {activeTab === "fonds" && (
+        <>
+          {fundView === "catalog" && <FundCatalog onSelectFund={handleSelectFund} />}
+          {fundSlug && <FundDetail fundSlug={fundSlug} onBack={handleBackToFunds} onInvest={handleInvest} />}
+          {fundView === "souscription" && (
+            <div>
+              <button onClick={handleBackToFunds} className="mb-4 text-sm text-gray-400 hover:text-navy transition-colors">← Retour au catalogue</button>
+              <SouscriptionIntermediee toast={toast} />
+            </div>
+          )}
+        </>
       )}
 
-      {view === "catalog" && <FundCatalog onSelectFund={handleSelectFund} />}
-      {fundSlug && <FundDetail fundSlug={fundSlug} onBack={handleBack} onInvest={handleInvest} />}
-      {view === "souscription" && <SouscriptionIntermediee toast={toast} />}
-      {view === "clients" && <MesClients toast={toast} />}
-      {view === "custody" && <Custody toast={toast} />}
-      {view === "collateral" && <CollateralClients toast={toast} />}
+      {activeTab === "clients" && <MesClients toast={toast} />}
+      {activeTab === "custody" && <Custody toast={toast} />}
+      {activeTab === "collateral" && <CollateralClients toast={toast} />}
     </div>
   );
 }

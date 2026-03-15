@@ -43,7 +43,8 @@ export async function createUser({ email, password, fullName, role, company, int
   // Save current admin session before signUp (which changes the active session)
   const { data: { session: adminSession } } = await supabase.auth.getSession();
 
-  // Sign up the new user
+  // Sign up the new user — AuthContext ignores user switches from onAuthStateChange,
+  // so this won't hijack the admin session in the UI
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -52,12 +53,11 @@ export async function createUser({ email, password, fullName, role, company, int
     },
   });
   if (error) {
-    // Restore admin session on error
     if (adminSession) await supabase.auth.setSession(adminSession);
     throw error;
   }
 
-  // Restore admin session immediately
+  // Restore admin session
   if (adminSession) {
     await supabase.auth.setSession(adminSession);
   }
@@ -127,7 +127,7 @@ export async function createClientAccount({ email, password, fullName, company }
     throw error;
   }
 
-  // Restore session immediately
+  // Restore session
   if (currentSession) {
     await supabase.auth.setSession(currentSession);
   }
