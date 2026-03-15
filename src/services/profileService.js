@@ -176,36 +176,46 @@ export async function createClientAccount({ email, password, fullName, company, 
   const { data: { user: restored } } = await supabase.auth.getUser();
   console.log("[Client] Session after restore:", { expected: me.id, actual: restored?.id, match: me.id === restored?.id });
 
-  // Link to intermediary + generate wallet + persist KYC via SECURITY DEFINER RPC
-  if (data.user) {
-    console.log("[Client] Linking client", data.user.id, "to intermediary", me.id);
-
-    let walletAddress = null;
-    try {
-      const wallet = await generateWallet(data.user.id);
-      if (wallet?.address) walletAddress = wallet.address;
-      console.log("[Client] Wallet generated:", walletAddress?.slice(0, 30));
-    } catch (err) {
-      console.error("[Client] Failed to generate wallet:", err);
-    }
-
-    const { data: linked, error: linkErr } = await supabase.rpc("link_client_to_intermediary", {
-      client_id: data.user.id,
-      inter_id: me.id,
-      p_company: company || null,
-      p_wallet_address: walletAddress,
-      p_kyc_status: kycData?.kyc_status || "pending",
-      p_person_type: kycData?.person_type || "physique",
-      p_investor_classification: kycData?.investor_classification || null,
-      p_source_of_funds: kycData?.source_of_funds || null,
-      p_pep_status: kycData?.pep_status || "non",
-      p_country: kycData?.country || "France",
-      p_fatca_status: kycData?.fatca_status || "non_us",
-      p_tax_residence: kycData?.tax_residence || "France",
-    });
-    if (linkErr) console.error("[Client] RPC link_client_to_intermediary FAILED:", linkErr.message, linkErr);
-    else console.log("[Client] Profile linked via RPC:", JSON.stringify(linked));
+  // Check for duplicate user (signUp returns user with empty identities if email exists)
+  if (!data.user) {
+    throw new Error("Échec de la création du compte");
   }
+  if (data.user.identities && data.user.identities.length === 0) {
+    throw new Error("Un compte avec cet email existe déjà");
+  }
+
+  console.log("[Client] Linking client", data.user.id, "to intermediary", me.id);
+
+  // Generate wallet (non-blocking)
+  let walletAddress = null;
+  try {
+    const wallet = await generateWallet(data.user.id);
+    if (wallet?.address) walletAddress = wallet.address;
+    console.log("[Client] Wallet generated:", walletAddress?.slice(0, 30));
+  } catch (err) {
+    console.error("[Client] Failed to generate wallet:", err);
+  }
+
+  // Link to intermediary + persist KYC via SECURITY DEFINER RPC — this MUST succeed
+  const { data: linked, error: linkErr } = await supabase.rpc("link_client_to_intermediary", {
+    client_id: data.user.id,
+    inter_id: me.id,
+    p_company: company || null,
+    p_wallet_address: walletAddress,
+    p_kyc_status: kycData?.kyc_status || "pending",
+    p_person_type: kycData?.person_type || "physique",
+    p_investor_classification: kycData?.investor_classification || null,
+    p_source_of_funds: kycData?.source_of_funds || null,
+    p_pep_status: kycData?.pep_status || "non",
+    p_country: kycData?.country || "France",
+    p_fatca_status: kycData?.fatca_status || "non_us",
+    p_tax_residence: kycData?.tax_residence || "France",
+  });
+  if (linkErr) {
+    console.error("[Client] RPC link_client_to_intermediary FAILED:", linkErr.message, linkErr);
+    throw new Error("Compte créé mais rattachement échoué : " + linkErr.message);
+  }
+  console.log("[Client] Profile linked via RPC:", JSON.stringify(linked));
 
   return data;
 }
