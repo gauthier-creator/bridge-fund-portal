@@ -139,7 +139,7 @@ export async function generateWallet(userId) {
  * Called when AIFM validates a subscription order.
  * Returns { txHash, policyId, tokenCount, explorerUrl }
  */
-export async function mintAndSendToken({ orderId, investorAddress, fundName, fundSlug, shareClass, montant, navPerShare, lpName }) {
+export async function mintAndSendToken({ orderId, investorAddress, fundName, fundSlug, fundPolicyId, fundId, shareClass, montant, navPerShare, lpName }) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     console.warn("[Cardano] Supabase not configured, simulating mint");
     const hex = (len) => {
@@ -169,7 +169,7 @@ export async function mintAndSendToken({ orderId, investorAddress, fundName, fun
         "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
         "apikey": SUPABASE_ANON_KEY,
       },
-      body: JSON.stringify({ orderId, investorAddress, fundName, fundSlug, shareClass, montant, navPerShare, lpName }),
+      body: JSON.stringify({ orderId, investorAddress, fundName, fundSlug, fundPolicyId, fundId, shareClass, montant, navPerShare, lpName }),
     });
 
     if (!res.ok) {

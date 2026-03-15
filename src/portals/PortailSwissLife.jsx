@@ -169,6 +169,7 @@ function SouscriptionIntermediee({ toast, fund, clients }) {
       intermediaryId: user?.id || null,
       lpName: selectedClient?.full_name || "",
       userId: selectedClient?.id || null,
+      fundId: fund?.id || null,
       shareClass: formData.shareClass,
       montant: formData.montant,
       date: new Date().toISOString().split("T")[0],

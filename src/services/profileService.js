@@ -139,13 +139,12 @@ export async function updateUserProfile(userId, updates) {
 export async function listMyClients() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("intermediary_id", user.id)
-    .order("created_at", { ascending: true });
+
+  // Use SECURITY DEFINER RPC to bypass RLS
+  const { data, error } = await supabase.rpc("list_my_clients");
+  console.log("[Clients] list_my_clients RPC:", { count: data?.length, error: error?.message });
   if (error) throw error;
-  return data;
+  return data || [];
 }
 
 // ─── Intermediary: create a client account ───
@@ -173,14 +172,21 @@ export async function createClientAccount({ email, password, fullName, company, 
     await supabase.auth.setSession(currentSession);
   }
 
+  // Verify session is restored
+  const { data: { user: restored } } = await supabase.auth.getUser();
+  console.log("[Client] Session after restore:", { expected: me.id, actual: restored?.id, match: me.id === restored?.id });
+
   // Link to intermediary + generate wallet + persist KYC via SECURITY DEFINER RPC
   if (data.user) {
+    console.log("[Client] Linking client", data.user.id, "to intermediary", me.id);
+
     let walletAddress = null;
     try {
       const wallet = await generateWallet(data.user.id);
       if (wallet?.address) walletAddress = wallet.address;
+      console.log("[Client] Wallet generated:", walletAddress?.slice(0, 30));
     } catch (err) {
-      console.error("Failed to generate wallet:", err);
+      console.error("[Client] Failed to generate wallet:", err);
     }
 
     const { data: linked, error: linkErr } = await supabase.rpc("link_client_to_intermediary", {
@@ -197,8 +203,8 @@ export async function createClientAccount({ email, password, fullName, company, 
       p_fatca_status: kycData?.fatca_status || "non_us",
       p_tax_residence: kycData?.tax_residence || "France",
     });
-    if (linkErr) console.error("Failed to link client profile:", linkErr.message);
-    else console.log("[Client] Profile linked via RPC:", linked?.id || data.user.id);
+    if (linkErr) console.error("[Client] RPC link_client_to_intermediary FAILED:", linkErr.message, linkErr);
+    else console.log("[Client] Profile linked via RPC:", JSON.stringify(linked));
   }
 
   return data;

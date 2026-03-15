@@ -42,6 +42,7 @@ export default function PortailAdmin({ toast }) {
           { id: "dashboard", label: "Dashboard" },
           { id: "users", label: "Gestion des utilisateurs" },
           { id: "fund", label: "Gestion des fonds" },
+          { id: "compliance", label: "Compliance CIP-113" },
         ].map((tab) => (
           <button key={tab.id} onClick={() => setAdminTab(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${adminTab === tab.id ? "text-navy" : "text-gray-400 hover:text-gray-600"}`}>
             {tab.label}
@@ -52,6 +53,7 @@ export default function PortailAdmin({ toast }) {
 
       {adminTab === "users" && <UserManagement toast={toast} />}
       {adminTab === "fund" && <FundEditorComponent toast={toast} />}
+      {adminTab === "compliance" && <ComplianceManager toast={toast} />}
 
       {adminTab === "dashboard" && <>
       {/* Overview KPIs */}
@@ -481,6 +483,309 @@ function UserManagement({ toast }) {
           </table>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPLIANCE CIP-113 MANAGER
+   ═══════════════════════════════════════════════════════════════ */
+function ComplianceManager({ toast }) {
+  const [subTab, setSubTab] = useState("whitelist");
+  const [funds, setFunds] = useState([]);
+  const [selectedFund, setSelectedFund] = useState(null);
+  const [whitelist, setWhitelist] = useState([]);
+  const [freezes, setFreezes] = useState([]);
+  const [supply, setSupply] = useState(null);
+  const [transfers, setTransfers] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Form state
+  const [newAddress, setNewAddress] = useState("");
+  const [freezeAddress, setFreezeAddress] = useState("");
+  const [freezeReason, setFreezeReason] = useState("");
+  const [supplyCap, setSupplyCap] = useState("");
+
+  // Load funds
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from("funds").select("id, fund_name, slug, cardano_policy_id").then(({ data }) => {
+      if (data?.length) { setFunds(data); setSelectedFund(data[0]); }
+    });
+  }, []);
+
+  // Load compliance data when fund changes
+  useEffect(() => {
+    if (!supabase || !selectedFund) return;
+    setLoading(true);
+    const fid = selectedFund.id;
+    Promise.all([
+      supabase.from("token_whitelist").select("*").eq("fund_id", fid).is("revoked_at", null).order("approved_at", { ascending: false }),
+      supabase.from("token_freezes").select("*").eq("fund_id", fid).is("unfrozen_at", null).order("frozen_at", { ascending: false }),
+      supabase.from("token_supply").select("*").eq("fund_id", fid).maybeSingle(),
+      supabase.from("token_transfers").select("*").eq("fund_id", fid).order("created_at", { ascending: false }).limit(50),
+    ]).then(([wl, fr, sp, tr]) => {
+      setWhitelist(wl.data || []);
+      setFreezes(fr.data || []);
+      setSupply(sp.data);
+      setTransfers(tr.data || []);
+      setLoading(false);
+    });
+  }, [selectedFund]);
+
+  const handleAddWhitelist = async () => {
+    if (!newAddress.startsWith("addr") || !selectedFund) return;
+    const { error } = await supabase.from("token_whitelist").upsert({
+      fund_id: selectedFund.id,
+      wallet_address: newAddress,
+      kyc_status: "validated",
+    }, { onConflict: "fund_id,wallet_address" });
+    if (error) { toast("Erreur : " + error.message); return; }
+    toast("Adresse ajoutée à la whitelist");
+    setNewAddress("");
+    // Refresh
+    const { data } = await supabase.from("token_whitelist").select("*").eq("fund_id", selectedFund.id).is("revoked_at", null).order("approved_at", { ascending: false });
+    setWhitelist(data || []);
+  };
+
+  const handleRevoke = async (id) => {
+    await supabase.from("token_whitelist").update({ revoked_at: new Date().toISOString() }).eq("id", id);
+    toast("Adresse révoquée");
+    setWhitelist((prev) => prev.filter((w) => w.id !== id));
+  };
+
+  const handleFreeze = async () => {
+    if (!freezeAddress.startsWith("addr") || !freezeReason || !selectedFund) return;
+    const { error } = await supabase.from("token_freezes").upsert({
+      fund_id: selectedFund.id,
+      wallet_address: freezeAddress,
+      reason: freezeReason,
+    }, { onConflict: "fund_id,wallet_address" });
+    if (error) { toast("Erreur : " + error.message); return; }
+    toast("Adresse gelée");
+    setFreezeAddress(""); setFreezeReason("");
+    const { data } = await supabase.from("token_freezes").select("*").eq("fund_id", selectedFund.id).is("unfrozen_at", null);
+    setFreezes(data || []);
+  };
+
+  const handleUnfreeze = async (id) => {
+    await supabase.from("token_freezes").update({ unfrozen_at: new Date().toISOString() }).eq("id", id);
+    toast("Adresse dégelée");
+    setFreezes((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  const handleSetCap = async () => {
+    if (!selectedFund || !supplyCap) return;
+    const cap = parseInt(supplyCap, 10);
+    if (isNaN(cap) || cap <= 0) return;
+    await supabase.from("token_supply").upsert({
+      fund_id: selectedFund.id,
+      supply_cap: cap,
+      total_minted: supply?.total_minted || 0,
+    }, { onConflict: "fund_id" });
+    toast(`Supply cap fixé à ${cap.toLocaleString("fr-FR")} tokens`);
+    setSupply((prev) => ({ ...prev, supply_cap: cap }));
+    setSupplyCap("");
+  };
+
+  const short = (addr) => addr ? `${addr.slice(0, 12)}...${addr.slice(-8)}` : "—";
+  const subTabs = [
+    { id: "whitelist", label: "Whitelist", count: whitelist.length },
+    { id: "freeze", label: "Freeze", count: freezes.length },
+    { id: "supply", label: "Supply Cap" },
+    { id: "audit", label: "Audit Trail", count: transfers.length },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold text-navy">Compliance CIP-113</h2>
+        <p className="text-sm text-gray-400 mt-1">Gestion des tokens programmables — whitelist, freeze, supply cap, audit trail</p>
+      </div>
+
+      {/* Fund selector */}
+      <div className="flex items-center gap-4">
+        <label className="text-xs font-medium text-gray-500">Fond :</label>
+        <select
+          value={selectedFund?.id || ""}
+          onChange={(e) => setSelectedFund(funds.find((f) => f.id === e.target.value))}
+          className={selectCls + " max-w-xs"}
+        >
+          {funds.map((f) => (
+            <option key={f.id} value={f.id}>{f.fund_name} ({f.slug})</option>
+          ))}
+        </select>
+        {selectedFund?.cardano_policy_id && (
+          <span className="text-xs font-mono text-gray-400">Policy: {selectedFund.cardano_policy_id.slice(0, 16)}...</span>
+        )}
+      </div>
+
+      {/* Sub-tabs */}
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+        {subTabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setSubTab(t.id)}
+            className={`px-4 py-2 text-xs font-medium rounded-lg transition-all ${subTab === t.id ? "bg-white text-navy shadow-sm" : "text-gray-500 hover:text-navy"}`}
+          >
+            {t.label} {t.count != null && <span className="ml-1 text-[10px] bg-navy/10 text-navy px-1.5 py-0.5 rounded-full">{t.count}</span>}
+          </button>
+        ))}
+      </div>
+
+      {loading && <p className="text-sm text-gray-400 text-center py-8">Chargement...</p>}
+
+      {/* WHITELIST TAB */}
+      {!loading && subTab === "whitelist" && (
+        <div className="space-y-4">
+          <div className="flex gap-3">
+            <input value={newAddress} onChange={(e) => setNewAddress(e.target.value)} placeholder="addr_test1q..." className={inputCls + " flex-1 font-mono text-xs"} />
+            <button onClick={handleAddWhitelist} disabled={!newAddress.startsWith("addr")} className="px-4 py-2 bg-navy text-white text-xs rounded-xl hover:bg-navy-light transition-colors disabled:opacity-50">
+              Ajouter
+            </button>
+          </div>
+          <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Adresse</th>
+                  <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">KYC</th>
+                  <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
+                  <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {whitelist.length === 0 && (
+                  <tr><td colSpan={4} className="px-5 py-8 text-center text-gray-400 text-xs">Aucune adresse whitelistée</td></tr>
+                )}
+                {whitelist.map((w) => (
+                  <tr key={w.id} className="border-b border-gray-50 hover:bg-cream/50">
+                    <td className="px-5 py-3 font-mono text-xs text-navy" title={w.wallet_address}>{short(w.wallet_address)}</td>
+                    <td className="px-5 py-3"><Badge status={w.kyc_status === "validated" ? "Validé" : "En attente"} /></td>
+                    <td className="px-5 py-3 text-gray-400 text-xs">{w.approved_at?.split("T")[0]}</td>
+                    <td className="px-5 py-3 text-right">
+                      <button onClick={() => handleRevoke(w.id)} className="text-xs text-red-500 hover:text-red-700 font-medium">Révoquer</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* FREEZE TAB */}
+      {!loading && subTab === "freeze" && (
+        <div className="space-y-4">
+          <div className="flex gap-3">
+            <input value={freezeAddress} onChange={(e) => setFreezeAddress(e.target.value)} placeholder="addr_test1q..." className={inputCls + " flex-1 font-mono text-xs"} />
+            <input value={freezeReason} onChange={(e) => setFreezeReason(e.target.value)} placeholder="Raison (sanctions, fraude...)" className={inputCls + " w-64"} />
+            <button onClick={handleFreeze} disabled={!freezeAddress.startsWith("addr") || !freezeReason} className="px-4 py-2 bg-red-600 text-white text-xs rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50">
+              Geler
+            </button>
+          </div>
+          <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Adresse</th>
+                  <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Raison</th>
+                  <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
+                  <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {freezes.length === 0 && (
+                  <tr><td colSpan={4} className="px-5 py-8 text-center text-gray-400 text-xs">Aucune adresse gelée</td></tr>
+                )}
+                {freezes.map((f) => (
+                  <tr key={f.id} className="border-b border-gray-50 hover:bg-red-50/30">
+                    <td className="px-5 py-3 font-mono text-xs text-navy" title={f.wallet_address}>{short(f.wallet_address)}</td>
+                    <td className="px-5 py-3 text-xs text-red-600">{f.reason}</td>
+                    <td className="px-5 py-3 text-gray-400 text-xs">{f.frozen_at?.split("T")[0]}</td>
+                    <td className="px-5 py-3 text-right">
+                      <button onClick={() => handleUnfreeze(f.id)} className="text-xs text-emerald-600 hover:text-emerald-800 font-medium">Dégeler</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* SUPPLY CAP TAB */}
+      {!loading && subTab === "supply" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-4">
+            <KPICard label="Tokens mintés" value={(supply?.total_minted || 0).toLocaleString("fr-FR")} sub="Total émis" />
+            <KPICard label="Supply Cap" value={supply?.supply_cap ? supply.supply_cap.toLocaleString("fr-FR") : "Illimité"} sub={supply?.supply_cap ? `${Math.round(((supply?.total_minted || 0) / supply.supply_cap) * 100)}% utilisé` : "Aucun plafond défini"} />
+            <KPICard label="Disponible" value={supply?.supply_cap ? (supply.supply_cap - (supply?.total_minted || 0)).toLocaleString("fr-FR") : "∞"} sub="Tokens restants" />
+          </div>
+          {supply?.last_mint_tx && (
+            <div className="bg-cream rounded-xl p-4 text-sm">
+              <p className="text-xs text-gray-400 mb-1">Dernier mint</p>
+              <p className="font-mono text-xs text-navy">{supply.last_mint_tx}</p>
+              <p className="text-xs text-gray-400 mt-1">{supply.last_mint_at?.split("T")[0]}</p>
+            </div>
+          )}
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <label className={labelCls}>Définir le supply cap (nombre total de tokens)</label>
+              <input type="number" value={supplyCap} onChange={(e) => setSupplyCap(e.target.value)} placeholder="Ex: 10000" className={inputCls} />
+            </div>
+            <button onClick={handleSetCap} disabled={!supplyCap} className="px-4 py-2.5 bg-navy text-white text-xs rounded-xl hover:bg-navy-light transition-colors disabled:opacity-50">
+              Appliquer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* AUDIT TRAIL TAB */}
+      {!loading && subTab === "audit" && (
+        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-navy">Journal des opérations on-chain</h3>
+          </div>
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Type</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Destinataire</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Tokens</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Tx Hash</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Ordre</th>
+                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transfers.length === 0 && (
+                <tr><td colSpan={6} className="px-5 py-8 text-center text-gray-400 text-xs">Aucune opération enregistrée</td></tr>
+              )}
+              {transfers.map((t) => (
+                <tr key={t.id} className="border-b border-gray-50 hover:bg-cream/50">
+                  <td className="px-5 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${t.transfer_type === "mint" ? "bg-emerald-100 text-emerald-700" : t.transfer_type === "burn" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>
+                      {t.transfer_type === "mint" ? "Mint" : t.transfer_type === "burn" ? "Burn" : "Transfert"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 font-mono text-xs text-navy" title={t.to_address}>{short(t.to_address)}</td>
+                  <td className="px-5 py-3 text-right font-mono text-xs">{t.token_count}</td>
+                  <td className="px-5 py-3">
+                    {t.tx_hash ? (
+                      <a href={`https://preprod.cardanoscan.io/transaction/${t.tx_hash}`} target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-gold hover:underline">
+                        {t.tx_hash.slice(0, 12)}...
+                      </a>
+                    ) : "—"}
+                  </td>
+                  <td className="px-5 py-3 text-xs text-gray-500">{t.order_id || "—"}</td>
+                  <td className="px-5 py-3 text-xs text-gray-400">{t.created_at?.split("T")[0]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

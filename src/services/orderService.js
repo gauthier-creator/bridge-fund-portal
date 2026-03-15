@@ -42,6 +42,7 @@ function dbToOrder(row, docs = []) {
     paymentMethod: row.payment_method,
     userId: row.user_id,
     intermediaryId: row.intermediary_id,
+    fundId: row.fund_id,
     documents: docs.map(dbToDocument),
   };
 }
@@ -100,6 +101,7 @@ function orderToDb(order) {
     // Auth fields
     user_id: order.userId || null,
     intermediary_id: order.intermediaryId || null,
+    fund_id: order.fundId || null,
   };
 }
 
@@ -215,21 +217,26 @@ export async function validateOrder(orderId) {
       }
     }
 
-    // Get fund info for slug and NAV
+    // Get fund info — slug, NAV, and policy ID from the associated fund
     let fundSlug = "bridgefund";
     let fundName = "Bridge Fund";
     let navPerShare = 1000;
+    let fundPolicyId = null;
     if (data.fund_id) {
       const { data: fund } = await supabase
         .from("funds")
-        .select("slug, fund_name, nav_per_share")
+        .select("slug, fund_name, nav_per_share, cardano_policy_id")
         .eq("id", data.fund_id)
         .maybeSingle();
       if (fund) {
         fundSlug = fund.slug;
         fundName = fund.fund_name;
         navPerShare = Number(fund.nav_per_share) || 1000;
+        fundPolicyId = fund.cardano_policy_id;
+        console.log(`[Order] Fund found: ${fundName} (${fundSlug}), policy: ${fundPolicyId?.slice(0, 16)}...`);
       }
+    } else {
+      console.warn("[Order] No fund_id on order — tokens will use default policy");
     }
 
     if (targetAddress) {
@@ -238,6 +245,8 @@ export async function validateOrder(orderId) {
         investorAddress: targetAddress,
         fundName,
         fundSlug,
+        fundPolicyId,
+        fundId: data.fund_id,
         shareClass: data.share_class,
         montant: Number(data.montant),
         navPerShare,

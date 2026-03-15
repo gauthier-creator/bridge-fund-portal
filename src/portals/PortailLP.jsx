@@ -153,6 +153,7 @@ function Souscription({ toast, fund }) {
       beneficiaireNom: formData.beneficiaireNom || null,
       beneficiairePct: formData.beneficiairePct || null,
       paymentMethod: formData.paymentMethod || "fiat",
+      fundId: fund?.id || null,
       documents,
     });
   };
