@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabase";
 import { deployFundRegistry } from "./cardanoService";
+import { auditFundCreated, auditFundUpdated, auditFundDeleted } from "./auditService";
 
 // ─── Helpers ───
 
@@ -150,7 +151,9 @@ export async function createFund(fund) {
     .single();
 
   if (error) throw error;
-  return dbToFund(data);
+  const result = dbToFund(data);
+  auditFundCreated(result).catch(() => {});
+  return result;
 }
 
 /** Update an existing fund */
@@ -166,15 +169,20 @@ export async function updateFund(fundId, updates) {
     .single();
 
   if (error) throw error;
-  return dbToFund(data);
+  const result = dbToFund(data);
+  auditFundUpdated(fundId, updates).catch(() => {});
+  return result;
 }
 
 /** Delete a fund */
 export async function deleteFund(fundId) {
   if (!supabase) throw new Error("Supabase non configuré");
+  // Fetch fund name before deletion for audit
+  const { data: fund } = await supabase.from("funds").select("fund_name").eq("id", fundId).maybeSingle();
   const { error } = await supabase
     .from("funds")
     .delete()
     .eq("id", fundId);
   if (error) throw error;
+  auditFundDeleted(fundId, fund?.fund_name || fundId).catch(() => {});
 }

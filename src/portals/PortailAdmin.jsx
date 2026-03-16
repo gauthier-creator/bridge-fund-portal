@@ -7,6 +7,7 @@ import { supabase } from "../lib/supabase";
 import { listProfiles, createUser, updateUserProfile } from "../services/profileService";
 import { mintAndSendToken, burnSynthetic, transferToken, getFundTokenInfo, getExplorerUrl, shortenHash } from "../services/cardanoService";
 import FundEditorComponent from "../components/FundEditor";
+import { fetchAuditLogs, fetchAuditStats } from "../services/auditService";
 
 const ROLE_LABELS = { investor: "Investisseur", intermediary: "Intermédiaire", aifm: "AIFM", admin: "Admin" };
 
@@ -92,6 +93,7 @@ export default function PortailAdmin({ toast }) {
           { id: "fund", label: "Gestion des fonds" },
           { id: "vault", label: "Vault" },
           { id: "compliance", label: "Compliance CIP-113" },
+          { id: "audit", label: "Audit Trail" },
         ].map((tab) => (
           <button key={tab.id} onClick={() => setAdminTab(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${adminTab === tab.id ? "text-[#0D0D12]" : "text-[#9AA4B2] hover:text-[#5F6B7A]"}`}>
             {tab.label}
@@ -104,6 +106,7 @@ export default function PortailAdmin({ toast }) {
       {adminTab === "fund" && <FundEditorComponent toast={toast} />}
       {adminTab === "vault" && <VaultManager toast={toast} />}
       {adminTab === "compliance" && <ComplianceManager toast={toast} />}
+      {adminTab === "audit" && <AuditTrailViewer />}
 
       {adminTab === "dashboard" && <>
       {/* Fund selector bar */}
@@ -1509,6 +1512,201 @@ function ComplianceManager({ toast }) {
             </tbody>
           </table>
         </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Audit Trail Viewer ─── */
+
+const CATEGORY_CONFIG = {
+  auth: { label: "Auth", color: "bg-[#EEF2FF] text-[#4F7DF3] ring-[#4F7DF3]/10", icon: "🔐" },
+  order: { label: "Ordres", color: "bg-[#FFF7ED] text-[#D97706] ring-[#D97706]/10", icon: "📋" },
+  fund: { label: "Fonds", color: "bg-[#F0FDF4] text-[#059669] ring-[#059669]/10", icon: "🏦" },
+  user: { label: "Utilisateurs", color: "bg-[#FDF2F8] text-[#EC4899] ring-[#EC4899]/10", icon: "👤" },
+  token: { label: "Tokens", color: "bg-[#ECFDF5] text-[#00C48C] ring-[#00C48C]/10", icon: "🪙" },
+  vault: { label: "Vault", color: "bg-[#F5F3FF] text-[#7C3AED] ring-[#7C3AED]/10", icon: "🔒" },
+  compliance: { label: "Compliance", color: "bg-red-50 text-red-700 ring-red-600/10", icon: "⚖️" },
+};
+
+const SEVERITY_CONFIG = {
+  info: { label: "Info", color: "bg-[#F7F8FA] text-[#5F6B7A]" },
+  warning: { label: "Warning", color: "bg-[#FFF7ED] text-[#D97706]" },
+  critical: { label: "Critical", color: "bg-red-50 text-red-700" },
+};
+
+function AuditTrailViewer() {
+  const [logs, setLogs] = useState([]);
+  const [stats, setStats] = useState({ total: 0, today: 0, critical: 0 });
+  const [loading, setLoading] = useState(true);
+  const [filterCategory, setFilterCategory] = useState(null);
+  const [filterSeverity, setFilterSeverity] = useState(null);
+  const [search, setSearch] = useState("");
+  const [expandedId, setExpandedId] = useState(null);
+
+  const loadLogs = async () => {
+    setLoading(true);
+    const [logsData, statsData] = await Promise.all([
+      fetchAuditLogs({ limit: 200, category: filterCategory, severity: filterSeverity, search: search || null }),
+      fetchAuditStats(),
+    ]);
+    setLogs(logsData);
+    setStats(statsData);
+    setLoading(false);
+  };
+
+  useEffect(() => { loadLogs(); }, [filterCategory, filterSeverity]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    loadLogs();
+  };
+
+  const fmtDate = (iso) => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return d.toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Stats bar */}
+      <div className="grid grid-cols-3 gap-4 stagger-fast">
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5" style={{ animationDelay: "0ms" }}>
+          <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-1">Total événements</p>
+          <p className="text-2xl font-bold text-[#0D0D12] tabular-nums">{stats.total.toLocaleString("fr-FR")}</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5" style={{ animationDelay: "70ms" }}>
+          <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-1">Aujourd'hui</p>
+          <p className="text-2xl font-bold text-[#4F7DF3] tabular-nums">{stats.today.toLocaleString("fr-FR")}</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5" style={{ animationDelay: "140ms" }}>
+          <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-1">Événements critiques</p>
+          <p className="text-2xl font-bold text-red-600 tabular-nums">{stats.critical.toLocaleString("fr-FR")}</p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-2xl border border-[#E8ECF1] p-4">
+        <div className="flex items-center gap-4 flex-wrap">
+          <form onSubmit={handleSearch} className="flex-1 min-w-[200px]">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher dans l'audit trail…"
+              className="w-full px-4 py-2 text-sm rounded-xl border border-[#E8ECF1] bg-[#F7F8FA] text-[#0D0D12] placeholder:text-[#9AA4B2] focus:outline-none focus:ring-2 focus:ring-[#4F7DF3]/20 focus:border-[#4F7DF3]"
+            />
+          </form>
+
+          <div className="flex gap-1.5 flex-wrap">
+            <button
+              onClick={() => setFilterCategory(null)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${!filterCategory ? "bg-[#0D0D12] text-white" : "bg-[#F7F8FA] text-[#5F6B7A] hover:bg-[#F0F2F5]"}`}
+            >
+              Tout
+            </button>
+            {Object.entries(CATEGORY_CONFIG).map(([key, cfg]) => (
+              <button
+                key={key}
+                onClick={() => setFilterCategory(filterCategory === key ? null : key)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${filterCategory === key ? "bg-[#0D0D12] text-white" : "bg-[#F7F8FA] text-[#5F6B7A] hover:bg-[#F0F2F5]"}`}
+              >
+                {cfg.icon} {cfg.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex gap-1.5">
+            {Object.entries(SEVERITY_CONFIG).map(([key, cfg]) => (
+              <button
+                key={key}
+                onClick={() => setFilterSeverity(filterSeverity === key ? null : key)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${filterSeverity === key ? "bg-[#0D0D12] text-white" : `${cfg.color}`}`}
+              >
+                {cfg.label}
+              </button>
+            ))}
+          </div>
+
+          <button onClick={loadLogs} className="px-3 py-1.5 text-xs font-medium text-[#4F7DF3] hover:text-[#3B6AE0] transition-colors">
+            ↻ Rafraîchir
+          </button>
+        </div>
+      </div>
+
+      {/* Logs table */}
+      <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="w-8 h-8 border-[2px] border-[#E8ECF1] border-t-[#0D0D12] rounded-full animate-spin" />
+          </div>
+        ) : logs.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-[#9AA4B2] text-sm">Aucun événement trouvé</p>
+            <p className="text-[#C1C7CF] text-xs mt-1">Les actions seront enregistrées automatiquement</p>
+          </div>
+        ) : (
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-[#E8ECF1] bg-[#FAFBFC]">
+                <th className="px-5 py-3 text-[11px] text-[#9AA4B2] font-semibold uppercase tracking-[0.06em]">Date</th>
+                <th className="px-5 py-3 text-[11px] text-[#9AA4B2] font-semibold uppercase tracking-[0.06em]">Catégorie</th>
+                <th className="px-5 py-3 text-[11px] text-[#9AA4B2] font-semibold uppercase tracking-[0.06em]">Action</th>
+                <th className="px-5 py-3 text-[11px] text-[#9AA4B2] font-semibold uppercase tracking-[0.06em]">Description</th>
+                <th className="px-5 py-3 text-[11px] text-[#9AA4B2] font-semibold uppercase tracking-[0.06em]">Utilisateur</th>
+                <th className="px-5 py-3 text-[11px] text-[#9AA4B2] font-semibold uppercase tracking-[0.06em]">Sévérité</th>
+              </tr>
+            </thead>
+            <tbody className="stagger-rows">
+              {logs.map((log) => {
+                const catCfg = CATEGORY_CONFIG[log.category] || CATEGORY_CONFIG.auth;
+                const sevCfg = SEVERITY_CONFIG[log.severity] || SEVERITY_CONFIG.info;
+                const isExpanded = expandedId === log.id;
+                return (
+                  <tr
+                    key={log.id}
+                    onClick={() => setExpandedId(isExpanded ? null : log.id)}
+                    className={`border-b border-[#F0F2F5] cursor-pointer transition-colors ${isExpanded ? "bg-[#F7F8FA]" : "hover:bg-[#FAFBFC]"} ${log.severity === "critical" ? "bg-red-50/30" : ""}`}
+                  >
+                    <td className="px-5 py-3 text-xs text-[#5F6B7A] whitespace-nowrap tabular-nums">{fmtDate(log.created_at)}</td>
+                    <td className="px-5 py-3">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ring-1 ${catCfg.color}`}>
+                        {catCfg.icon} {catCfg.label}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-xs font-mono text-[#0D0D12]">{log.action}</td>
+                    <td className="px-5 py-3 text-xs text-[#0D0D12] max-w-[300px]">
+                      <span className="line-clamp-1">{log.description}</span>
+                      {isExpanded && log.metadata && Object.keys(log.metadata).length > 0 && (
+                        <div className="mt-2 bg-[#F7F8FA] rounded-lg p-3 text-[11px] font-mono text-[#5F6B7A] space-y-1">
+                          {Object.entries(log.metadata).map(([k, v]) => (
+                            <div key={k}><span className="text-[#9AA4B2]">{k}:</span> {typeof v === "object" ? JSON.stringify(v) : String(v ?? "—")}</div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-xs text-[#5F6B7A]">
+                      <div>{log.user_email || "Système"}</div>
+                      {log.user_role && <div className="text-[10px] text-[#9AA4B2]">{ROLE_LABELS[log.user_role] || log.user_role}</div>}
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium ${sevCfg.color}`}>
+                        {sevCfg.label}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {!loading && logs.length > 0 && (
+        <p className="text-center text-[11px] text-[#9AA4B2]">
+          {logs.length} événement{logs.length > 1 ? "s" : ""} affichés
+        </p>
       )}
     </div>
   );

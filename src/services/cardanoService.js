@@ -6,6 +6,8 @@
  * Transactions are verifiable on preprod.cardanoscan.io.
  */
 
+import { auditTokenTransferred, auditSyntheticMinted, auditSyntheticBurned } from "./auditService";
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -234,12 +236,14 @@ export async function transferToken({ toAddress, fundSlug, tokenCount }) {
 
     const data = await res.json();
     console.log(`[Cardano] Transferred! Tx: ${data.txHash}`);
-    return {
+    const result = {
       txHash: data.txHash,
       policyId: data.policyId,
       tokenCount: data.tokenCount,
       explorerUrl: data.explorerUrl,
     };
+    auditTokenTransferred(toAddress, result).catch(() => {});
+    return result;
   } catch (err) {
     console.error("[Cardano] Transfer failed:", err.message);
     throw err;
@@ -275,6 +279,7 @@ export async function mintSynthetic({ userAddress, fundSlug, fundId, tokenCount,
 
   const data = await res.json();
   console.log(`[Cardano] Synthetic minted! Tx: ${data.txHash}`);
+  auditSyntheticMinted(userId, data).catch(() => {});
   return data;
 }
 
@@ -306,6 +311,7 @@ export async function burnSynthetic({ userAddress, fundSlug, fundId, tokenCount,
 
   const data = await res.json();
   console.log(`[Cardano] Synthetic burned! Tx: ${data.txHash}`);
+  auditSyntheticBurned(userId, data).catch(() => {});
   return data;
 }
 

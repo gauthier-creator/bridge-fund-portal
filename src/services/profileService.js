@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabase";
 import { generateWallet } from "./cardanoService";
+import { auditUserCreated } from "./auditService";
 
 // Wait for the profiles trigger to create the row after auth.signUp
 // Uses select for admin/aifm (who can see all profiles), or update-and-check for intermediaries
@@ -122,6 +123,8 @@ export async function createUser({ email, password, fullName, role, company, int
       );
       if (profileErr) console.error("Failed to update profile:", profileErr.message);
     }
+
+    auditUserCreated(data.user.id, email, role).catch(() => {});
   }
 
   return data;
@@ -225,5 +228,6 @@ export async function createClientAccount({ email, password, fullName, company, 
   }
   console.log("[Client] Profile linked via RPC:", JSON.stringify(linked));
 
+  auditUserCreated(data.user.id, email, "investor").catch(() => {});
   return data;
 }

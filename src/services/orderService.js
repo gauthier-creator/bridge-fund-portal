@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabase";
 import { mintAndSendToken } from "./cardanoService";
+import { auditOrderCreated, auditOrderValidated, auditOrderRejected, auditTokenMinted } from "./auditService";
 
 // ─── Helpers: convert between DB snake_case and app camelCase ───
 
@@ -164,6 +165,7 @@ export async function createOrder(order) {
     if (docErr) throw docErr;
   }
 
+  auditOrderCreated(order).catch(() => {});
   return order;
 }
 
@@ -272,6 +274,8 @@ export async function validateOrder(orderId) {
     console.error("[Order] Token minting failed:", mintErr.message);
   }
 
+  auditOrderValidated(orderId, mintResult).catch(() => {});
+  if (mintResult?.txHash) auditTokenMinted(orderId, mintResult).catch(() => {});
   return { orderId, validatedAt: now, mintResult };
 }
 
@@ -285,6 +289,7 @@ export async function rejectOrder(orderId, reason) {
     .maybeSingle();
   if (error) throw error;
   if (!data) throw new Error("Aucun ordre trouvé avec cet ID");
+  auditOrderRejected(orderId, reason).catch(() => {});
   return { orderId, rejectedAt: now, reason };
 }
 

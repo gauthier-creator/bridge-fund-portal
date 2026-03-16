@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "../lib/supabase";
+import { auditLogin, auditLoginFailed, auditLogout } from "../services/auditService";
 
 const AuthContext = createContext(null);
 
@@ -79,13 +80,17 @@ export function AuthProvider({ children }) {
   const signIn = useCallback(async (email, password) => {
     if (!supabase) throw new Error("Supabase non configuré");
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    if (error) {
+      auditLoginFailed(email, error.message).catch(() => {});
+      throw error;
+    }
     // Handle user switch directly here — don't rely on onAuthStateChange
     setSession(data.session);
     if (data.user) {
       currentUserIdRef.current = data.user.id;
       const p = await fetchProfile(data.user.id);
       setProfile(p);
+      auditLogin(email).catch(() => {});
     }
     return data;
   }, [fetchProfile]);
@@ -103,16 +108,18 @@ export function AuthProvider({ children }) {
 
   const signOut = useCallback(async () => {
     if (!supabase) return;
+    const email = profile?.email || session?.user?.email;
     // Clear state immediately so UI reacts before the async call
     currentUserIdRef.current = null;
     setSession(null);
     setProfile(null);
     try {
+      if (email) auditLogout(email).catch(() => {});
       await supabase.auth.signOut();
     } catch (err) {
       console.error("signOut error:", err);
     }
-  }, []);
+  }, [profile, session]);
 
   const refreshProfile = useCallback(async () => {
     if (session?.user) {
