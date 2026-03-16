@@ -448,6 +448,8 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
     tinFiscal: "",
     paysResidenceFiscale: "France",
   });
+  const [walletMode, setWalletMode] = useState("generate");
+  const [walletAddress, setWalletAddress] = useState("");
   const [documents, setDocuments] = useState([]);
   const fileRefs = {
     id: useRef(null), domicile: useRef(null), fonds: useRef(null),
@@ -498,6 +500,10 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
   };
 
   const handleCreateClient = async () => {
+    if (walletMode === "existing" && !walletAddress.trim()) {
+      toast("Veuillez renseigner l'adresse du wallet");
+      return;
+    }
     setCreating(true);
     try {
       const result = await createClientAccount({
@@ -505,6 +511,7 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
         password: clientData.password,
         fullName: `${clientData.prenom} ${clientData.nom}`.trim(),
         company: clientData.societe || null,
+        walletAddress: walletMode === "existing" ? walletAddress.trim() : undefined,
         kycData: {
           kyc_status: "validated",
           person_type: personType,
@@ -536,6 +543,8 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
     setShowOnboarding(false);
     setKycStep(0);
     setPersonType("physique");
+    setWalletMode("generate");
+    setWalletAddress("");
     setClientData({
       email: "", password: "",
       nom: "", prenom: "", dateNaissance: "", nationalite: "Française",
@@ -625,6 +634,26 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
                     <input type="password" value={clientData.password} onChange={(e) => setField("password", e.target.value)} className={inputCls} placeholder="Min. 6 caractères" />
                   </div>
                 </div>
+              </div>
+
+              {/* Wallet choice */}
+              <div className="mb-4 p-4 rounded-xl border border-[#E8ECF1] bg-[#FAFBFC]">
+                <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-3">Wallet Cardano</p>
+                <div className="flex gap-4 mb-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="clientWalletMode" checked={walletMode === "generate"} onChange={() => { setWalletMode("generate"); setWalletAddress(""); }} className="w-4 h-4 accent-[#0D0D12]" />
+                    <span className="text-sm text-[#0D0D12]">Générer un nouveau wallet</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="clientWalletMode" checked={walletMode === "existing"} onChange={() => setWalletMode("existing")} className="w-4 h-4 accent-[#0D0D12]" />
+                    <span className="text-sm text-[#0D0D12]">Renseigner une adresse existante</span>
+                  </label>
+                </div>
+                {walletMode === "existing" ? (
+                  <input value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)} className={`${inputCls} font-mono`} placeholder="addr_test1q..." />
+                ) : (
+                  <p className="text-xs text-[#9AA4B2]">Un wallet sera automatiquement généré à la création du compte.</p>
+                )}
               </div>
 
               {personType === "physique" ? (

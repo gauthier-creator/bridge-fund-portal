@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   PieChart, Pie, Cell,
 } from "recharts";
@@ -6,17 +6,19 @@ import { NAV_PER_PART } from "../data";
 import { useAppContext } from "../context/AppContext";
 import { KPICard, Badge, fmt, fmtFull } from "../components/shared";
 import { getExplorerUrl, shortenHash } from "../services/cardanoService";
+import { listAllFunds } from "../services/fundService";
 
 /* ─── Sub-tab: Ordres à valider ─── */
-function ValidationOrdres({ toast }) {
+function ValidationOrdres({ toast, selectedFundId }) {
   const { orders, validateOrder, rejectOrder } = useAppContext();
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
 
-  const pendingOrders = orders.filter((o) => o.status === "pending");
-  const validatedOrders = orders.filter((o) => o.status === "validated");
-  const rejectedOrders = orders.filter((o) => o.status === "rejected");
+  const fundOrders = selectedFundId ? orders.filter((o) => o.fundId === selectedFundId) : orders;
+  const pendingOrders = fundOrders.filter((o) => o.status === "pending");
+  const validatedOrders = fundOrders.filter((o) => o.status === "validated");
+  const rejectedOrders = fundOrders.filter((o) => o.status === "rejected");
 
   const [lastMintResult, setLastMintResult] = useState(null);
 
@@ -293,13 +295,14 @@ function ValidationOrdres({ toast }) {
 }
 
 /* ─── Sub-tab: Registre du fonds ─── */
-function RegistreFonds({ toast }) {
+function RegistreFonds({ toast, selectedFundId, selectedFundName }) {
   const { orders } = useAppContext();
   const [filterClass, setFilterClass] = useState("all");
   const [filterKyc, setFilterKyc] = useState("all");
 
-  // Build LP list from real orders
-  const allOrders = orders.filter((o) => o.status !== "rejected");
+  // Build LP list from real orders — filtered by fund
+  const fundOrders = selectedFundId ? orders.filter((o) => o.fundId === selectedFundId) : orders;
+  const allOrders = fundOrders.filter((o) => o.status !== "rejected");
   const totalAUMAll = allOrders.filter((o) => o.status === "validated").reduce((s, o) => s + o.montant, 0);
   const mergedLPs = allOrders.map((o) => {
     const parts = o.status === "validated" ? +(o.montant / NAV_PER_PART).toFixed(2) : 0;
@@ -451,13 +454,63 @@ function RegistreFonds({ toast }) {
 /* ─── Main AIFM Portal ─── */
 export default function PortailAIFM({ toast }) {
   const [subTab, setSubTab] = useState("validation");
+  const [funds, setFunds] = useState([]);
+  const [selectedFundId, setSelectedFundId] = useState("");
+  const { orders } = useAppContext();
+
+  useEffect(() => {
+    listAllFunds().then((data) => {
+      setFunds(data);
+      if (data.length > 0) setSelectedFundId(data[0].id);
+    });
+  }, []);
+
+  const selectedFund = funds.find((f) => f.id === selectedFundId);
+
+  // Count orders per fund for the selector badges
+  const orderCountByFund = funds.map((f) => ({
+    ...f,
+    pendingCount: orders.filter((o) => o.fundId === f.id && o.status === "pending").length,
+    totalCount: orders.filter((o) => o.fundId === f.id).length,
+  }));
 
   return (
     <div>
+      {/* Fund selector */}
+      {funds.length > 1 && (
+        <div className="mb-6">
+          <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-3">Sélectionnez un fonds</p>
+          <div className="flex gap-3 flex-wrap">
+            {orderCountByFund.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setSelectedFundId(f.id)}
+                className={`relative px-5 py-3 rounded-2xl border text-sm font-medium transition-all ${
+                  selectedFundId === f.id
+                    ? "bg-[#0D0D12] text-white border-[#0D0D12]"
+                    : "bg-white text-[#0D0D12] border-[#E8ECF1] hover:border-[#D1D5DB]"
+                }`}
+              >
+                <span>{f.fundName}</span>
+                <span className={`ml-2 text-xs ${selectedFundId === f.id ? "text-white/60" : "text-[#9AA4B2]"}`}>
+                  {f.totalCount} ordre{f.totalCount > 1 ? "s" : ""}
+                </span>
+                {f.pendingCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#DC2626] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {f.pendingCount}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
       <div className="flex border-b border-[#F0F2F5] mb-8">
         {[
           { id: "validation", label: "Validation des ordres" },
-          { id: "registre", label: "Registre du fonds" },
+          { id: "registre", label: `Registre${selectedFund ? " — " + selectedFund.fundName : ""}` },
         ].map((tab) => (
           <button key={tab.id} onClick={() => setSubTab(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${subTab === tab.id ? "text-[#0D0D12]" : "text-[#9AA4B2] hover:text-[#5F6B7A]"}`}>
             {tab.label}
@@ -466,8 +519,8 @@ export default function PortailAIFM({ toast }) {
         ))}
       </div>
 
-      {subTab === "validation" && <ValidationOrdres toast={toast} />}
-      {subTab === "registre" && <RegistreFonds toast={toast} />}
+      {subTab === "validation" && <ValidationOrdres toast={toast} selectedFundId={selectedFundId} />}
+      {subTab === "registre" && <RegistreFonds toast={toast} selectedFundId={selectedFundId} selectedFundName={selectedFund?.fundName} />}
     </div>
   );
 }

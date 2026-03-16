@@ -72,7 +72,7 @@ export async function listProfiles() {
 }
 
 // ─── Admin: create a user account ───
-export async function createUser({ email, password, fullName, role, company, intermediaryId }) {
+export async function createUser({ email, password, fullName, role, company, intermediaryId, walletAddress: providedWallet }) {
   // Save current admin session before signUp (which changes the active session)
   const { data: { session: adminSession } } = await supabase.auth.getSession();
 
@@ -103,12 +103,16 @@ export async function createUser({ email, password, fullName, role, company, int
     if (role) updates.role = role;
     if (fullName) updates.full_name = fullName;
 
-    // Generate a Cardano wallet for this user
-    try {
-      const wallet = await generateWallet(data.user.id);
-      if (wallet?.address) updates.wallet_address = wallet.address;
-    } catch (err) {
-      console.error("Failed to generate wallet:", err);
+    // Use provided wallet address or generate a new one
+    if (providedWallet) {
+      updates.wallet_address = providedWallet;
+    } else {
+      try {
+        const wallet = await generateWallet(data.user.id);
+        if (wallet?.address) updates.wallet_address = wallet.address;
+      } catch (err) {
+        console.error("Failed to generate wallet:", err);
+      }
     }
 
     if (Object.keys(updates).length > 0) {
@@ -148,7 +152,7 @@ export async function listMyClients() {
 }
 
 // ─── Intermediary: create a client account ───
-export async function createClientAccount({ email, password, fullName, company, kycData }) {
+export async function createClientAccount({ email, password, fullName, company, kycData, walletAddress: providedWallet }) {
   const { data: { user: me } } = await supabase.auth.getUser();
   if (!me) throw new Error("Not authenticated");
 
@@ -186,14 +190,18 @@ export async function createClientAccount({ email, password, fullName, company, 
 
   console.log("[Client] Linking client", data.user.id, "to intermediary", me.id);
 
-  // Generate wallet (non-blocking)
-  let walletAddress = null;
-  try {
-    const wallet = await generateWallet(data.user.id);
-    if (wallet?.address) walletAddress = wallet.address;
-    console.log("[Client] Wallet generated:", walletAddress?.slice(0, 30));
-  } catch (err) {
-    console.error("[Client] Failed to generate wallet:", err);
+  // Use provided wallet address or generate a new one
+  let walletAddress = providedWallet || null;
+  if (!walletAddress) {
+    try {
+      const wallet = await generateWallet(data.user.id);
+      if (wallet?.address) walletAddress = wallet.address;
+      console.log("[Client] Wallet generated:", walletAddress?.slice(0, 30));
+    } catch (err) {
+      console.error("[Client] Failed to generate wallet:", err);
+    }
+  } else {
+    console.log("[Client] Using provided wallet:", walletAddress?.slice(0, 30));
   }
 
   // Link to intermediary + persist KYC via SECURITY DEFINER RPC — this MUST succeed

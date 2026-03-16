@@ -306,7 +306,7 @@ function UserManagement({ toast }) {
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editRole, setEditRole] = useState("");
-  const [newUser, setNewUser] = useState({ email: "", password: "", fullName: "", role: "investor", company: "", intermediaryId: "" });
+  const [newUser, setNewUser] = useState({ email: "", password: "", fullName: "", role: "investor", company: "", intermediaryId: "", walletMode: "generate", walletAddress: "" });
 
   useEffect(() => {
     loadUsers();
@@ -328,11 +328,18 @@ function UserManagement({ toast }) {
       toast("Veuillez remplir tous les champs obligatoires");
       return;
     }
+    if (newUser.walletMode === "existing" && !newUser.walletAddress.trim()) {
+      toast("Veuillez renseigner l'adresse du wallet");
+      return;
+    }
     setCreating(true);
     try {
-      await createUser(newUser);
+      await createUser({
+        ...newUser,
+        walletAddress: newUser.walletMode === "existing" ? newUser.walletAddress.trim() : undefined,
+      });
       toast(`Compte créé pour ${newUser.fullName} (${ROLE_LABELS[newUser.role]})`);
-      setNewUser({ email: "", password: "", fullName: "", role: "investor", company: "", intermediaryId: "" });
+      setNewUser({ email: "", password: "", fullName: "", role: "investor", company: "", intermediaryId: "", walletMode: "generate", walletAddress: "" });
       setShowForm(false);
       await loadUsers();
     } catch (err) {
@@ -406,6 +413,28 @@ function UserManagement({ toast }) {
               </div>
             )}
           </div>
+
+          {/* Wallet choice */}
+          <div className="mb-4 p-4 rounded-xl border border-[#E8ECF1] bg-[#FAFBFC]">
+            <label className="block text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-3">Wallet Cardano</label>
+            <div className="flex gap-4 mb-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="walletMode" checked={newUser.walletMode === "generate"} onChange={() => setNewUser((p) => ({ ...p, walletMode: "generate", walletAddress: "" }))} className="w-4 h-4 accent-[#0D0D12]" />
+                <span className="text-sm text-[#0D0D12]">Générer un nouveau wallet</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="walletMode" checked={newUser.walletMode === "existing"} onChange={() => setNewUser((p) => ({ ...p, walletMode: "existing" }))} className="w-4 h-4 accent-[#0D0D12]" />
+                <span className="text-sm text-[#0D0D12]">Renseigner une adresse existante</span>
+              </label>
+            </div>
+            {newUser.walletMode === "existing" && (
+              <input value={newUser.walletAddress} onChange={(e) => setNewUser((p) => ({ ...p, walletAddress: e.target.value }))} className="w-full px-3 py-2 rounded-xl bg-white border border-[#E8ECF1] text-[#0D0D12] placeholder-[#9AA4B2] text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#4F7DF3]/10 focus:border-[#4F7DF3]" placeholder="addr_test1q..." />
+            )}
+            {newUser.walletMode === "generate" && (
+              <p className="text-xs text-[#9AA4B2]">Un wallet sera automatiquement généré à la création du compte.</p>
+            )}
+          </div>
+
           <button onClick={handleCreate} disabled={creating} className="px-6 py-2 bg-[#0D0D12] hover:bg-[#1A1A2E] text-white text-sm rounded-xl transition-colors disabled:opacity-50">
             {creating ? "Création…" : "Créer le compte"}
           </button>
