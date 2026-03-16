@@ -5,6 +5,7 @@ import { useAppContext } from "../context/AppContext";
 import { KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls } from "../components/shared";
 import { supabase } from "../lib/supabase";
 import { listProfiles, createUser, updateUserProfile } from "../services/profileService";
+import { mintAndSendToken, burnSynthetic, transferToken, getFundTokenInfo, getExplorerUrl, shortenHash } from "../services/cardanoService";
 import FundEditorComponent from "../components/FundEditor";
 
 const ROLE_LABELS = { investor: "Investisseur", intermediary: "Intermédiaire", aifm: "AIFM", admin: "Admin" };
@@ -42,6 +43,7 @@ export default function PortailAdmin({ toast }) {
           { id: "dashboard", label: "Dashboard" },
           { id: "users", label: "Gestion des utilisateurs" },
           { id: "fund", label: "Gestion des fonds" },
+          { id: "vault", label: "Vault" },
           { id: "compliance", label: "Compliance CIP-113" },
         ].map((tab) => (
           <button key={tab.id} onClick={() => setAdminTab(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${adminTab === tab.id ? "text-[#0D0D12]" : "text-[#9AA4B2] hover:text-[#5F6B7A]"}`}>
@@ -53,6 +55,7 @@ export default function PortailAdmin({ toast }) {
 
       {adminTab === "users" && <UserManagement toast={toast} />}
       {adminTab === "fund" && <FundEditorComponent toast={toast} />}
+      {adminTab === "vault" && <VaultManager toast={toast} />}
       {adminTab === "compliance" && <ComplianceManager toast={toast} />}
 
       {adminTab === "dashboard" && <>
@@ -512,6 +515,565 @@ function UserManagement({ toast }) {
           </table>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VAULT MANAGER — Pilotage vault par fonds
+   ═══════════════════════════════════════════════════════════════ */
+function VaultManager({ toast }) {
+  const { orders } = useAppContext();
+  const [funds, setFunds] = useState([]);
+  const [selectedFund, setSelectedFund] = useState(null);
+  const [vaultTab, setVaultTab] = useState("overview");
+  const [loading, setLoading] = useState(false);
+  const [processing, setProcessing] = useState(false);
+
+  // Vault data per fund
+  const [tokenInfo, setTokenInfo] = useState(null);
+  const [holders, setHolders] = useState([]);
+  const [vaultPositions, setVaultPositions] = useState([]);
+  const [transfers, setTransfers] = useState([]);
+  const [supply, setSupply] = useState(null);
+
+  // Form states
+  const [mintForm, setMintForm] = useState({ address: "", amount: "", lpName: "", shareClass: 1 });
+  const [burnForm, setBurnForm] = useState({ address: "", amount: "", positionId: "" });
+  const [transferForm, setTransferForm] = useState({ toAddress: "", amount: "" });
+
+  // Load funds
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from("funds").select("*").then(({ data }) => {
+      if (data?.length) { setFunds(data); setSelectedFund(data[0]); }
+    });
+  }, []);
+
+  // Load vault data when fund changes
+  useEffect(() => {
+    if (!selectedFund) return;
+    setLoading(true);
+    const fid = selectedFund.id;
+    const promises = [];
+
+    if (supabase) {
+      promises.push(
+        supabase.from("token_transfers").select("*").eq("fund_id", fid).order("created_at", { ascending: false }).limit(100),
+        supabase.from("token_supply").select("*").eq("fund_id", fid).maybeSingle(),
+        supabase.from("token_whitelist").select("*").eq("fund_id", fid).is("revoked_at", null),
+        supabase.from("vault_positions").select("*").eq("fund_id", fid).order("created_at", { ascending: false }),
+      );
+    }
+
+    // Try Blockfrost for on-chain data
+    if (selectedFund.cardano_policy_id) {
+      promises.push(getFundTokenInfo(selectedFund.cardano_policy_id));
+    }
+
+    Promise.all(promises).then((results) => {
+      if (supabase) {
+        setTransfers(results[0]?.data || []);
+        setSupply(results[1]?.data || null);
+        setHolders(results[2]?.data || []);
+        setVaultPositions(results[3]?.data || []);
+        if (results[4]) setTokenInfo(results[4]);
+      }
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [selectedFund]);
+
+  // Compute per-fund stats
+  const fundOrders = orders.filter((o) => o.fundId === selectedFund?.id);
+  const totalMinted = supply?.total_minted || transfers.filter((t) => t.transfer_type === "mint").reduce((s, t) => s + (t.token_count || 0), 0);
+  const totalBurned = transfers.filter((t) => t.transfer_type === "burn").reduce((s, t) => s + (t.token_count || 0), 0);
+  const totalTransferred = transfers.filter((t) => t.transfer_type === "transfer").reduce((s, t) => s + (t.token_count || 0), 0);
+  const circulatingSupply = totalMinted - totalBurned;
+  const navPerShare = selectedFund?.nav_per_share || NAV_PER_PART;
+  const vaultAUM = circulatingSupply * navPerShare;
+
+  // Mint tokens
+  const handleMint = async () => {
+    if (!mintForm.address.startsWith("addr") || !mintForm.amount || !selectedFund) return;
+    setProcessing(true);
+    try {
+      const result = await mintAndSendToken({
+        orderId: `ADMIN-MINT-${Date.now()}`,
+        investorAddress: mintForm.address,
+        fundName: selectedFund.fund_name,
+        fundSlug: selectedFund.slug,
+        fundPolicyId: selectedFund.cardano_policy_id,
+        fundId: selectedFund.id,
+        shareClass: mintForm.shareClass,
+        montant: parseFloat(mintForm.amount),
+        navPerShare,
+        lpName: mintForm.lpName || "Admin Mint",
+      });
+      toast(`${result.tokenCount} tokens mintés — Tx: ${result.txHash.slice(0, 16)}...`);
+      setMintForm({ address: "", amount: "", lpName: "", shareClass: 1 });
+
+      // Log transfer in DB
+      if (supabase) {
+        await supabase.from("token_transfers").insert({
+          fund_id: selectedFund.id,
+          transfer_type: "mint",
+          to_address: mintForm.address,
+          token_count: result.tokenCount,
+          tx_hash: result.txHash,
+        });
+        // Refresh
+        const { data } = await supabase.from("token_transfers").select("*").eq("fund_id", selectedFund.id).order("created_at", { ascending: false }).limit(100);
+        setTransfers(data || []);
+      }
+    } catch (err) {
+      toast("Erreur mint : " + err.message);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Burn tokens
+  const handleBurn = async () => {
+    if (!burnForm.address.startsWith("addr") || !burnForm.amount || !selectedFund) return;
+    setProcessing(true);
+    try {
+      const result = await burnSynthetic({
+        userAddress: burnForm.address,
+        fundSlug: selectedFund.slug,
+        fundId: selectedFund.id,
+        tokenCount: parseInt(burnForm.amount, 10),
+        vaultPositionId: burnForm.positionId || null,
+        userId: null,
+      });
+      toast(`${burnForm.amount} tokens brûlés — Tx: ${result.txHash.slice(0, 16)}...`);
+      setBurnForm({ address: "", amount: "", positionId: "" });
+
+      if (supabase) {
+        await supabase.from("token_transfers").insert({
+          fund_id: selectedFund.id,
+          transfer_type: "burn",
+          to_address: burnForm.address,
+          token_count: parseInt(burnForm.amount, 10),
+          tx_hash: result.txHash,
+        });
+        const { data } = await supabase.from("token_transfers").select("*").eq("fund_id", selectedFund.id).order("created_at", { ascending: false }).limit(100);
+        setTransfers(data || []);
+      }
+    } catch (err) {
+      toast("Erreur burn : " + err.message);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Transfer tokens
+  const handleTransfer = async () => {
+    if (!transferForm.toAddress.startsWith("addr") || !transferForm.amount || !selectedFund) return;
+    setProcessing(true);
+    try {
+      const result = await transferToken({
+        toAddress: transferForm.toAddress,
+        fundSlug: selectedFund.slug,
+        tokenCount: parseInt(transferForm.amount, 10),
+      });
+      toast(`${transferForm.amount} tokens transférés — Tx: ${result.txHash.slice(0, 16)}...`);
+      setTransferForm({ toAddress: "", amount: "" });
+
+      if (supabase) {
+        await supabase.from("token_transfers").insert({
+          fund_id: selectedFund.id,
+          transfer_type: "transfer",
+          to_address: transferForm.toAddress,
+          token_count: parseInt(transferForm.amount, 10),
+          tx_hash: result.txHash,
+        });
+        const { data } = await supabase.from("token_transfers").select("*").eq("fund_id", selectedFund.id).order("created_at", { ascending: false }).limit(100);
+        setTransfers(data || []);
+      }
+    } catch (err) {
+      toast("Erreur transfert : " + err.message);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const short = (addr) => addr ? `${addr.slice(0, 12)}...${addr.slice(-8)}` : "—";
+
+  const vaultTabs = [
+    { id: "overview", label: "Vue d'ensemble" },
+    { id: "mint", label: "Mint" },
+    { id: "burn", label: "Burn" },
+    { id: "transfer", label: "Transfert" },
+    { id: "holders", label: "Holders" },
+    { id: "history", label: "Historique" },
+  ];
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-[#0D0D12]">Vault Management</h2>
+          <p className="text-sm text-[#9AA4B2] mt-1">Pilotage on-chain par fonds — mint, burn, transfert</p>
+        </div>
+        {selectedFund?.cardano_policy_id && (
+          <a href={`https://preprod.cardanoscan.io/tokenPolicy/${selectedFund.cardano_policy_id}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-[#E8ECF1] rounded-xl text-xs font-medium text-[#4F7DF3] hover:border-[#D1D5DB] transition-colors">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+            Voir sur CardanoScan
+          </a>
+        )}
+      </div>
+
+      {/* Fund selector */}
+      <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
+        <div className="flex items-center gap-6">
+          <div className="flex-1">
+            <label className="block text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-2">Fonds</label>
+            <select value={selectedFund?.id || ""} onChange={(e) => setSelectedFund(funds.find((f) => f.id === e.target.value))} className={selectCls + " w-full"}>
+              {funds.map((f) => <option key={f.id} value={f.id}>{f.fund_name} ({f.slug})</option>)}
+            </select>
+          </div>
+          {selectedFund && (
+            <>
+              <div className="text-center">
+                <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Policy ID</p>
+                <p className="font-mono text-xs text-[#0D0D12] mt-1">{selectedFund.cardano_policy_id ? short(selectedFund.cardano_policy_id) : "Non déployé"}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Network</p>
+                <p className="text-xs text-[#0D0D12] mt-1">{selectedFund.blockchain_network || "preprod"}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Script Address</p>
+                <p className="font-mono text-xs text-[#0D0D12] mt-1">{selectedFund.cardano_script_address ? short(selectedFund.cardano_script_address) : "—"}</p>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Vault KPIs */}
+      <div className="grid grid-cols-5 gap-4">
+        <KPICard label="Tokens en circulation" value={circulatingSupply.toLocaleString("fr-FR")} sub={`${selectedFund?.slug || ""}`} />
+        <KPICard label="AUM Vault" value={fmt(vaultAUM)} sub={`NAV ${fmtFull(navPerShare)} / token`} />
+        <KPICard label="Total Mint" value={totalMinted.toLocaleString("fr-FR")} sub={`${transfers.filter((t) => t.transfer_type === "mint").length} opérations`} />
+        <KPICard label="Total Burn" value={totalBurned.toLocaleString("fr-FR")} sub={`${transfers.filter((t) => t.transfer_type === "burn").length} opérations`} />
+        <KPICard label="Holders" value={holders.length} sub={`${fundOrders.filter((o) => o.status === "validated").length} souscriptions`} />
+      </div>
+
+      {/* Sub-tabs */}
+      <div className="flex gap-1 bg-[#F0F2F5] rounded-xl p-1">
+        {vaultTabs.map((t) => (
+          <button key={t.id} onClick={() => setVaultTab(t.id)} className={`px-4 py-2 text-xs font-medium rounded-xl transition-all ${vaultTab === t.id ? "bg-white text-[#0D0D12] border border-[#E8ECF1]" : "text-[#5F6B7A] hover:text-[#0D0D12]"}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {loading && <p className="text-sm text-[#9AA4B2] text-center py-8">Chargement des données vault...</p>}
+
+      {/* ─── OVERVIEW TAB ─── */}
+      {!loading && vaultTab === "overview" && (
+        <div className="space-y-4">
+          {/* Supply bar */}
+          {supply?.supply_cap && (
+            <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-medium text-[#0D0D12]">Utilisation du Supply Cap</p>
+                <p className="text-sm font-semibold text-[#0D0D12]">{Math.round((circulatingSupply / supply.supply_cap) * 100)}%</p>
+              </div>
+              <div className="w-full h-3 bg-[#F0F2F5] rounded-full overflow-hidden">
+                <div className="h-full bg-[#0D0D12] rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (circulatingSupply / supply.supply_cap) * 100)}%` }} />
+              </div>
+              <div className="flex justify-between mt-2 text-xs text-[#9AA4B2]">
+                <span>{circulatingSupply.toLocaleString("fr-FR")} mintés</span>
+                <span>{supply.supply_cap.toLocaleString("fr-FR")} cap</span>
+              </div>
+            </div>
+          )}
+
+          {/* Recent operations summary */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-xl bg-[#ECFDF5] flex items-center justify-center">
+                  <svg className="w-4 h-4 text-[#059669]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                </div>
+                <p className="text-sm font-medium text-[#0D0D12]">Dernier Mint</p>
+              </div>
+              {transfers.find((t) => t.transfer_type === "mint") ? (
+                <>
+                  <p className="text-lg font-semibold text-[#0D0D12]">{transfers.find((t) => t.transfer_type === "mint").token_count} tokens</p>
+                  <p className="text-xs text-[#9AA4B2] mt-1">{transfers.find((t) => t.transfer_type === "mint").created_at?.split("T")[0]}</p>
+                  {transfers.find((t) => t.transfer_type === "mint").tx_hash && (
+                    <a href={getExplorerUrl(transfers.find((t) => t.transfer_type === "mint").tx_hash)} target="_blank" rel="noopener noreferrer" className="text-xs text-[#4F7DF3] hover:underline mt-1 block font-mono">
+                      {shortenHash(transfers.find((t) => t.transfer_type === "mint").tx_hash, 10)}
+                    </a>
+                  )}
+                </>
+              ) : <p className="text-xs text-[#9AA4B2]">Aucune opération</p>}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-xl bg-[#FEF2F2] flex items-center justify-center">
+                  <svg className="w-4 h-4 text-[#DC2626]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" /></svg>
+                </div>
+                <p className="text-sm font-medium text-[#0D0D12]">Dernier Burn</p>
+              </div>
+              {transfers.find((t) => t.transfer_type === "burn") ? (
+                <>
+                  <p className="text-lg font-semibold text-[#0D0D12]">{transfers.find((t) => t.transfer_type === "burn").token_count} tokens</p>
+                  <p className="text-xs text-[#9AA4B2] mt-1">{transfers.find((t) => t.transfer_type === "burn").created_at?.split("T")[0]}</p>
+                </>
+              ) : <p className="text-xs text-[#9AA4B2]">Aucune opération</p>}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-xl bg-[#EEF2FF] flex items-center justify-center">
+                  <svg className="w-4 h-4 text-[#4F7DF3]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                </div>
+                <p className="text-sm font-medium text-[#0D0D12]">Transferts</p>
+              </div>
+              <p className="text-lg font-semibold text-[#0D0D12]">{totalTransferred.toLocaleString("fr-FR")} tokens</p>
+              <p className="text-xs text-[#9AA4B2] mt-1">{transfers.filter((t) => t.transfer_type === "transfer").length} opérations</p>
+            </div>
+          </div>
+
+          {/* On-chain info */}
+          {selectedFund?.cardano_policy_id && (
+            <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
+              <p className="text-sm font-medium text-[#0D0D12] mb-4">Données on-chain</p>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="flex justify-between py-2 border-b border-[#F0F2F5]">
+                  <span className="text-[#5F6B7A]">Policy ID</span>
+                  <span className="font-mono text-xs text-[#0D0D12]">{shortenHash(selectedFund.cardano_policy_id, 16)}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-[#F0F2F5]">
+                  <span className="text-[#5F6B7A]">Script Address</span>
+                  <span className="font-mono text-xs text-[#0D0D12]">{shortenHash(selectedFund.cardano_script_address, 16)}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-[#F0F2F5]">
+                  <span className="text-[#5F6B7A]">Tx Déploiement</span>
+                  {selectedFund.cardano_tx_hash ? (
+                    <a href={getExplorerUrl(selectedFund.cardano_tx_hash)} target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-[#4F7DF3] hover:underline">
+                      {shortenHash(selectedFund.cardano_tx_hash, 16)}
+                    </a>
+                  ) : <span className="text-xs text-[#9AA4B2]">—</span>}
+                </div>
+                <div className="flex justify-between py-2 border-b border-[#F0F2F5]">
+                  <span className="text-[#5F6B7A]">Réseau</span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ring-1 ring-amber-600/10 bg-amber-50 text-amber-700">{selectedFund.blockchain_network || "preprod"}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── MINT TAB ─── */}
+      {!loading && vaultTab === "mint" && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-[#E8ECF1] p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-[#ECFDF5] flex items-center justify-center">
+                <svg className="w-5 h-5 text-[#059669]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[#0D0D12]">Mint de tokens</h3>
+                <p className="text-xs text-[#9AA4B2]">Émettre de nouveaux tokens {selectedFund?.slug} vers une adresse</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className={labelCls}>Adresse destinataire *</label>
+                <input value={mintForm.address} onChange={(e) => setMintForm((p) => ({ ...p, address: e.target.value }))} placeholder="addr_test1q..." className={inputCls + " font-mono text-xs"} />
+              </div>
+              <div>
+                <label className={labelCls}>Montant EUR *</label>
+                <input type="number" value={mintForm.amount} onChange={(e) => setMintForm((p) => ({ ...p, amount: e.target.value }))} placeholder="125000" className={inputCls} />
+                {mintForm.amount && <p className="text-xs text-[#9AA4B2] mt-1">≈ {Math.floor(parseFloat(mintForm.amount) / navPerShare)} tokens à {fmtFull(navPerShare)} / token</p>}
+              </div>
+              <div>
+                <label className={labelCls}>Nom du bénéficiaire</label>
+                <input value={mintForm.lpName} onChange={(e) => setMintForm((p) => ({ ...p, lpName: e.target.value }))} placeholder="Jean Dupont" className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Share Class</label>
+                <select value={mintForm.shareClass} onChange={(e) => setMintForm((p) => ({ ...p, shareClass: parseInt(e.target.value) }))} className={selectCls}>
+                  <option value={1}>Classe 1 — 7-9% / 36 mois</option>
+                  <option value={2}>Classe 2 — 5-6% / 24 mois</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-[#F0F2F5]">
+              <div className="text-xs text-[#9AA4B2]">
+                {mintForm.amount && <span>Tokens à émettre : <strong className="text-[#0D0D12]">{Math.floor(parseFloat(mintForm.amount) / navPerShare)}</strong></span>}
+              </div>
+              <button onClick={handleMint} disabled={processing || !mintForm.address.startsWith("addr") || !mintForm.amount} className="px-6 py-2.5 bg-[#0D0D12] hover:bg-[#1A1A2E] text-white text-sm rounded-xl transition-colors disabled:opacity-50">
+                {processing ? "Mint en cours..." : "Exécuter le Mint"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── BURN TAB ─── */}
+      {!loading && vaultTab === "burn" && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-[#E8ECF1] p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-[#FEF2F2] flex items-center justify-center">
+                <svg className="w-5 h-5 text-[#DC2626]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" /></svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[#0D0D12]">Burn de tokens</h3>
+                <p className="text-xs text-[#9AA4B2]">Détruire des tokens et libérer les actifs sous-jacents du vault</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className={labelCls}>Adresse du holder *</label>
+                <input value={burnForm.address} onChange={(e) => setBurnForm((p) => ({ ...p, address: e.target.value }))} placeholder="addr_test1q..." className={inputCls + " font-mono text-xs"} />
+              </div>
+              <div>
+                <label className={labelCls}>Nombre de tokens à brûler *</label>
+                <input type="number" value={burnForm.amount} onChange={(e) => setBurnForm((p) => ({ ...p, amount: e.target.value }))} placeholder="100" className={inputCls} />
+                {burnForm.amount && <p className="text-xs text-[#9AA4B2] mt-1">≈ {fmt(parseInt(burnForm.amount) * navPerShare)} en valeur</p>}
+              </div>
+              <div className="col-span-2">
+                <label className={labelCls}>Vault Position ID (optionnel)</label>
+                <input value={burnForm.positionId} onChange={(e) => setBurnForm((p) => ({ ...p, positionId: e.target.value }))} placeholder="UUID de la position vault" className={inputCls + " font-mono text-xs"} />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-[#F0F2F5]">
+              <div className="flex items-center gap-2 text-xs text-amber-600">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                Cette action est irréversible
+              </div>
+              <button onClick={handleBurn} disabled={processing || !burnForm.address.startsWith("addr") || !burnForm.amount} className="px-6 py-2.5 bg-[#DC2626] hover:bg-[#B91C1C] text-white text-sm rounded-xl transition-colors disabled:opacity-50">
+                {processing ? "Burn en cours..." : "Exécuter le Burn"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── TRANSFER TAB ─── */}
+      {!loading && vaultTab === "transfer" && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-[#E8ECF1] p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-[#EEF2FF] flex items-center justify-center">
+                <svg className="w-5 h-5 text-[#4F7DF3]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[#0D0D12]">Transfert de tokens</h3>
+                <p className="text-xs text-[#9AA4B2]">Transférer des tokens du vault custody vers une adresse</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className={labelCls}>Adresse destinataire *</label>
+                <input value={transferForm.toAddress} onChange={(e) => setTransferForm((p) => ({ ...p, toAddress: e.target.value }))} placeholder="addr_test1q..." className={inputCls + " font-mono text-xs"} />
+              </div>
+              <div>
+                <label className={labelCls}>Nombre de tokens *</label>
+                <input type="number" value={transferForm.amount} onChange={(e) => setTransferForm((p) => ({ ...p, amount: e.target.value }))} placeholder="50" className={inputCls} />
+                {transferForm.amount && <p className="text-xs text-[#9AA4B2] mt-1">≈ {fmt(parseInt(transferForm.amount) * navPerShare)} en valeur</p>}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-[#F0F2F5]">
+              <button onClick={handleTransfer} disabled={processing || !transferForm.toAddress.startsWith("addr") || !transferForm.amount} className="px-6 py-2.5 bg-[#0D0D12] hover:bg-[#1A1A2E] text-white text-sm rounded-xl transition-colors disabled:opacity-50">
+                {processing ? "Transfert en cours..." : "Exécuter le Transfert"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── HOLDERS TAB ─── */}
+      {!loading && vaultTab === "holders" && (
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
+          <div className="px-6 py-4 border-b border-[#F0F2F5] flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-[#0D0D12]">Holders whitelistés — {selectedFund?.fund_name}</h3>
+            <span className="text-xs text-[#9AA4B2]">{holders.length} adresses</span>
+          </div>
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b border-[#F0F2F5] bg-[#F7F8FA]">
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Adresse</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">KYC</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Approuvé le</th>
+              </tr>
+            </thead>
+            <tbody>
+              {holders.length === 0 && (
+                <tr><td colSpan={3} className="px-5 py-8 text-center text-[#9AA4B2] text-xs">Aucun holder pour ce fonds</td></tr>
+              )}
+              {holders.map((h) => (
+                <tr key={h.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC]">
+                  <td className="px-5 py-3 font-mono text-xs text-[#0D0D12]" title={h.wallet_address}>{short(h.wallet_address)}</td>
+                  <td className="px-5 py-3"><Badge status={["validated", "verified"].includes(h.kyc_status) ? "Validé" : "En attente"} /></td>
+                  <td className="px-5 py-3 text-xs text-[#9AA4B2]">{h.approved_at?.split("T")[0] || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ─── HISTORY TAB ─── */}
+      {!loading && vaultTab === "history" && (
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
+          <div className="px-6 py-4 border-b border-[#F0F2F5] flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-[#0D0D12]">Historique des opérations — {selectedFund?.fund_name}</h3>
+            <span className="text-xs text-[#9AA4B2]">{transfers.length} opérations</span>
+          </div>
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr className="border-b border-[#F0F2F5] bg-[#F7F8FA]">
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Type</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Destinataire</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] text-right">Tokens</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] text-right">Valeur</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Tx Hash</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transfers.length === 0 && (
+                <tr><td colSpan={6} className="px-5 py-8 text-center text-[#9AA4B2] text-xs">Aucune opération pour ce fonds</td></tr>
+              )}
+              {transfers.map((t) => (
+                <tr key={t.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC]">
+                  <td className="px-5 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ring-1 ${t.transfer_type === "mint" ? "ring-[#059669]/10 bg-[#ECFDF5] text-[#059669]" : t.transfer_type === "burn" ? "ring-[#DC2626]/10 bg-[#FEF2F2] text-[#DC2626]" : "ring-[#4F7DF3]/10 bg-[#EEF2FF] text-[#4F7DF3]"}`}>
+                      {t.transfer_type === "mint" ? "Mint" : t.transfer_type === "burn" ? "Burn" : "Transfert"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 font-mono text-xs text-[#0D0D12]" title={t.to_address}>{short(t.to_address)}</td>
+                  <td className="px-5 py-3 text-right font-mono text-xs text-[#0D0D12]">{(t.token_count || 0).toLocaleString("fr-FR")}</td>
+                  <td className="px-5 py-3 text-right text-xs text-[#5F6B7A]">{fmt((t.token_count || 0) * navPerShare)}</td>
+                  <td className="px-5 py-3">
+                    {t.tx_hash ? (
+                      <a href={getExplorerUrl(t.tx_hash)} target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-[#4F7DF3] hover:underline">{shortenHash(t.tx_hash, 10)}</a>
+                    ) : <span className="text-xs text-[#9AA4B2]">—</span>}
+                  </td>
+                  <td className="px-5 py-3 text-xs text-[#9AA4B2]">{t.created_at?.split("T")[0] || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
