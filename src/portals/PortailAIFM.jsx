@@ -4,7 +4,7 @@ import {
 } from "recharts";
 import { NAV_PER_PART } from "../data";
 import { useAppContext } from "../context/AppContext";
-import { KPICard, Badge, fmt, fmtFull } from "../components/shared";
+import { KPICard, Badge, fmt, fmtFull, useInView } from "../components/shared";
 import { getExplorerUrl, shortenHash } from "../services/cardanoService";
 import { listAllFunds } from "../services/fundService";
 
@@ -55,12 +55,14 @@ function ValidationOrdres({ toast, selectedFundId }) {
     return <Badge status={map[status] || status} />;
   };
 
+  const [kpiRef, kpiInView] = useInView();
+
   return (
     <div className="animate-fade-in">
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <KPICard label="Ordres en attente" value={pendingOrders.length} sub={pendingOrders.length > 0 ? "Action requise" : "Aucun"} />
-        <KPICard label="Ordres validés" value={validatedOrders.length} />
-        <KPICard label="Ordres rejetés" value={rejectedOrders.length} />
+      <div ref={kpiRef} className={`grid grid-cols-3 gap-4 mb-8 stagger-fast ${kpiInView ? "" : "opacity-0"}`}>
+        <KPICard label="Ordres en attente" value={pendingOrders.length} sub={pendingOrders.length > 0 ? "Action requise" : "Aucun"} delay={0} />
+        <KPICard label="Ordres validés" value={validatedOrders.length} delay={60} />
+        <KPICard label="Ordres rejetés" value={rejectedOrders.length} delay={120} />
       </div>
 
       {/* Last mint result banner */}
@@ -130,7 +132,7 @@ function ValidationOrdres({ toast, selectedFundId }) {
                 <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="stagger-rows">
               {pendingOrders.map((o) => (
                 <tr key={o.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC] transition-colors">
                   <td className="px-5 py-3 font-mono text-xs text-[#0D0D12]">{o.id}</td>
@@ -276,7 +278,7 @@ function ValidationOrdres({ toast, selectedFundId }) {
                 <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Date traitement</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="stagger-rows">
               {[...validatedOrders, ...rejectedOrders].map((o) => (
                 <tr key={o.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC] transition-colors">
                   <td className="px-5 py-3 font-mono text-xs text-[#0D0D12]">{o.id}</td>
@@ -352,15 +354,15 @@ function RegistreFonds({ toast, selectedFundId, selectedFundName }) {
         Temps réel · dernière mise à jour : 14 mars 2026, 14:32:08
       </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <KPICard label="Total AUM" value={fmt(totalAUM)} />
-        <KPICard label="Nombre de LP" value={mergedLPs.length} />
-        <KPICard label="Capital appelé" value={fmt(capitalAppele)} sub={capitalEngage > 0 ? `${((capitalAppele / capitalEngage) * 100).toFixed(1)}% du capital engagé` : "—"} />
-        <KPICard label="NAV / part" value={fmtFull(NAV_PER_PART)} />
+      <div className="grid grid-cols-4 gap-4 mb-6 stagger-fast">
+        <KPICard label="Total AUM" value={fmt(totalAUM)} delay={0} />
+        <KPICard label="Nombre de LP" value={mergedLPs.length} delay={60} />
+        <KPICard label="Capital appelé" value={fmt(capitalAppele)} sub={capitalEngage > 0 ? `${((capitalAppele / capitalEngage) * 100).toFixed(1)}% du capital engagé` : "—"} delay={120} />
+        <KPICard label="NAV / part" value={fmtFull(NAV_PER_PART)} delay={180} />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-white border border-[#E8ECF1] rounded-2xl p-5">
+      <div className="grid grid-cols-2 gap-4 mb-6 stagger-children">
+        <div className="bg-white border border-[#E8ECF1] rounded-2xl p-5 card-elevated">
           <p className="text-[12px] text-[#9AA4B2] font-medium mb-4">Répartition Share Class</p>
           <div className="flex items-center gap-6">
             <PieChart width={140} height={140}>
@@ -375,7 +377,7 @@ function RegistreFonds({ toast, selectedFundId, selectedFundName }) {
             </div>
           </div>
         </div>
-        <div className="bg-white border border-[#E8ECF1] rounded-2xl p-5">
+        <div className="bg-white border border-[#E8ECF1] rounded-2xl p-5 card-elevated">
           <p className="text-[12px] text-[#9AA4B2] font-medium mb-4">Capital appelé vs engagé</p>
           <div className="mt-6">
             <div className="flex justify-between text-xs text-[#5F6B7A] mb-1">
@@ -420,7 +422,7 @@ function RegistreFonds({ toast, selectedFundId, selectedFundName }) {
                 <th className="px-4 py-3 text-[12px] text-[#9AA4B2] font-medium text-right">% Fonds</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="stagger-rows">
               {filtered.map((lp) => (
                 <tr key={lp.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC] transition-colors">
                   <td className="px-4 py-3">
@@ -480,7 +482,7 @@ export default function PortailAIFM({ toast }) {
       {funds.length > 1 && (
         <div className="mb-6">
           <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-3">Sélectionnez un fonds</p>
-          <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-3 flex-wrap stagger-fast">
             {orderCountByFund.map((f) => (
               <button
                 key={f.id}

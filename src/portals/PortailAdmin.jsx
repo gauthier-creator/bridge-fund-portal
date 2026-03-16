@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { PieChart, Pie, Cell } from "recharts";
 import { NAV_PER_PART } from "../data";
 import { useAppContext } from "../context/AppContext";
-import { KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls } from "../components/shared";
+import { KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls, useInView } from "../components/shared";
 import { supabase } from "../lib/supabase";
 import { listProfiles, createUser, updateUserProfile } from "../services/profileService";
 import { mintAndSendToken, burnSynthetic, transferToken, getFundTokenInfo, getExplorerUrl, shortenHash } from "../services/cardanoService";
@@ -109,7 +109,7 @@ export default function PortailAdmin({ toast }) {
       {/* Fund selector bar */}
       <div className="bg-white rounded-2xl border border-[#E8ECF1] p-4 mb-6 flex items-center gap-4">
         <label className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] whitespace-nowrap">Fonds :</label>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap stagger-fast">
           <button onClick={() => setSelectedFundId("all")} className={`px-4 py-2 text-xs font-medium rounded-xl transition-all ${selectedFundId === "all" ? "bg-[#0D0D12] text-white" : "bg-[#F7F8FA] text-[#5F6B7A] hover:bg-[#F0F2F5] border border-[#E8ECF1]"}`}>
             Tous les fonds
             <span className="ml-1.5 text-[10px] opacity-70">{orders.length}</span>
@@ -127,17 +127,17 @@ export default function PortailAdmin({ toast }) {
       </div>
 
       {/* Overview KPIs */}
-      <div className="grid grid-cols-5 gap-4 mb-8">
-        <KPICard label="AUM Total" value={fmt(totalAUM)} sub={selectedFundId === "all" ? "Tous les fonds" : selectedFundObj?.fund_name || ""} />
-        <KPICard label="Souscriptions" value={filteredOrders.length} sub={`${validatedOrders.length} validées · ${rejectedOrders.length} rejetées`} />
-        <KPICard label="NAV / part" value={fmtFull(currentNAV)} sub={selectedFundId === "all" ? "Global" : selectedFundObj?.slug || ""} />
-        <KPICard label="En attente" value={pendingOrders.length} sub={pendingOrders.length > 0 ? fmt(pendingOrders.reduce((s, o) => s + o.montant, 0)) : "—"} />
-        <KPICard label="Collatéral total" value={totalCollateral + " BF"} sub={collateralPositions.length + " positions"} />
+      <div className="grid grid-cols-5 gap-4 mb-8 stagger-fast">
+        <KPICard label="AUM Total" value={fmt(totalAUM)} sub={selectedFundId === "all" ? "Tous les fonds" : selectedFundObj?.fund_name || ""} delay={0} />
+        <KPICard label="Souscriptions" value={filteredOrders.length} sub={`${validatedOrders.length} validées · ${rejectedOrders.length} rejetées`} delay={60} />
+        <KPICard label="NAV / part" value={fmtFull(currentNAV)} sub={selectedFundId === "all" ? "Global" : selectedFundObj?.slug || ""} delay={120} />
+        <KPICard label="En attente" value={pendingOrders.length} sub={pendingOrders.length > 0 ? fmt(pendingOrders.reduce((s, o) => s + o.montant, 0)) : "—"} delay={180} />
+        <KPICard label="Collatéral total" value={totalCollateral + " BF"} sub={collateralPositions.length + " positions"} delay={240} />
       </div>
 
       {/* Orders status */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
+      <div className="grid grid-cols-4 gap-4 mb-8 stagger-children">
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5 card-elevated">
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2 h-2 rounded-full bg-amber-500" />
             <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">En attente</p>
@@ -147,7 +147,7 @@ export default function PortailAdmin({ toast }) {
             <p className="text-xs text-amber-600 mt-2">{fmt(pendingOrders.reduce((s, o) => s + o.montant, 0))}</p>
           )}
         </div>
-        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5 card-elevated">
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2 h-2 rounded-full bg-[#00C48C]" />
             <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Validés</p>
@@ -155,7 +155,7 @@ export default function PortailAdmin({ toast }) {
           <p className="text-3xl font-semibold text-[#0D0D12]">{validatedOrders.length}</p>
           <p className="text-xs text-[#059669] mt-2">{fmt(validatedOrders.reduce((s, o) => s + o.montant, 0))}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5 card-elevated">
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2 h-2 rounded-full bg-[#DC2626]" />
             <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Rejetés</p>
@@ -163,7 +163,7 @@ export default function PortailAdmin({ toast }) {
           <p className="text-3xl font-semibold text-[#0D0D12]">{rejectedOrders.length}</p>
           <p className="text-xs text-[#DC2626] mt-2">{fmt(rejectedOrders.reduce((s, o) => s + o.montant, 0))}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5 card-elevated">
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2 h-2 rounded-full bg-[#4F7DF3]" />
             <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Total</p>
@@ -174,7 +174,7 @@ export default function PortailAdmin({ toast }) {
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-3 gap-4 mb-8 stagger-children">
         <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
           <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-4">Répartition Share Class</p>
           <div className="flex items-center gap-4">
@@ -255,10 +255,10 @@ export default function PortailAdmin({ toast }) {
             {filteredOrders.length === 0 && (
               <tr><td colSpan={10} className="px-5 py-8 text-center text-[#9AA4B2] text-xs">Aucun ordre pour ce fonds</td></tr>
             )}
-            {filteredOrders.map((o) => {
+            {filteredOrders.map((o, idx) => {
               const fundName = funds.find((f) => f.id === o.fundId)?.fund_name;
               return (
-                <tr key={o.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC] transition-colors">
+                <tr key={o.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC] transition-colors" style={{ animation: `revealUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) ${idx * 40}ms both` }}>
                   <td className="px-5 py-3 font-mono text-xs text-[#0D0D12]">{o.id}</td>
                   <td className="px-5 py-3">
                     <p className="font-medium text-[#0D0D12]">{o.lpName}</p>
@@ -310,7 +310,7 @@ export default function PortailAdmin({ toast }) {
       </div>
 
       {/* Registry + Collateral side by side */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4 stagger-children">
         <div className="bg-white rounded-2xl border border-[#E8ECF1] p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-[#0D0D12]">Registre des souscriptions</h3>
@@ -595,10 +595,10 @@ function UserManagement({ toast }) {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => {
+              {users.map((u, idx) => {
                 const linked = u.intermediary_id ? users.find((x) => x.id === u.intermediary_id) : null;
                 return (
-                  <tr key={u.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC]">
+                  <tr key={u.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC]" style={{ animation: `revealUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) ${idx * 40}ms both` }}>
                     <td className="px-5 py-3 font-medium text-[#0D0D12]">{u.full_name || "—"}</td>
                     <td className="px-5 py-3 text-[#5F6B7A]">{u.email}</td>
                     <td className="px-5 py-3">

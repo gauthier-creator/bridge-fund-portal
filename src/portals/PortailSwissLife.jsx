@@ -8,7 +8,7 @@ import { supabase } from "../lib/supabase";
 import { listMyClients, createClientAccount, updateUserProfile } from "../services/profileService";
 import {
   KPICard, Badge, fmt, fmtFull, inputCls, selectCls, labelCls,
-  Checkbox, ComplianceAlert, SignaturePad,
+  Checkbox, ComplianceAlert, SignaturePad, useInView, useCountUp,
 } from "../components/shared";
 import { transferToken, mintSynthetic, burnSynthetic, generateWallet } from "../services/cardanoService";
 import FundCatalog from "../components/FundCatalog";
@@ -32,23 +32,26 @@ function DashboardIntermediaire({ toast, onViewClients, onViewCustody }) {
 
   const statusLabel = (s) => s === "pending" ? "En attente" : s === "validated" ? "Approuvé" : "Rejeté";
 
+  const [dashRef, dashInView] = useInView();
+  const [tableRef, tableInView] = useInView();
+
   return (
     <div className="animate-fade-in space-y-6">
-      <div>
+      <div className="stagger-hero">
         <h2 className="text-xl font-semibold text-[#0D0D12]">Bonjour, {profile?.full_name?.split(" ")[0] || "Intermédiaire"}</h2>
         <p className="text-sm text-[#5F6B7A] mt-1">Pilotez votre activité d'intermédiation</p>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-4 gap-4">
-        <KPICard label="AUM total" value={fmt(totalAUM)} sub={`${totalTokens} tokens BF`} />
-        <KPICard label="En attente" value={fmt(totalPending)} sub={`${pendingOrders.length} souscription${pendingOrders.length > 1 ? "s" : ""}`} />
-        <KPICard label="Souscriptions validées" value={validatedOrders.length} sub="Tous fonds confondus" />
-        <KPICard label="Tokens stakés" value={`${totalStaked} BF`} sub={`${collateralPositions.length} position${collateralPositions.length > 1 ? "s" : ""}`} />
+      <div ref={dashRef} className={`grid grid-cols-4 gap-4 stagger-fast ${dashInView ? "" : "opacity-0"}`}>
+        <KPICard label="AUM total" value={fmt(totalAUM)} sub={`${totalTokens} tokens BF`} delay={0} />
+        <KPICard label="En attente" value={fmt(totalPending)} sub={`${pendingOrders.length} souscription${pendingOrders.length > 1 ? "s" : ""}`} delay={60} />
+        <KPICard label="Souscriptions validées" value={validatedOrders.length} sub="Tous fonds confondus" delay={120} />
+        <KPICard label="Tokens stakés" value={`${totalStaked} BF`} sub={`${collateralPositions.length} position${collateralPositions.length > 1 ? "s" : ""}`} delay={180} />
       </div>
 
       {/* Recent subscriptions */}
-      <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
+      <div ref={tableRef} className={`bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden card-elevated ${tableInView ? "" : "opacity-0"}`}>
         <div className="px-6 py-4 border-b border-[#E8ECF1] flex items-center justify-between">
           <h3 className="text-sm font-semibold text-[#0D0D12]">Souscriptions récentes</h3>
           <span className="text-xs text-[#9AA4B2]">{myOrders.length} souscription{myOrders.length > 1 ? "s" : ""}</span>
@@ -75,7 +78,7 @@ function DashboardIntermediaire({ toast, onViewClients, onViewCustody }) {
                 <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Date</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="stagger-rows">
               {myOrders.sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 10).map((o) => (
                 <tr key={o.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC] transition-colors">
                   <td className="px-5 py-3 font-mono text-xs text-[#0D0D12]">{o.id?.slice(0, 12)}...</td>
@@ -1088,10 +1091,10 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-3 gap-4">
-        <KPICard label="Clients enregistrés" value={clients.length} />
-        <KPICard label="Souscriptions clients" value={orders.filter((o) => o.intermediaryId === user?.id || o.intermediaire).length} />
-        <KPICard label="Volume total" value={fmt(orders.filter((o) => (o.intermediaryId === user?.id || o.intermediaire) && o.status === "validated").reduce((s, o) => s + o.montant, 0))} />
+      <div className="grid grid-cols-3 gap-4 stagger-fast">
+        <KPICard label="Clients enregistrés" value={clients.length} delay={0} />
+        <KPICard label="Souscriptions clients" value={orders.filter((o) => o.intermediaryId === user?.id || o.intermediaire).length} delay={60} />
+        <KPICard label="Volume total" value={fmt(orders.filter((o) => (o.intermediaryId === user?.id || o.intermediaire) && o.status === "validated").reduce((s, o) => s + o.montant, 0))} delay={120} />
       </div>
 
       <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
@@ -1118,7 +1121,7 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
                 <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Créé le</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="stagger-rows">
               {clients.map((c) => {
                 const stats = getClientStats(c.id);
                 return (
@@ -1197,11 +1200,11 @@ function Custody({ toast, clients }) {
         <p className="text-sm text-[#9AA4B2] mt-1">Tokens sous garde pour le compte de vos clients — transférez-les à la demande</p>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
-        <KPICard label="Tokens sous custody" value={totalTokens.toLocaleString("fr-FR")} sub="Bridge Fund tokens" />
-        <KPICard label="Valeur totale AUM" value={fmt(totalNav)} sub="Actifs sous gestion" />
-        <KPICard label="Clients en custody" value={validatedOrders.length} sub="Comptes actifs" />
-        <KPICard label="NAV / part" value={fmtFull(NAV_PER_PART)} sub="Dernière valorisation" />
+      <div className="grid grid-cols-4 gap-4 stagger-fast">
+        <KPICard label="Tokens sous custody" value={totalTokens.toLocaleString("fr-FR")} sub="Bridge Fund tokens" delay={0} />
+        <KPICard label="Valeur totale AUM" value={fmt(totalNav)} sub="Actifs sous gestion" delay={60} />
+        <KPICard label="Clients en custody" value={validatedOrders.length} sub="Comptes actifs" delay={120} />
+        <KPICard label="NAV / part" value={fmtFull(NAV_PER_PART)} sub="Dernière valorisation" delay={180} />
       </div>
 
       <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
@@ -1230,8 +1233,8 @@ function Custody({ toast, clients }) {
               </tr>
             </thead>
             <tbody>
-              {validatedOrders.map((o) => (
-                <tr key={o.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC] transition-colors">
+              {validatedOrders.map((o, idx) => (
+                <tr key={o.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC] transition-colors" style={{ animation: `revealUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${idx * 50}ms both` }}>
                   <td className="px-5 py-3.5 font-medium text-[#0D0D12]">{o.lpName}</td>
                   <td className="px-5 py-3.5 text-right font-mono">{Math.floor(o.montant / NAV_PER_PART).toLocaleString("fr-FR")}</td>
                   <td className="px-5 py-3.5 text-right">{fmt(o.montant)}</td>
@@ -1585,11 +1588,11 @@ function CollateralClients({ toast, clients }) {
       </div>
 
       {/* Global KPIs */}
-      <div className="grid grid-cols-4 gap-4">
-        <KPICard label="Clients actifs" value={clientsWithStats.length} sub="Avec des parts" />
-        <KPICard label="Total parts (BF)" value={totalAllParts.toLocaleString("fr-FR")} sub="Tous clients" />
-        <KPICard label="Verrouillés (vault)" value={totalAllLocked.toLocaleString("fr-FR")} sub="BF lockés" />
-        <KPICard label="Synthetic (sBF)" value={totalAllSBF.toLocaleString("fr-FR")} sub="Librement transférables" />
+      <div className="grid grid-cols-4 gap-4 stagger-fast">
+        <KPICard label="Clients actifs" value={clientsWithStats.length} sub="Avec des parts" delay={0} />
+        <KPICard label="Total parts (BF)" value={totalAllParts.toLocaleString("fr-FR")} sub="Tous clients" delay={60} />
+        <KPICard label="Verrouillés (vault)" value={totalAllLocked.toLocaleString("fr-FR")} sub="BF lockés" delay={120} />
+        <KPICard label="Synthetic (sBF)" value={totalAllSBF.toLocaleString("fr-FR")} sub="Librement transférables" delay={180} />
       </div>
 
       {/* Client selector cards */}
@@ -1602,7 +1605,7 @@ function CollateralClients({ toast, clients }) {
             <p className="text-sm text-[#9AA4B2]">Aucun client avec des parts validées</p>
           </div>
         ) : (
-          <div className="grid gap-3 p-5">
+          <div className="grid gap-3 p-5 stagger-children">
             {clientsWithStats.map((c) => (
               <button
                 key={c.id}
@@ -1801,7 +1804,7 @@ function CollateralClients({ toast, clients }) {
             </div>
             <span className="text-xs font-medium text-[#059669] bg-[#ECFDF5] px-3 py-1 rounded-full">{totalAllSBF.toLocaleString("fr-FR")} sBF</span>
           </div>
-          <div className="grid grid-cols-3 gap-4 p-5">
+          <div className="grid grid-cols-3 gap-4 p-5 stagger-children">
             <a href="https://app.minswap.org/swap" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-[#E8ECF1] rounded-xl hover:border-[#E8ECF1] hover:bg-[#EEF2FF] transition-all">
               <div className="w-9 h-9 bg-[#EEF2FF] rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-[#4F7DF3] font-bold text-sm">M</span></div>
               <div>
