@@ -350,8 +350,7 @@ export default function InvestorDashboard({ onViewFund }) {
       {/* On-chain activity — scroll-triggered */}
       {tokenTransfers.length > 0 && (
         <div
-          ref={onchainRef}
-          className={`bg-white border border-[#E8ECF1] rounded-2xl overflow-hidden transition-all duration-700 ${onchainVisible ? "animate-fade-in-up" : "opacity-0"}`}
+          className="bg-white border border-[#E8ECF1] rounded-2xl overflow-hidden animate-fade-in-up"
         >
           <div className="px-6 py-4 border-b border-[#E8ECF1] flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -383,7 +382,7 @@ export default function InvestorDashboard({ onViewFund }) {
                 <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Date</th>
               </tr>
             </thead>
-            <tbody className={onchainVisible ? "stagger-rows" : ""}>
+            <tbody className="stagger-rows">
               {tokenTransfers.map((t) => {
                 const isIncoming = t.to_address === profile?.wallet_address;
                 const typeLabels = {
