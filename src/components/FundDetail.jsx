@@ -123,7 +123,7 @@ export default function FundDetail({ fundSlug, onBack, onInvest }) {
       {/* Key Metrics — staggered card lift */}
       <div
         ref={metricsRef}
-        className={`grid grid-cols-2 md:grid-cols-4 gap-4 transition-all duration-500 ${metricsVisible ? "stagger-fast" : "opacity-0"}`}
+        className={`grid grid-cols-2 md:grid-cols-4 gap-4 transition-all duration-500 ${metricsVisible ? "stagger-fast" : "opacity-0 translate-y-4"}`}
       >
         {[
           { label: "Rendement cible", value: fund.targetReturn || "—" },
@@ -170,7 +170,7 @@ export default function FundDetail({ fundSlug, onBack, onInvest }) {
       {/* Strategy & Thesis — scroll-triggered */}
       <div
         ref={strategyRef}
-        className={`grid md:grid-cols-2 gap-6 transition-all duration-700 ${strategyVisible ? "" : "opacity-0 translate-y-8"}`}
+        className={`grid md:grid-cols-2 gap-6 transition-all duration-700 ${strategyVisible ? "" : "opacity-0 translate-y-4"}`}
       >
         {fund.strategy && (
           <div className="bg-white border border-[#E8ECF1] rounded-2xl p-6 card-elevated" style={strategyVisible ? { animation: "fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards" } : undefined}>

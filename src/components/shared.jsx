@@ -74,9 +74,15 @@ export function useInView(options = {}) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    // Check if already visible on mount (above fold)
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight && rect.bottom > 0) {
+      setIsInView(true);
+      return;
+    }
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) { setIsInView(true); observer.unobserve(el); } },
-      { threshold: 0.15, ...options }
+      { threshold: 0.05, rootMargin: "100px 0px", ...options }
     );
     observer.observe(el);
     return () => observer.disconnect();
