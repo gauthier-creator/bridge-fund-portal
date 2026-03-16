@@ -74,18 +74,27 @@ export function useInView(options = {}) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // Check if already visible on mount (above fold)
-    const rect = el.getBoundingClientRect();
-    if (rect.top < window.innerHeight && rect.bottom > 0) {
-      setIsInView(true);
-      return;
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setIsInView(true); observer.unobserve(el); } },
-      { threshold: 0.05, rootMargin: "100px 0px", ...options }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
+
+    // Use rAF to wait for browser layout to settle, then check visibility
+    const rafId = requestAnimationFrame(() => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight + 100 && rect.bottom > -100) {
+        setIsInView(true);
+        return;
+      }
+      const observer = new IntersectionObserver(
+        ([entry]) => { if (entry.isIntersecting) { setIsInView(true); observer.unobserve(el); } },
+        { threshold: 0.01, rootMargin: "200px 0px", ...options }
+      );
+      observer.observe(el);
+      // Store cleanup
+      el._observer = observer;
+    });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      if (el._observer) { el._observer.disconnect(); delete el._observer; }
+    };
   }, []);
 
   return [ref, isInView];

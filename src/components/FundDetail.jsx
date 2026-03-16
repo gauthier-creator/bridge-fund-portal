@@ -1,21 +1,12 @@
 import { useState, useEffect } from "react";
 import { getFund } from "../services/fundService";
 import { shortenHash, getExplorerUrl } from "../services/cardanoService";
-import { useInView } from "./shared";
 
 const fmt = (n) => Number(n || 0).toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 
 export default function FundDetail({ fundSlug, onBack, onInvest }) {
   const [fund, setFund] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Scroll-triggered sections
-  const [metricsRef, metricsVisible] = useInView();
-  const [strategyRef, strategyVisible] = useInView();
-  const [highlightsRef, highlightsVisible] = useInView();
-  const [classesRef, classesVisible] = useInView();
-  const [structureRef, structureVisible] = useInView();
-  const [ctaRef, ctaVisible] = useInView();
 
   useEffect(() => {
     if (!fundSlug) return;
@@ -121,10 +112,7 @@ export default function FundDetail({ fundSlug, onBack, onInvest }) {
       </div>
 
       {/* Key Metrics — staggered card lift */}
-      <div
-        ref={metricsRef}
-        className={`grid grid-cols-2 md:grid-cols-4 gap-4 transition-all duration-500 ${metricsVisible ? "stagger-fast" : "opacity-0 translate-y-4"}`}
-      >
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stagger-fast">
         {[
           { label: "Rendement cible", value: fund.targetReturn || "—" },
           { label: "NAV / Part", value: fund.navPerShare ? fmt(fund.navPerShare) : "—" },
@@ -167,32 +155,29 @@ export default function FundDetail({ fundSlug, onBack, onInvest }) {
         </div>
       )}
 
-      {/* Strategy & Thesis — scroll-triggered */}
-      <div
-        ref={strategyRef}
-        className={`grid md:grid-cols-2 gap-6 transition-all duration-700 ${strategyVisible ? "" : "opacity-0 translate-y-4"}`}
-      >
+      {/* Strategy & Thesis */}
+      <div className="grid md:grid-cols-2 gap-6 stagger-children">
         {fund.strategy && (
-          <div className="bg-white border border-[#E8ECF1] rounded-2xl p-6 card-elevated" style={strategyVisible ? { animation: "fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards" } : undefined}>
+          <div className="bg-white border border-[#E8ECF1] rounded-2xl p-6 card-elevated">
             <h3 className="text-lg font-semibold text-[#0D0D12] mb-3 tracking-tight">Stratégie d'investissement</h3>
             <p className="text-sm text-[#5F6B7A] leading-relaxed whitespace-pre-line">{fund.strategy}</p>
           </div>
         )}
         {fund.investmentThesis && (
-          <div className="bg-white border border-[#E8ECF1] rounded-2xl p-6 card-elevated" style={strategyVisible ? { animation: "fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards", opacity: 0 } : undefined}>
+          <div className="bg-white border border-[#E8ECF1] rounded-2xl p-6 card-elevated">
             <h3 className="text-lg font-semibold text-[#0D0D12] mb-3 tracking-tight">Thèse d'investissement</h3>
             <p className="text-sm text-[#5F6B7A] leading-relaxed whitespace-pre-line">{fund.investmentThesis}</p>
           </div>
         )}
       </div>
 
-      {/* Highlights — scroll-triggered stagger */}
+      {/* Highlights */}
       {highlights.length > 0 && (
-        <div ref={highlightsRef}>
-          <h3 className={`text-lg font-semibold text-[#0D0D12] mb-4 tracking-tight transition-all duration-500 ${highlightsVisible ? "animate-fade-in" : "opacity-0"}`}>Points clés</h3>
-          <div className={`grid md:grid-cols-3 gap-4 ${highlightsVisible ? "stagger-children" : ""}`}>
+        <div>
+          <h3 className="text-lg font-semibold text-[#0D0D12] mb-4 tracking-tight animate-fade-in">Points clés</h3>
+          <div className="grid md:grid-cols-3 gap-4 stagger-children">
             {highlights.map((h, i) => (
-              <div key={i} className={`flex items-start gap-3 bg-white border border-[#E8ECF1] rounded-2xl p-5 card-elevated ${highlightsVisible ? "" : "opacity-0"}`}>
+              <div key={i} className="flex items-start gap-3 bg-white border border-[#E8ECF1] rounded-2xl p-5 card-elevated">
                 <div className="w-8 h-8 bg-[#ECFDF5] rounded-lg flex items-center justify-center flex-shrink-0">
                   <svg className="w-4 h-4 text-[#059669]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -205,13 +190,13 @@ export default function FundDetail({ fundSlug, onBack, onInvest }) {
         </div>
       )}
 
-      {/* Share Classes — scroll-triggered */}
+      {/* Share Classes */}
       {shareClasses.length > 0 && (
-        <div ref={classesRef}>
-          <h3 className={`text-lg font-semibold text-[#0D0D12] mb-4 tracking-tight transition-all duration-500 ${classesVisible ? "animate-fade-in" : "opacity-0"}`}>Classes de parts</h3>
-          <div className={`grid md:grid-cols-2 gap-4 ${classesVisible ? "stagger-children" : ""}`}>
+        <div>
+          <h3 className="text-lg font-semibold text-[#0D0D12] mb-4 tracking-tight animate-fade-in">Classes de parts</h3>
+          <div className="grid md:grid-cols-2 gap-4 stagger-children">
             {shareClasses.map((sc) => (
-              <div key={sc.id} className={`bg-white border border-[#E8ECF1] rounded-2xl p-6 card-interactive ${classesVisible ? "" : "opacity-0"}`}>
+              <div key={sc.id} className="bg-white border border-[#E8ECF1] rounded-2xl p-6 card-interactive">
                 <div className="flex items-center gap-3 mb-4">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold transition-transform duration-300 group-hover:scale-110 ${sc.id === 1 ? "bg-[#0D0D12] text-white" : "bg-[#EEF2FF] text-[#4F7DF3]"}`}>
                     {sc.id}
@@ -229,16 +214,16 @@ export default function FundDetail({ fundSlug, onBack, onInvest }) {
         </div>
       )}
 
-      {/* Fund Structure — scroll-triggered with row stagger */}
+      {/* Fund Structure — with row stagger */}
       {structureItems.length > 0 && (
-        <div ref={structureRef}>
-          <h3 className={`text-lg font-semibold text-[#0D0D12] mb-4 tracking-tight transition-all duration-500 ${structureVisible ? "animate-fade-in" : "opacity-0"}`}>Structure du fonds</h3>
-          <div className={`bg-white border border-[#E8ECF1] rounded-2xl overflow-hidden ${structureVisible ? "animate-fade-in-up" : "opacity-0"}`}>
+        <div>
+          <h3 className="text-lg font-semibold text-[#0D0D12] mb-4 tracking-tight animate-fade-in">Structure du fonds</h3>
+          <div className="bg-white border border-[#E8ECF1] rounded-2xl overflow-hidden animate-fade-in-up">
             {structureItems.map((item, i) => (
               <div
                 key={i}
                 className={`flex items-center justify-between px-6 py-4 hover:bg-[#FAFBFC] transition-colors duration-200 ${i < structureItems.length - 1 ? "border-b border-[#E8ECF1]" : ""}`}
-                style={structureVisible ? { animation: `table-row 0.35s cubic-bezier(0.16, 1, 0.3, 1) ${i * 60}ms forwards`, opacity: 0 } : undefined}
+                style={{ animation: `revealUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) ${i * 60}ms both` }}
               >
                 <span className="text-sm text-[#5F6B7A]">{item.label}</span>
                 <span className="text-sm font-medium text-[#0D0D12]">{item.value}</span>
@@ -248,11 +233,8 @@ export default function FundDetail({ fundSlug, onBack, onInvest }) {
         </div>
       )}
 
-      {/* CTA — scroll-triggered cinematic entrance */}
-      <div
-        ref={ctaRef}
-        className={`bg-[#0D0D12] rounded-2xl p-8 lg:p-10 text-center relative overflow-hidden transition-all duration-700 ${ctaVisible ? "animate-reveal-scale" : "opacity-0 scale-95"}`}
-      >
+      {/* CTA */}
+      <div className="bg-[#0D0D12] rounded-2xl p-8 lg:p-10 text-center relative overflow-hidden animate-reveal-scale">
         <svg className="absolute inset-0 w-full h-full opacity-[0.04]" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="dots-cta" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">

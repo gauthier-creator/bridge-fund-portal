@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useAppContext } from "../context/AppContext";
 import { supabase } from "../lib/supabase";
-import { KPICard, Badge, fmt, fmtFull, useCountUp, useInView, ProgressRing } from "./shared";
+import { KPICard, Badge, fmt, fmtFull, useCountUp, ProgressRing } from "./shared";
 import { NAV_PER_PART } from "../data";
 import { shortenHash, getExplorerUrl } from "../services/cardanoService";
 
@@ -77,11 +77,7 @@ export default function InvestorDashboard({ onViewFund }) {
   const animPending = useCountUp(loaded ? totalPending : 0, 1200);
   const animParts = useCountUp(loaded ? totalParts : 0, 1000);
 
-  // InView refs for scroll-triggered sections
-  const [portfolioRef, portfolioVisible] = useInView();
-  const [ordersRef, ordersVisible] = useInView();
-  const [onchainRef, onchainVisible] = useInView();
-  const [vaultRef, vaultVisible] = useInView();
+  // No scroll-triggered refs needed — use pure CSS animations
 
   const greeting = () => {
     const h = new Date().getHours();
@@ -127,10 +123,7 @@ export default function InvestorDashboard({ onViewFund }) {
 
       {/* Portfolio breakdown — scroll-triggered */}
       {validatedOrders.length > 0 && (
-        <div
-          ref={portfolioRef}
-          className={`bg-white border border-[#E8ECF1] rounded-2xl p-6 transition-all duration-700 ${portfolioVisible ? "animate-fade-in-up" : "opacity-0"}`}
-        >
+        <div className="bg-white border border-[#E8ECF1] rounded-2xl p-6 animate-fade-in-up">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="text-sm font-semibold text-[#0D0D12]">Mon portefeuille</h3>
@@ -145,7 +138,7 @@ export default function InvestorDashboard({ onViewFund }) {
             </div>
           </div>
 
-          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${portfolioVisible ? "stagger-children" : ""}`}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger-children">
             {Object.entries(investmentsByFund).map(([fundId, fundOrders]) => {
               const fund = funds.find((f) => f.id === fundId);
               const validated = fundOrders.filter((o) => o.status === "validated");
@@ -222,10 +215,7 @@ export default function InvestorDashboard({ onViewFund }) {
 
       {/* Vault Positions — with reveal animation */}
       {vaultPositions.length > 0 && (
-        <div
-          ref={vaultRef}
-          className={`bg-white border border-[#E8ECF1] rounded-2xl overflow-hidden transition-all duration-700 ${vaultVisible ? "animate-fade-in-up" : "opacity-0"}`}
-        >
+        <div className="bg-white border border-[#E8ECF1] rounded-2xl overflow-hidden animate-fade-in-up">
           <div className="px-6 py-4 border-b border-[#E8ECF1] flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-[#EEF2FF] flex items-center justify-center">
@@ -264,7 +254,7 @@ export default function InvestorDashboard({ onViewFund }) {
                 <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Date</th>
               </tr>
             </thead>
-            <tbody className={vaultVisible ? "stagger-rows" : ""}>
+            <tbody className="stagger-rows">
               {vaultPositions.map((pos) => (
                 <tr key={pos.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC] transition-colors">
                   <td className="px-5 py-3">
@@ -297,11 +287,8 @@ export default function InvestorDashboard({ onViewFund }) {
         </div>
       )}
 
-      {/* Subscription History — scroll-triggered */}
-      <div
-        ref={ordersRef}
-        className={`bg-white border border-[#E8ECF1] rounded-2xl overflow-hidden transition-all duration-700 ${ordersVisible ? "animate-fade-in-up" : "opacity-0"}`}
-      >
+      {/* Subscription History */}
+      <div className="bg-white border border-[#E8ECF1] rounded-2xl overflow-hidden animate-fade-in-up">
         <div className="px-6 py-4 border-b border-[#E8ECF1] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-[#F7F8FA] flex items-center justify-center">
@@ -335,7 +322,7 @@ export default function InvestorDashboard({ onViewFund }) {
                 <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Date</th>
               </tr>
             </thead>
-            <tbody className={ordersVisible ? "stagger-rows" : ""}>
+            <tbody className="stagger-rows">
               {myOrders.sort((a, b) => (b.date || "").localeCompare(a.date || "")).map((o) => (
                 <tr key={o.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC] transition-colors">
                   <td className="px-5 py-3 font-mono text-xs text-[#0D0D12] tabular-nums">{o.id?.slice(0, 8)}...</td>
