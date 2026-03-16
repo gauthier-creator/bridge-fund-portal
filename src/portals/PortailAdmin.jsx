@@ -32,21 +32,21 @@ export default function PortailAdmin({ toast }) {
   const countryData = {};
   orders.filter((o) => o.status !== "rejected").forEach((o) => { if (o.pays) countryData[o.pays] = (countryData[o.pays] || 0) + o.montant; });
   const countryPie = Object.entries(countryData).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-  const countryColors = ["#1a2332", "#c9a84c", "#3b82f6", "#10b981", "#8b5cf6", "#f59e0b"];
+  const countryColors = ["#4F7DF3", "#7C3AED", "#059669", "#D97706", "#EC4899", "#DC2626"];
 
   return (
     <div className="animate-fade-in">
       {/* Admin tabs */}
-      <div className="flex border-b border-gray-100 mb-8">
+      <div className="flex border-b border-[#E8ECF1] mb-8">
         {[
           { id: "dashboard", label: "Dashboard" },
           { id: "users", label: "Gestion des utilisateurs" },
           { id: "fund", label: "Gestion des fonds" },
           { id: "compliance", label: "Compliance CIP-113" },
         ].map((tab) => (
-          <button key={tab.id} onClick={() => setAdminTab(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${adminTab === tab.id ? "text-navy" : "text-gray-400 hover:text-gray-600"}`}>
+          <button key={tab.id} onClick={() => setAdminTab(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${adminTab === tab.id ? "text-[#0D0D12]" : "text-[#9AA4B2] hover:text-[#5F6B7A]"}`}>
             {tab.label}
-            {adminTab === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy rounded-full" />}
+            {adminTab === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0D0D12] rounded-full" />}
           </button>
         ))}
       </div>
@@ -67,35 +67,35 @@ export default function PortailAdmin({ toast }) {
 
       {/* Orders status */}
       <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-5">
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2 h-2 rounded-full bg-amber-500" />
-            <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold">Ordres en attente</p>
+            <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Ordres en attente</p>
           </div>
-          <p className="text-3xl font-semibold text-navy">{pendingOrders.length}</p>
+          <p className="text-3xl font-semibold text-[#0D0D12]">{pendingOrders.length}</p>
           {pendingOrders.length > 0 && (
             <p className="text-xs text-amber-600 mt-2">
               {fmt(pendingOrders.reduce((s, o) => s + o.montant, 0))} en attente de validation
             </p>
           )}
         </div>
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-5">
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
           <div className="flex items-center gap-2 mb-3">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold">Ordres validés</p>
+            <span className="w-2 h-2 rounded-full bg-[#00C48C]" />
+            <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Ordres validés</p>
           </div>
-          <p className="text-3xl font-semibold text-navy">{validatedOrders.length}</p>
-          <p className="text-xs text-emerald-600 mt-2">
+          <p className="text-3xl font-semibold text-[#0D0D12]">{validatedOrders.length}</p>
+          <p className="text-xs text-[#059669] mt-2">
             {fmt(validatedOrders.reduce((s, o) => s + o.montant, 0))} validés
           </p>
         </div>
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-5">
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
           <div className="flex items-center gap-2 mb-3">
-            <span className="w-2 h-2 rounded-full bg-blue-500" />
-            <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold">Total ordres</p>
+            <span className="w-2 h-2 rounded-full bg-[#4F7DF3]" />
+            <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Total ordres</p>
           </div>
-          <p className="text-3xl font-semibold text-navy">{orders.length}</p>
-          <p className="text-xs text-gray-400 mt-2">
+          <p className="text-3xl font-semibold text-[#0D0D12]">{orders.length}</p>
+          <p className="text-xs text-[#9AA4B2] mt-2">
             {fmt(orders.reduce((s, o) => s + o.montant, 0))} total
           </p>
         </div>
@@ -104,32 +104,32 @@ export default function PortailAdmin({ toast }) {
       {/* Charts row */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         {/* Share class distribution */}
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-5">
-          <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-4">Répartition Share Class</p>
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
+          <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-4">Répartition Share Class</p>
           <div className="flex items-center gap-4">
             <PieChart width={120} height={120}>
               <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={35} outerRadius={50} stroke="none">
-                <Cell fill="#1a2332" />
-                <Cell fill="#c9a84c" />
+                <Cell fill="#0D0D12" />
+                <Cell fill="#D1D5DB" />
               </Pie>
             </PieChart>
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-navy" /> Classe 1 — {fmt(pieData[0].value)}</div>
-              <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-gold" /> Classe 2 — {fmt(pieData[1].value)}</div>
+            <div className="space-y-2 text-xs text-[#0D0D12]">
+              <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#0D0D12]" /> Classe 1 — {fmt(pieData[0].value)}</div>
+              <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#D1D5DB]" /> Classe 2 — {fmt(pieData[1].value)}</div>
             </div>
           </div>
         </div>
 
         {/* Country distribution */}
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-5">
-          <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-4">Répartition géographique</p>
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
+          <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-4">Répartition géographique</p>
           <div className="flex items-center gap-4">
             <PieChart width={120} height={120}>
               <Pie data={countryPie} dataKey="value" cx="50%" cy="50%" innerRadius={35} outerRadius={50} stroke="none">
                 {countryPie.map((_, i) => <Cell key={i} fill={countryColors[i % countryColors.length]} />)}
               </Pie>
             </PieChart>
-            <div className="space-y-1 text-xs">
+            <div className="space-y-1 text-xs text-[#0D0D12]">
               {countryPie.map((c, i) => (
                 <div key={c.name} className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: countryColors[i % countryColors.length] }} />
@@ -141,60 +141,60 @@ export default function PortailAdmin({ toast }) {
         </div>
 
         {/* Summary */}
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-5">
-          <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-4">Résumé du fonds</p>
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
+          <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-4">Résumé du fonds</p>
           <div className="space-y-3 text-sm">
-            <div className="flex justify-between"><span className="text-gray-500">NAV / part</span><span className="font-medium text-navy">{fmtFull(NAV_PER_PART)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Total souscriptions</span><span className="font-medium text-navy">{orders.length}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Montant total</span><span className="font-medium text-navy">{fmt(totalAUM)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Positions collatérales</span><span className="font-medium text-navy">{collateralPositions.length}</span></div>
+            <div className="flex justify-between"><span className="text-[#5F6B7A]">NAV / part</span><span className="font-medium text-[#0D0D12]">{fmtFull(NAV_PER_PART)}</span></div>
+            <div className="flex justify-between"><span className="text-[#5F6B7A]">Total souscriptions</span><span className="font-medium text-[#0D0D12]">{orders.length}</span></div>
+            <div className="flex justify-between"><span className="text-[#5F6B7A]">Montant total</span><span className="font-medium text-[#0D0D12]">{fmt(totalAUM)}</span></div>
+            <div className="flex justify-between"><span className="text-[#5F6B7A]">Positions collatérales</span><span className="font-medium text-[#0D0D12]">{collateralPositions.length}</span></div>
           </div>
         </div>
       </div>
 
       {/* Recent orders table */}
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden mb-8">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="text-sm font-semibold text-navy">Derniers ordres de souscription</h3>
+      <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden mb-8">
+        <div className="px-6 py-4 border-b border-[#F0F2F5]">
+          <h3 className="text-sm font-semibold text-[#0D0D12]">Derniers ordres de souscription</h3>
         </div>
         <table className="w-full text-sm text-left">
           <thead>
-            <tr className="border-b border-gray-100">
-              <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Ref</th>
-              <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Souscripteur</th>
-              <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Type</th>
-              <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Montant</th>
-              <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Statut</th>
-              <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Docs</th>
-              <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
+            <tr className="border-b border-[#F0F2F5] bg-[#F7F8FA]">
+              <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Ref</th>
+              <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Souscripteur</th>
+              <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Type</th>
+              <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] text-right">Montant</th>
+              <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Statut</th>
+              <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Docs</th>
+              <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Date</th>
             </tr>
           </thead>
           <tbody>
             {orders.map((o) => (
-              <tr key={o.id} className="border-b border-gray-50 hover:bg-cream/50 transition-colors">
-                <td className="px-5 py-3 font-mono text-xs text-navy">{o.id}</td>
+              <tr key={o.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC] transition-colors">
+                <td className="px-5 py-3 font-mono text-xs text-[#0D0D12]">{o.id}</td>
                 <td className="px-5 py-3">
-                  <p className="font-medium text-navy">{o.lpName}</p>
-                  {o.intermediaire && <p className="text-xs text-blue-500">via {o.intermediaire}</p>}
+                  <p className="font-medium text-[#0D0D12]">{o.lpName}</p>
+                  {o.intermediaire && <p className="text-xs text-[#4F7DF3]">via {o.intermediaire}</p>}
                 </td>
                 <td className="px-5 py-3">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${o.type === "direct" ? "bg-navy/10 text-navy" : "bg-blue-50 text-blue-700"}`}>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ring-1 ${o.type === "direct" ? "ring-slate-600/10 bg-slate-50 text-slate-700" : "ring-[#4F7DF3]/10 bg-[#EEF2FF] text-[#4F7DF3]"}`}>
                     {o.type === "direct" ? "Direct" : "Intermédié"}
                   </span>
                 </td>
-                <td className="px-5 py-3 text-right font-medium">{fmt(o.montant)}</td>
+                <td className="px-5 py-3 text-right font-medium text-[#0D0D12]">{fmt(o.montant)}</td>
                 <td className="px-5 py-3"><Badge status={o.status === "pending" ? "En attente" : o.status === "validated" ? "Approuvé" : "Rejeté"} /></td>
                 <td className="px-5 py-3">
                   {o.documents && o.documents.length > 0 ? (
-                    <button onClick={() => setDocModal(o)} className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium hover:text-navy transition-colors">
+                    <button onClick={() => setDocModal(o)} className="inline-flex items-center gap-1 text-xs text-[#059669] font-medium hover:text-[#4F7DF3] transition-colors">
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                       {o.documents.length}
                     </button>
                   ) : (
-                    <span className="text-xs text-gray-300">—</span>
+                    <span className="text-xs text-[#9AA4B2]">—</span>
                   )}
                 </td>
-                <td className="px-5 py-3 text-gray-500">{o.date}</td>
+                <td className="px-5 py-3 text-[#5F6B7A]">{o.date}</td>
               </tr>
             ))}
           </tbody>
@@ -203,24 +203,24 @@ export default function PortailAdmin({ toast }) {
 
       {/* Capital calls + Collateral side by side */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
-          <h3 className="text-sm font-semibold text-navy mb-4">Registre des souscriptions</h3>
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-6">
+          <h3 className="text-sm font-semibold text-[#0D0D12] mb-4">Registre des souscriptions</h3>
           {orders.length === 0 ? (
-            <p className="text-sm text-gray-400 py-4 text-center">Aucune souscription enregistrée</p>
+            <p className="text-sm text-[#9AA4B2] py-4 text-center">Aucune souscription enregistrée</p>
           ) : (
             <table className="w-full text-sm text-left">
               <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Souscripteur</th>
-                  <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Montant</th>
-                  <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Statut</th>
+                <tr className="border-b border-[#F0F2F5]">
+                  <th className="pb-2 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Souscripteur</th>
+                  <th className="pb-2 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] text-right">Montant</th>
+                  <th className="pb-2 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Statut</th>
                 </tr>
               </thead>
               <tbody>
                 {orders.map((o) => (
-                  <tr key={o.id} className="border-b border-gray-50">
-                    <td className="py-2 text-navy text-xs font-medium">{o.lpName}</td>
-                    <td className="py-2 text-right font-medium text-xs">{fmt(o.montant)}</td>
+                  <tr key={o.id} className="border-b border-[#F0F2F5]">
+                    <td className="py-2 text-[#0D0D12] text-xs font-medium">{o.lpName}</td>
+                    <td className="py-2 text-right font-medium text-xs text-[#0D0D12]">{fmt(o.montant)}</td>
                     <td className="py-2"><Badge status={o.status === "pending" ? "En attente" : o.status === "validated" ? "Approuvé" : "Rejeté"} /></td>
                   </tr>
                 ))}
@@ -229,22 +229,22 @@ export default function PortailAdmin({ toast }) {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
-          <h3 className="text-sm font-semibold text-navy mb-4">Positions collatérales</h3>
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-6">
+          <h3 className="text-sm font-semibold text-[#0D0D12] mb-4">Positions collatérales</h3>
           <table className="w-full text-sm text-left">
             <thead>
-              <tr className="border-b border-gray-100">
-                <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold">Client</th>
-                <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Tokens</th>
-                <th className="pb-2 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">APY</th>
+              <tr className="border-b border-[#F0F2F5]">
+                <th className="pb-2 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Client</th>
+                <th className="pb-2 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] text-right">Tokens</th>
+                <th className="pb-2 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] text-right">APY</th>
               </tr>
             </thead>
             <tbody>
               {collateralPositions.map((p) => (
-                <tr key={p.id} className="border-b border-gray-50">
-                  <td className="py-2 text-navy text-xs font-medium">{p.owner}</td>
-                  <td className="py-2 text-right font-mono text-xs">{p.tokens}</td>
-                  <td className="py-2 text-right text-emerald-600 text-xs font-medium">{p.apy}%</td>
+                <tr key={p.id} className="border-b border-[#F0F2F5]">
+                  <td className="py-2 text-[#0D0D12] text-xs font-medium">{p.owner}</td>
+                  <td className="py-2 text-right font-mono text-xs text-[#0D0D12]">{p.tokens}</td>
+                  <td className="py-2 text-right text-[#059669] text-xs font-medium">{p.apy}%</td>
                 </tr>
               ))}
             </tbody>
@@ -255,38 +255,38 @@ export default function PortailAdmin({ toast }) {
 
       {/* Document viewer modal */}
       {docModal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={() => setDocModal(null)}>
-          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-lg w-full mx-4 animate-fade-in max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-[#0D0D12]/40 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setDocModal(null)}>
+          <div className="bg-white rounded-2xl border border-[#E8ECF1] p-8 max-w-lg w-full mx-4 animate-fade-in max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-lg font-semibold text-navy">Documents justificatifs</h3>
-                <p className="text-xs text-gray-400 mt-1">{docModal.lpName} — {docModal.id}</p>
+                <h3 className="text-lg font-semibold text-[#0D0D12]">Documents justificatifs</h3>
+                <p className="text-xs text-[#9AA4B2] mt-1">{docModal.lpName} — {docModal.id}</p>
               </div>
-              <button onClick={() => setDocModal(null)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+              <button onClick={() => setDocModal(null)} className="text-[#9AA4B2] hover:text-[#5F6B7A] text-lg">&#x2715;</button>
             </div>
             <div className="space-y-2">
               {docModal.documents.map((doc, i) => (
-                <div key={i} className="flex items-center gap-3 bg-cream rounded-xl px-4 py-3">
-                  <div className="w-8 h-8 bg-navy/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <svg className="w-4 h-4 text-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                <div key={i} className="flex items-center gap-3 bg-[#F7F8FA] rounded-xl px-4 py-3">
+                  <div className="w-8 h-8 bg-[#EEF2FF] rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-[#4F7DF3]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-navy truncate">{doc.name}</p>
-                    <p className="text-xs text-gray-400">{doc.type} · {doc.size} · {doc.date}</p>
+                    <p className="text-sm font-medium text-[#0D0D12] truncate">{doc.name}</p>
+                    <p className="text-xs text-[#9AA4B2]">{doc.type} · {doc.size} · {doc.date}</p>
                   </div>
                   {doc.url ? (
                     <div className="flex items-center gap-2">
-                      <button onClick={() => window.open(doc.url, "_blank")} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-navy/10 text-navy hover:bg-navy/20 transition-colors">
+                      <button onClick={() => window.open(doc.url, "_blank")} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium bg-[#0D0D12] text-white hover:bg-[#1A1A2E] transition-colors">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                         Consulter
                       </button>
-                      <a href={doc.url} download={doc.name} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-gold/10 text-gold hover:bg-gold/20 transition-colors">
+                      <a href={doc.url} download={doc.name} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium bg-white text-[#4F7DF3] hover:bg-[#F7F8FA] transition-colors border border-[#E8ECF1]">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                         PDF
                       </a>
                     </div>
                   ) : (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">Validé</span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ring-1 ring-[#059669]/10 bg-[#ECFDF5] text-[#059669]">Validé</span>
                   )}
                 </div>
               ))}
@@ -359,33 +359,33 @@ function UserManagement({ toast }) {
     <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-sm font-semibold text-navy">Utilisateurs de la plateforme</h3>
-          <p className="text-xs text-gray-400 mt-1">{users.length} comptes enregistrés</p>
+          <h3 className="text-sm font-semibold text-[#0D0D12]">Utilisateurs de la plateforme</h3>
+          <p className="text-xs text-[#9AA4B2] mt-1">{users.length} comptes enregistrés</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-navy text-white text-xs rounded-xl hover:bg-navy-light transition-colors">
+        <button onClick={() => setShowForm(!showForm)} className="px-4 py-2 bg-[#0D0D12] hover:bg-[#1A1A2E] text-white text-xs rounded-xl transition-colors">
           {showForm ? "Annuler" : "+ Créer un compte"}
         </button>
       </div>
 
       {showForm && (
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6 mb-6">
-          <h4 className="text-sm font-semibold text-navy mb-4">Nouveau compte utilisateur</h4>
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-6 mb-6">
+          <h4 className="text-sm font-semibold text-[#0D0D12] mb-4">Nouveau compte utilisateur</h4>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Nom complet *</label>
-              <input value={newUser.fullName} onChange={(e) => setNewUser((p) => ({ ...p, fullName: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20" placeholder="Jean Dupont" />
+              <label className="block text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-1">Nom complet *</label>
+              <input value={newUser.fullName} onChange={(e) => setNewUser((p) => ({ ...p, fullName: e.target.value }))} className="w-full px-3 py-2 rounded-xl bg-white border border-[#E8ECF1] text-[#0D0D12] placeholder-[#9AA4B2] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F7DF3]/10 focus:border-[#4F7DF3]" placeholder="Jean Dupont" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Email *</label>
-              <input type="email" value={newUser.email} onChange={(e) => setNewUser((p) => ({ ...p, email: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20" placeholder="user@email.com" />
+              <label className="block text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-1">Email *</label>
+              <input type="email" value={newUser.email} onChange={(e) => setNewUser((p) => ({ ...p, email: e.target.value }))} className="w-full px-3 py-2 rounded-xl bg-white border border-[#E8ECF1] text-[#0D0D12] placeholder-[#9AA4B2] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F7DF3]/10 focus:border-[#4F7DF3]" placeholder="user@email.com" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Mot de passe *</label>
-              <input type="password" value={newUser.password} onChange={(e) => setNewUser((p) => ({ ...p, password: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20" placeholder="Min. 6 caractères" />
+              <label className="block text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-1">Mot de passe *</label>
+              <input type="password" value={newUser.password} onChange={(e) => setNewUser((p) => ({ ...p, password: e.target.value }))} className="w-full px-3 py-2 rounded-xl bg-white border border-[#E8ECF1] text-[#0D0D12] placeholder-[#9AA4B2] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F7DF3]/10 focus:border-[#4F7DF3]" placeholder="Min. 6 caractères" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Rôle *</label>
-              <select value={newUser.role} onChange={(e) => setNewUser((p) => ({ ...p, role: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20 bg-white">
+              <label className="block text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-1">Rôle *</label>
+              <select value={newUser.role} onChange={(e) => setNewUser((p) => ({ ...p, role: e.target.value }))} className="w-full px-3 py-2 rounded-xl bg-white border border-[#E8ECF1] text-[#0D0D12] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F7DF3]/10 focus:border-[#4F7DF3]">
                 <option value="investor">Investisseur</option>
                 <option value="intermediary">Intermédiaire</option>
                 <option value="aifm">AIFM</option>
@@ -393,67 +393,67 @@ function UserManagement({ toast }) {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Société</label>
-              <input value={newUser.company} onChange={(e) => setNewUser((p) => ({ ...p, company: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20" placeholder="Optionnel" />
+              <label className="block text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-1">Société</label>
+              <input value={newUser.company} onChange={(e) => setNewUser((p) => ({ ...p, company: e.target.value }))} className="w-full px-3 py-2 rounded-xl bg-white border border-[#E8ECF1] text-[#0D0D12] placeholder-[#9AA4B2] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F7DF3]/10 focus:border-[#4F7DF3]" placeholder="Optionnel" />
             </div>
             {newUser.role === "investor" && intermediaries.length > 0 && (
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Intermédiaire rattaché</label>
-                <select value={newUser.intermediaryId} onChange={(e) => setNewUser((p) => ({ ...p, intermediaryId: e.target.value }))} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20 bg-white">
+                <label className="block text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-1">Intermédiaire rattaché</label>
+                <select value={newUser.intermediaryId} onChange={(e) => setNewUser((p) => ({ ...p, intermediaryId: e.target.value }))} className="w-full px-3 py-2 rounded-xl bg-white border border-[#E8ECF1] text-[#0D0D12] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F7DF3]/10 focus:border-[#4F7DF3]">
                   <option value="">Aucun (direct)</option>
                   {intermediaries.map((i) => <option key={i.id} value={i.id}>{i.full_name} — {i.company || i.email}</option>)}
                 </select>
               </div>
             )}
           </div>
-          <button onClick={handleCreate} disabled={creating} className="px-6 py-2 bg-navy text-white text-sm rounded-xl hover:bg-navy-light transition-colors disabled:opacity-50">
+          <button onClick={handleCreate} disabled={creating} className="px-6 py-2 bg-[#0D0D12] hover:bg-[#1A1A2E] text-white text-sm rounded-xl transition-colors disabled:opacity-50">
             {creating ? "Création…" : "Créer le compte"}
           </button>
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-400 text-sm">Chargement…</div>
+          <div className="p-8 text-center text-[#9AA4B2] text-sm">Chargement…</div>
         ) : (
           <table className="w-full text-sm text-left">
             <thead>
-              <tr className="border-b border-gray-100">
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Nom</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Email</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Rôle</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Wallet Cardano</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Société</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Rattaché à</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Créé le</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Actions</th>
+              <tr className="border-b border-[#F0F2F5] bg-[#F7F8FA]">
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Nom</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Email</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Rôle</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Wallet Cardano</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Société</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Rattaché à</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Créé le</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Actions</th>
               </tr>
             </thead>
             <tbody>
               {users.map((u) => {
                 const linked = u.intermediary_id ? users.find((x) => x.id === u.intermediary_id) : null;
                 return (
-                  <tr key={u.id} className="border-b border-gray-50 hover:bg-cream/50">
-                    <td className="px-5 py-3 font-medium text-navy">{u.full_name || "—"}</td>
-                    <td className="px-5 py-3 text-gray-500">{u.email}</td>
+                  <tr key={u.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC]">
+                    <td className="px-5 py-3 font-medium text-[#0D0D12]">{u.full_name || "—"}</td>
+                    <td className="px-5 py-3 text-[#5F6B7A]">{u.email}</td>
                     <td className="px-5 py-3">
                       {editingId === u.id ? (
                         <div className="flex items-center gap-2">
-                          <select value={editRole} onChange={(e) => setEditRole(e.target.value)} className="px-2 py-1 rounded-lg border border-gray-200 text-xs bg-white">
+                          <select value={editRole} onChange={(e) => setEditRole(e.target.value)} className="px-2 py-1 rounded-xl bg-white border border-[#E8ECF1] text-[#0D0D12] text-xs">
                             <option value="investor">Investisseur</option>
                             <option value="intermediary">Intermédiaire</option>
                             <option value="aifm">AIFM</option>
                             <option value="admin">Admin</option>
                           </select>
-                          <button onClick={() => handleRoleUpdate(u.id)} className="text-xs text-emerald-600 font-medium">OK</button>
-                          <button onClick={() => setEditingId(null)} className="text-xs text-gray-400">Annuler</button>
+                          <button onClick={() => handleRoleUpdate(u.id)} className="text-xs text-[#059669] font-medium">OK</button>
+                          <button onClick={() => setEditingId(null)} className="text-xs text-[#9AA4B2]">Annuler</button>
                         </div>
                       ) : (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
-                          u.role === "admin" ? "bg-emerald-50 text-emerald-700" :
-                          u.role === "aifm" ? "bg-gold/10 text-gold" :
-                          u.role === "intermediary" ? "bg-blue-50 text-blue-700" :
-                          "bg-navy/10 text-navy"
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ring-1 ${
+                          u.role === "admin" ? "ring-[#059669]/10 bg-[#ECFDF5] text-[#059669]" :
+                          u.role === "aifm" ? "ring-[#4F7DF3]/10 bg-[#EEF2FF] text-[#4F7DF3]" :
+                          u.role === "intermediary" ? "ring-violet-600/10 bg-violet-50 text-violet-700" :
+                          "ring-slate-600/10 bg-slate-50 text-slate-700"
                         }`}>
                           {ROLE_LABELS[u.role] || u.role}
                         </span>
@@ -461,18 +461,18 @@ function UserManagement({ toast }) {
                     </td>
                     <td className="px-5 py-3">
                       {u.wallet_address ? (
-                        <span className="font-mono text-[10px] text-navy bg-cream px-1.5 py-0.5 rounded" title={u.wallet_address}>
+                        <span className="font-mono text-[10px] text-[#0D0D12] bg-[#F7F8FA] px-1.5 py-0.5 rounded border border-[#E8ECF1]" title={u.wallet_address}>
                           {u.wallet_address.slice(0, 12)}...{u.wallet_address.slice(-6)}
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-300">—</span>
+                        <span className="text-xs text-[#9AA4B2]">—</span>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-gray-500 text-xs">{u.company || "—"}</td>
-                    <td className="px-5 py-3 text-gray-500 text-xs">{linked ? linked.full_name : "—"}</td>
-                    <td className="px-5 py-3 text-gray-400 text-xs">{u.created_at?.split("T")[0]}</td>
+                    <td className="px-5 py-3 text-[#5F6B7A] text-xs">{u.company || "—"}</td>
+                    <td className="px-5 py-3 text-[#5F6B7A] text-xs">{linked ? linked.full_name : "—"}</td>
+                    <td className="px-5 py-3 text-[#9AA4B2] text-xs">{u.created_at?.split("T")[0]}</td>
                     <td className="px-5 py-3">
-                      <button onClick={() => { setEditingId(u.id); setEditRole(u.role); }} className="text-xs text-navy hover:text-gold transition-colors font-medium">
+                      <button onClick={() => { setEditingId(u.id); setEditRole(u.role); }} className="text-xs text-[#4F7DF3] hover:text-[#0D0D12] transition-colors font-medium">
                         Modifier rôle
                       </button>
                     </td>
@@ -599,13 +599,13 @@ function ComplianceManager({ toast }) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-navy">Compliance CIP-113</h2>
-        <p className="text-sm text-gray-400 mt-1">Gestion des tokens programmables — whitelist, freeze, supply cap, audit trail</p>
+        <h2 className="text-xl font-semibold text-[#0D0D12]">Compliance CIP-113</h2>
+        <p className="text-sm text-[#9AA4B2] mt-1">Gestion des tokens programmables — whitelist, freeze, supply cap, audit trail</p>
       </div>
 
       {/* Fund selector */}
       <div className="flex items-center gap-4">
-        <label className="text-xs font-medium text-gray-500">Fond :</label>
+        <label className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Fond :</label>
         <select
           value={selectedFund?.id || ""}
           onChange={(e) => setSelectedFund(funds.find((f) => f.id === e.target.value))}
@@ -616,55 +616,55 @@ function ComplianceManager({ toast }) {
           ))}
         </select>
         {selectedFund?.cardano_policy_id && (
-          <span className="text-xs font-mono text-gray-400">Policy: {selectedFund.cardano_policy_id.slice(0, 16)}...</span>
+          <span className="text-xs font-mono text-[#9AA4B2]">Policy: {selectedFund.cardano_policy_id.slice(0, 16)}...</span>
         )}
       </div>
 
       {/* Sub-tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+      <div className="flex gap-1 bg-[#F0F2F5] rounded-xl p-1">
         {subTabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setSubTab(t.id)}
-            className={`px-4 py-2 text-xs font-medium rounded-lg transition-all ${subTab === t.id ? "bg-white text-navy shadow-sm" : "text-gray-500 hover:text-navy"}`}
+            className={`px-4 py-2 text-xs font-medium rounded-xl transition-all ${subTab === t.id ? "bg-white text-[#0D0D12] border border-[#E8ECF1]" : "text-[#5F6B7A] hover:text-[#0D0D12]"}`}
           >
-            {t.label} {t.count != null && <span className="ml-1 text-[10px] bg-navy/10 text-navy px-1.5 py-0.5 rounded-full">{t.count}</span>}
+            {t.label} {t.count != null && <span className="ml-1 text-[10px] ring-1 ring-[#4F7DF3]/10 bg-[#EEF2FF] text-[#4F7DF3] px-1.5 py-0.5 rounded-md">{t.count}</span>}
           </button>
         ))}
       </div>
 
-      {loading && <p className="text-sm text-gray-400 text-center py-8">Chargement...</p>}
+      {loading && <p className="text-sm text-[#9AA4B2] text-center py-8">Chargement...</p>}
 
       {/* WHITELIST TAB */}
       {!loading && subTab === "whitelist" && (
         <div className="space-y-4">
           <div className="flex gap-3">
             <input value={newAddress} onChange={(e) => setNewAddress(e.target.value)} placeholder="addr_test1q..." className={inputCls + " flex-1 font-mono text-xs"} />
-            <button onClick={handleAddWhitelist} disabled={!newAddress.startsWith("addr")} className="px-4 py-2 bg-navy text-white text-xs rounded-xl hover:bg-navy-light transition-colors disabled:opacity-50">
+            <button onClick={handleAddWhitelist} disabled={!newAddress.startsWith("addr")} className="px-4 py-2 bg-[#0D0D12] hover:bg-[#1A1A2E] text-white text-xs rounded-xl transition-colors disabled:opacity-50">
               Ajouter
             </button>
           </div>
-          <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
             <table className="w-full text-sm text-left">
               <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Adresse</th>
-                  <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">KYC</th>
-                  <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
-                  <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Action</th>
+                <tr className="border-b border-[#F0F2F5] bg-[#F7F8FA]">
+                  <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Adresse</th>
+                  <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">KYC</th>
+                  <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Date</th>
+                  <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {whitelist.length === 0 && (
-                  <tr><td colSpan={4} className="px-5 py-8 text-center text-gray-400 text-xs">Aucune adresse whitelistée</td></tr>
+                  <tr><td colSpan={4} className="px-5 py-8 text-center text-[#9AA4B2] text-xs">Aucune adresse whitelistée</td></tr>
                 )}
                 {whitelist.map((w) => (
-                  <tr key={w.id} className="border-b border-gray-50 hover:bg-cream/50">
-                    <td className="px-5 py-3 font-mono text-xs text-navy" title={w.wallet_address}>{short(w.wallet_address)}</td>
+                  <tr key={w.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC]">
+                    <td className="px-5 py-3 font-mono text-xs text-[#0D0D12]" title={w.wallet_address}>{short(w.wallet_address)}</td>
                     <td className="px-5 py-3"><Badge status={["validated", "verified"].includes(w.kyc_status) ? "Validé" : "En attente"} /></td>
-                    <td className="px-5 py-3 text-gray-400 text-xs">{w.approved_at?.split("T")[0]}</td>
+                    <td className="px-5 py-3 text-[#9AA4B2] text-xs">{w.approved_at?.split("T")[0]}</td>
                     <td className="px-5 py-3 text-right">
-                      <button onClick={() => handleRevoke(w.id)} className="text-xs text-red-500 hover:text-red-700 font-medium">Révoquer</button>
+                      <button onClick={() => handleRevoke(w.id)} className="text-xs text-red-500 hover:text-red-600 font-medium">Révoquer</button>
                     </td>
                   </tr>
                 ))}
@@ -680,31 +680,31 @@ function ComplianceManager({ toast }) {
           <div className="flex gap-3">
             <input value={freezeAddress} onChange={(e) => setFreezeAddress(e.target.value)} placeholder="addr_test1q..." className={inputCls + " flex-1 font-mono text-xs"} />
             <input value={freezeReason} onChange={(e) => setFreezeReason(e.target.value)} placeholder="Raison (sanctions, fraude...)" className={inputCls + " w-64"} />
-            <button onClick={handleFreeze} disabled={!freezeAddress.startsWith("addr") || !freezeReason} className="px-4 py-2 bg-red-600 text-white text-xs rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50">
+            <button onClick={handleFreeze} disabled={!freezeAddress.startsWith("addr") || !freezeReason} className="px-4 py-2 bg-red-500 text-white text-xs rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50">
               Geler
             </button>
           </div>
-          <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
             <table className="w-full text-sm text-left">
               <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Adresse</th>
-                  <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Raison</th>
-                  <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
-                  <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Action</th>
+                <tr className="border-b border-[#F0F2F5] bg-[#F7F8FA]">
+                  <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Adresse</th>
+                  <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Raison</th>
+                  <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Date</th>
+                  <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {freezes.length === 0 && (
-                  <tr><td colSpan={4} className="px-5 py-8 text-center text-gray-400 text-xs">Aucune adresse gelée</td></tr>
+                  <tr><td colSpan={4} className="px-5 py-8 text-center text-[#9AA4B2] text-xs">Aucune adresse gelée</td></tr>
                 )}
                 {freezes.map((f) => (
-                  <tr key={f.id} className="border-b border-gray-50 hover:bg-red-50/30">
-                    <td className="px-5 py-3 font-mono text-xs text-navy" title={f.wallet_address}>{short(f.wallet_address)}</td>
-                    <td className="px-5 py-3 text-xs text-red-600">{f.reason}</td>
-                    <td className="px-5 py-3 text-gray-400 text-xs">{f.frozen_at?.split("T")[0]}</td>
+                  <tr key={f.id} className="border-b border-[#F0F2F5] hover:bg-red-50">
+                    <td className="px-5 py-3 font-mono text-xs text-[#0D0D12]" title={f.wallet_address}>{short(f.wallet_address)}</td>
+                    <td className="px-5 py-3 text-xs text-red-500">{f.reason}</td>
+                    <td className="px-5 py-3 text-[#9AA4B2] text-xs">{f.frozen_at?.split("T")[0]}</td>
                     <td className="px-5 py-3 text-right">
-                      <button onClick={() => handleUnfreeze(f.id)} className="text-xs text-emerald-600 hover:text-emerald-800 font-medium">Dégeler</button>
+                      <button onClick={() => handleUnfreeze(f.id)} className="text-xs text-[#059669] hover:text-[#00C48C] font-medium">Dégeler</button>
                     </td>
                   </tr>
                 ))}
@@ -723,10 +723,10 @@ function ComplianceManager({ toast }) {
             <KPICard label="Disponible" value={supply?.supply_cap ? (supply.supply_cap - (supply?.total_minted || 0)).toLocaleString("fr-FR") : "∞"} sub="Tokens restants" />
           </div>
           {supply?.last_mint_tx && (
-            <div className="bg-cream rounded-xl p-4 text-sm">
-              <p className="text-xs text-gray-400 mb-1">Dernier mint</p>
-              <p className="font-mono text-xs text-navy">{supply.last_mint_tx}</p>
-              <p className="text-xs text-gray-400 mt-1">{supply.last_mint_at?.split("T")[0]}</p>
+            <div className="bg-[#F7F8FA] rounded-xl p-4 text-sm border border-[#E8ECF1]">
+              <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-1">Dernier mint</p>
+              <p className="font-mono text-xs text-[#0D0D12]">{supply.last_mint_tx}</p>
+              <p className="text-xs text-[#9AA4B2] mt-1">{supply.last_mint_at?.split("T")[0]}</p>
             </div>
           )}
           <div className="flex gap-3 items-end">
@@ -734,7 +734,7 @@ function ComplianceManager({ toast }) {
               <label className={labelCls}>Définir le supply cap (nombre total de tokens)</label>
               <input type="number" value={supplyCap} onChange={(e) => setSupplyCap(e.target.value)} placeholder="Ex: 10000" className={inputCls} />
             </div>
-            <button onClick={handleSetCap} disabled={!supplyCap} className="px-4 py-2.5 bg-navy text-white text-xs rounded-xl hover:bg-navy-light transition-colors disabled:opacity-50">
+            <button onClick={handleSetCap} disabled={!supplyCap} className="px-4 py-2.5 bg-[#0D0D12] hover:bg-[#1A1A2E] text-white text-xs rounded-xl transition-colors disabled:opacity-50">
               Appliquer
             </button>
           </div>
@@ -743,43 +743,43 @@ function ComplianceManager({ toast }) {
 
       {/* AUDIT TRAIL TAB */}
       {!loading && subTab === "audit" && (
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-navy">Journal des opérations on-chain</h3>
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
+          <div className="px-6 py-4 border-b border-[#F0F2F5]">
+            <h3 className="text-sm font-semibold text-[#0D0D12]">Journal des opérations on-chain</h3>
           </div>
           <table className="w-full text-sm text-left">
             <thead>
-              <tr className="border-b border-gray-100">
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Type</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Destinataire</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Tokens</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Tx Hash</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Ordre</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
+              <tr className="border-b border-[#F0F2F5] bg-[#F7F8FA]">
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Type</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Destinataire</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] text-right">Tokens</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Tx Hash</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Ordre</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Date</th>
               </tr>
             </thead>
             <tbody>
               {transfers.length === 0 && (
-                <tr><td colSpan={6} className="px-5 py-8 text-center text-gray-400 text-xs">Aucune opération enregistrée</td></tr>
+                <tr><td colSpan={6} className="px-5 py-8 text-center text-[#9AA4B2] text-xs">Aucune opération enregistrée</td></tr>
               )}
               {transfers.map((t) => (
-                <tr key={t.id} className="border-b border-gray-50 hover:bg-cream/50">
+                <tr key={t.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC]">
                   <td className="px-5 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${t.transfer_type === "mint" ? "bg-emerald-100 text-emerald-700" : t.transfer_type === "burn" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ring-1 ${t.transfer_type === "mint" ? "ring-[#059669]/10 bg-[#ECFDF5] text-[#059669]" : t.transfer_type === "burn" ? "ring-red-600/10 bg-red-50 text-red-700" : "ring-[#4F7DF3]/10 bg-[#EEF2FF] text-[#4F7DF3]"}`}>
                       {t.transfer_type === "mint" ? "Mint" : t.transfer_type === "burn" ? "Burn" : "Transfert"}
                     </span>
                   </td>
-                  <td className="px-5 py-3 font-mono text-xs text-navy" title={t.to_address}>{short(t.to_address)}</td>
-                  <td className="px-5 py-3 text-right font-mono text-xs">{t.token_count}</td>
+                  <td className="px-5 py-3 font-mono text-xs text-[#0D0D12]" title={t.to_address}>{short(t.to_address)}</td>
+                  <td className="px-5 py-3 text-right font-mono text-xs text-[#0D0D12]">{t.token_count}</td>
                   <td className="px-5 py-3">
                     {t.tx_hash ? (
-                      <a href={`https://preprod.cardanoscan.io/transaction/${t.tx_hash}`} target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-gold hover:underline">
+                      <a href={`https://preprod.cardanoscan.io/transaction/${t.tx_hash}`} target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-[#4F7DF3] hover:underline">
                         {t.tx_hash.slice(0, 12)}...
                       </a>
                     ) : "—"}
                   </td>
-                  <td className="px-5 py-3 text-xs text-gray-500">{t.order_id || "—"}</td>
-                  <td className="px-5 py-3 text-xs text-gray-400">{t.created_at?.split("T")[0]}</td>
+                  <td className="px-5 py-3 text-xs text-[#5F6B7A]">{t.order_id || "—"}</td>
+                  <td className="px-5 py-3 text-xs text-[#9AA4B2]">{t.created_at?.split("T")[0]}</td>
                 </tr>
               ))}
             </tbody>

@@ -3,8 +3,8 @@ import { listAllFunds, createFund, updateFund, deleteFund } from "../services/fu
 import { shortenHash, getExplorerUrl } from "../services/cardanoService";
 import { Badge } from "./shared";
 
-const fieldCls = "w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-navy/20";
-const lblCls = "block text-xs font-medium text-gray-500 mb-1";
+const fieldCls = "w-full bg-white border border-[#E8ECF1] rounded-xl px-3.5 py-2.5 text-sm text-[#0D0D12] placeholder-[#C4CAD4] focus:outline-none focus:border-[#4F7DF3] focus:ring-2 focus:ring-[#4F7DF3]/10 transition-all";
+const lblCls = "block text-[13px] font-medium text-[#5F6B7A] mb-1";
 const fmt = (n) => Number(n || 0).toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 
 const EMPTY_FUND = {
@@ -95,19 +95,19 @@ export default function FundEditor({ toast }) {
   if (deploying) {
     return (
       <div className="animate-fade-in text-center py-20">
-        <div className="w-20 h-20 bg-navy/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-          <div className="w-10 h-10 border-4 border-navy/20 border-t-gold rounded-full animate-spin" />
+        <div className="w-20 h-20 bg-[#F7F8FA] border border-[#E8ECF1] rounded-2xl flex items-center justify-center mx-auto mb-6">
+          <div className="w-10 h-10 border-4 border-[#0D0D12]/20 border-t-[#0D0D12] rounded-full animate-spin" />
         </div>
-        <h3 className="text-lg font-semibold text-navy mb-2">Déploiement sur Cardano Preprod…</h3>
-        <p className="text-sm text-gray-400 max-w-md mx-auto">
+        <h3 className="text-lg font-semibold text-[#0D0D12] mb-2">Déploiement sur Cardano Preprod…</h3>
+        <p className="text-sm text-[#5F6B7A] max-w-md mx-auto">
           Mint du token registre (CIP-25) pour "{form.fundName}" sur le réseau Cardano Preprod. La transaction sera vérifiable sur preprod.cardanoscan.io.
         </p>
         <div className="mt-6 space-y-2">
-          <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
-            <span className="w-2 h-2 rounded-full bg-gold animate-pulse" />
+          <div className="flex items-center justify-center gap-2 text-xs text-[#5F6B7A]">
+            <span className="w-2 h-2 rounded-full bg-[#0D0D12] animate-pulse" />
             Construction et soumission de la transaction…
           </div>
-          <p className="text-xs text-gray-300">Réseau : Cardano Preprod Testnet</p>
+          <p className="text-xs text-[#9AA4B2]">Réseau : Cardano Preprod Testnet</p>
         </div>
       </div>
     );
@@ -119,28 +119,28 @@ export default function FundEditor({ toast }) {
       <div className="animate-fade-in">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-sm font-semibold text-navy">
+            <h3 className="text-sm font-semibold text-[#0D0D12]">
               {editing === "new" ? "Créer un nouveau fonds" : `Modifier — ${editing.fundName}`}
             </h3>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-[#5F6B7A] mt-1">
               {editing === "new"
                 ? "Un smart contract sera automatiquement déployé sur Cardano"
                 : "Les modifications seront immédiatement visibles"}
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => setEditing(null)} className="px-4 py-2 border border-gray-200 text-gray-600 text-xs rounded-xl hover:bg-gray-50 transition-colors">
+            <button onClick={() => setEditing(null)} className="px-4 py-2 bg-white border border-[#E8ECF1] text-[#5F6B7A] text-xs rounded-xl hover:bg-[#F7F8FA] transition-colors">
               Annuler
             </button>
-            <button onClick={handleSave} disabled={saving} className="px-6 py-2 bg-navy text-white text-xs rounded-xl hover:bg-navy-light transition-colors disabled:opacity-50">
+            <button onClick={handleSave} disabled={saving} className="px-6 py-2 bg-[#0D0D12] text-white text-xs rounded-xl hover:bg-[#1A1A2E] transition-colors disabled:opacity-50">
               {saving ? "Sauvegarde…" : editing === "new" ? "Créer le fonds" : "Sauvegarder"}
             </button>
           </div>
         </div>
 
         {/* General info */}
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6 mb-6">
-          <h4 className="text-sm font-semibold text-navy mb-4">Informations générales</h4>
+        <div className="bg-white border border-[#E8ECF1] rounded-2xl p-6 mb-6">
+          <h4 className="text-sm font-semibold text-[#0D0D12] mb-4">Informations générales</h4>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={lblCls}>Nom du fonds *</label>
@@ -166,8 +166,8 @@ export default function FundEditor({ toast }) {
         </div>
 
         {/* Key metrics */}
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6 mb-6">
-          <h4 className="text-sm font-semibold text-navy mb-4">Métriques clés</h4>
+        <div className="bg-white border border-[#E8ECF1] rounded-2xl p-6 mb-6">
+          <h4 className="text-sm font-semibold text-[#0D0D12] mb-4">Métriques clés</h4>
           <div className="grid grid-cols-4 gap-4">
             <div>
               <label className={lblCls}>Rendement cible</label>
@@ -189,8 +189,8 @@ export default function FundEditor({ toast }) {
         </div>
 
         {/* Structure */}
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6 mb-6">
-          <h4 className="text-sm font-semibold text-navy mb-4">Structure du fonds</h4>
+        <div className="bg-white border border-[#E8ECF1] rounded-2xl p-6 mb-6">
+          <h4 className="text-sm font-semibold text-[#0D0D12] mb-4">Structure du fonds</h4>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={lblCls}>Juridiction</label>
@@ -224,9 +224,9 @@ export default function FundEditor({ toast }) {
         </div>
 
         {/* Highlights */}
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6 mb-6">
-          <h4 className="text-sm font-semibold text-navy mb-2">Points clés</h4>
-          <p className="text-xs text-gray-400 mb-3">Un point clé par ligne</p>
+        <div className="bg-white border border-[#E8ECF1] rounded-2xl p-6 mb-6">
+          <h4 className="text-sm font-semibold text-[#0D0D12] mb-2">Points clés</h4>
+          <p className="text-xs text-[#5F6B7A] mb-3">Un point clé par ligne</p>
           <textarea
             value={highlightsText}
             onChange={(e) => setHighlightsText(e.target.value)}
@@ -238,10 +238,10 @@ export default function FundEditor({ toast }) {
 
         {/* Save button bottom */}
         <div className="flex justify-end gap-3">
-          <button onClick={() => setEditing(null)} className="px-6 py-2.5 border border-gray-200 text-gray-600 text-sm rounded-xl hover:bg-gray-50 transition-colors">
+          <button onClick={() => setEditing(null)} className="px-6 py-2.5 bg-white border border-[#E8ECF1] text-[#5F6B7A] text-sm rounded-xl hover:bg-[#F7F8FA] transition-colors">
             Annuler
           </button>
-          <button onClick={handleSave} disabled={saving} className="px-8 py-2.5 bg-navy text-white text-sm rounded-xl hover:bg-navy-light transition-colors disabled:opacity-50">
+          <button onClick={handleSave} disabled={saving} className="px-8 py-2.5 bg-[#0D0D12] text-white text-sm rounded-xl hover:bg-[#1A1A2E] transition-colors disabled:opacity-50">
             {saving ? "Sauvegarde…" : editing === "new" ? "Créer et déployer" : "Sauvegarder"}
           </button>
         </div>
@@ -254,50 +254,50 @@ export default function FundEditor({ toast }) {
     <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-sm font-semibold text-navy">Gestion des fonds</h3>
-          <p className="text-xs text-gray-400 mt-1">{funds.length} fonds enregistrés</p>
+          <h3 className="text-sm font-semibold text-[#0D0D12]">Gestion des fonds</h3>
+          <p className="text-xs text-[#9AA4B2] mt-1">{funds.length} fonds enregistrés</p>
         </div>
-        <button onClick={startCreate} className="px-5 py-2 bg-navy text-white text-xs rounded-xl hover:bg-navy-light transition-colors flex items-center gap-2">
+        <button onClick={startCreate} className="px-5 py-2 bg-[#0D0D12] text-white text-xs rounded-xl hover:bg-[#1A1A2E] transition-colors flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
           Créer un fonds
         </button>
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-400 text-sm">Chargement…</div>
+        <div className="text-center py-12 text-[#9AA4B2] text-sm">Chargement…</div>
       ) : funds.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-12 text-center">
-          <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-[#F7F8FA] border border-[#E8ECF1] rounded-2xl p-12 text-center">
+          <div className="w-16 h-16 bg-white border border-[#E8ECF1] rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-[#C4CAD4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
             </svg>
           </div>
-          <h4 className="text-sm font-semibold text-navy mb-1">Aucun fonds créé</h4>
-          <p className="text-xs text-gray-400 mb-4">Créez votre premier fonds pour commencer</p>
-          <button onClick={startCreate} className="px-6 py-2 bg-navy text-white text-xs rounded-xl hover:bg-navy-light transition-colors">
+          <h4 className="text-sm font-semibold text-[#0D0D12] mb-1">Aucun fonds créé</h4>
+          <p className="text-xs text-[#9AA4B2] mb-4">Créez votre premier fonds pour commencer</p>
+          <button onClick={startCreate} className="px-6 py-2 bg-[#0D0D12] text-white text-xs rounded-xl hover:bg-[#1A1A2E] transition-colors">
             Créer un fonds
           </button>
         </div>
       ) : (
         <div className="space-y-4">
           {funds.map((fund) => (
-            <div key={fund.id} className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
+            <div key={fund.id} className="bg-white border border-[#E8ECF1] rounded-2xl p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h4 className="text-sm font-semibold text-navy">{fund.fundName}</h4>
+                    <h4 className="text-sm font-semibold text-[#0D0D12]">{fund.fundName}</h4>
                     <Badge status={fund.status === "active" ? "Actif" : fund.status === "draft" ? "Brouillon" : "Fermé"} />
                   </div>
-                  <p className="text-xs text-gray-400 mb-3">{fund.fundSubtitle}</p>
+                  <p className="text-xs text-[#5F6B7A] mb-3">{fund.fundSubtitle}</p>
 
                   <div className="flex items-center gap-6 text-xs">
-                    <span className="text-gray-500">Rendement: <span className="text-navy font-medium">{fund.targetReturn || "—"}</span></span>
-                    <span className="text-gray-500">NAV: <span className="text-navy font-medium">{fund.navPerShare ? fmt(fund.navPerShare) : "—"}</span></span>
-                    <span className="text-gray-500">Taille: <span className="text-navy font-medium">{fund.fundSize ? fmt(fund.fundSize) : "—"}</span></span>
+                    <span className="text-[#5F6B7A]">Rendement: <span className="text-[#0D0D12] font-medium">{fund.targetReturn || "—"}</span></span>
+                    <span className="text-[#5F6B7A]">NAV: <span className="text-[#0D0D12] font-medium">{fund.navPerShare ? fmt(fund.navPerShare) : "—"}</span></span>
+                    <span className="text-[#5F6B7A]">Taille: <span className="text-[#0D0D12] font-medium">{fund.fundSize ? fmt(fund.fundSize) : "—"}</span></span>
                     {fund.cardanoPolicyId && (
-                      <span className="flex items-center gap-1 text-gray-500">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        Cardano: <span className="font-mono text-navy/60">{shortenHash(fund.cardanoPolicyId, 6)}</span>
+                      <span className="flex items-center gap-1 text-[#5F6B7A]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#00C48C]" />
+                        Cardano: <span className="font-mono text-[#9AA4B2]">{shortenHash(fund.cardanoPolicyId, 6)}</span>
                       </span>
                     )}
                   </div>
@@ -309,15 +309,15 @@ export default function FundEditor({ toast }) {
                       href={getExplorerUrl(fund.cardanoTxHash, fund.blockchainNetwork)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-1.5 text-xs border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 transition-colors"
+                      className="px-3 py-1.5 text-xs bg-white border border-[#E8ECF1] rounded-xl text-[#5F6B7A] hover:bg-[#F7F8FA] transition-colors"
                     >
                       Explorer
                     </a>
                   )}
-                  <button onClick={() => startEdit(fund)} className="px-3 py-1.5 text-xs bg-navy/10 text-navy rounded-xl hover:bg-navy/20 transition-colors font-medium">
+                  <button onClick={() => startEdit(fund)} className="px-3 py-1.5 text-xs bg-[#EEF2FF] text-[#4F7DF3] rounded-xl hover:bg-[#E0E7FF] transition-colors font-medium">
                     Modifier
                   </button>
-                  <button onClick={() => handleDelete(fund)} className="px-3 py-1.5 text-xs text-red-500 border border-red-200 rounded-xl hover:bg-red-50 transition-colors">
+                  <button onClick={() => handleDelete(fund)} className="px-3 py-1.5 text-xs text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors">
                     Supprimer
                   </button>
                 </div>

@@ -1,49 +1,224 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "SF Pro Display", "Inter", system-ui, -apple-system, sans-serif;
-  --color-navy: #1a2332;
-  --color-navy-light: #2a3a4e;
-  --color-gold: #c9a84c;
-  --color-gold-light: #d4ba6a;
-  --color-cream: #faf9f7;
-  --color-cream-dark: #f0eeeb;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+
+  /* ─── Ondo-inspired Fintech Palette ─── */
+  --color-surface: #FFFFFF;
+  --color-surface-secondary: #F7F8FA;
+  --color-surface-tertiary: #F0F2F5;
+  --color-surface-elevated: #FFFFFF;
+  --color-page: #FFFFFF;
+
+  /* ─── Typography ─── */
+  --color-text-primary: #0D0D12;
+  --color-text-secondary: #5F6B7A;
+  --color-text-muted: #9AA4B2;
+  --color-text-faint: #C4CAD4;
+
+  /* ─── Borders ─── */
+  --color-border: #E8ECF1;
+  --color-border-light: #F0F2F5;
+  --color-border-subtle: #F7F8FA;
+
+  /* ─── Accent ─── */
+  --color-accent: #0D0D12;
+  --color-accent-hover: #1A1A2E;
+  --color-accent-light: #F0F2F5;
+  --color-accent-bg: #F7F8FA;
+
+  /* ─── Fintech Green ─── */
+  --color-green: #00C48C;
+  --color-green-dark: #00A676;
+  --color-green-light: #ECFDF5;
+  --color-green-muted: #D1FAE5;
+
+  /* ─── Semantic ─── */
+  --color-success: #059669;
+  --color-success-light: #ECFDF5;
+  --color-warning: #D97706;
+  --color-warning-light: #FFF7ED;
+  --color-error: #DC2626;
+  --color-error-light: #FEF2F2;
+
+  /* ─── Brand Blue (links/secondary) ─── */
+  --color-blue: #4F7DF3;
+  --color-blue-light: #EEF2FF;
+
+  /* ─── Legacy mappings ─── */
+  --color-navy: #0D0D12;
+  --color-navy-light: #1A1A2E;
+  --color-cream: #F7F8FA;
+  --color-cream-dark: #F0F2F5;
+  --color-gold: #00C48C;
+  --color-gold-light: #00C48C;
 }
 
+/* ─── Base ─── */
 body {
   margin: 0;
-  background: var(--color-cream);
+  background: #FFFFFF;
+  color: #0D0D12;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
 #root {
   min-height: 100vh;
 }
 
+/* ─── Selection ─── */
+::selection {
+  background: rgba(79, 125, 243, 0.12);
+  color: #0D0D12;
+}
+
+/* ─── Scrollbar — invisible until hover ─── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.12); }
+*:hover > ::-webkit-scrollbar-thumb,
+*:hover::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.06); }
+
+/* ─── Animations ─── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slideIn {
-  from { opacity: 0; transform: translateX(20px); }
+  from { opacity: 0; transform: translateX(12px); }
   to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
+  animation: fadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-slide-in {
-  animation: slideIn 0.35s ease-out forwards;
+  animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .pulse-dot {
   animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* ─── Stagger children ─── */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 420ms; }
+
+/* ─── Card system (Ondo-style: border-based, clean) ─── */
+.card-elevated {
+  background: #FFFFFF;
+  border: 1px solid #E8ECF1;
+  border-radius: 16px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-elevated:hover {
+  border-color: #D1D5DB;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.card-flat {
+  background: #F7F8FA;
+  border: 1px solid #F0F2F5;
+  border-radius: 16px;
+}
+
+/* ─── Tabular numbers for financial data ─── */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Input base ─── */
+input, select, textarea {
+  color-scheme: light;
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+}
+
+/* ─── Focus ring utility ─── */
+.focus-ring:focus-visible {
+  outline: 2px solid #4F7DF3;
+  outline-offset: 2px;
+}
+
+/* ─── Gradient text ─── */
+.text-gradient {
+  background: linear-gradient(135deg, #0D0D12 0%, #5F6B7A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Decorative geometric patterns ─── */
+.pattern-dots {
+  background-image: radial-gradient(circle, #E8ECF1 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.pattern-grid {
+  background-image:
+    linear-gradient(#F0F2F5 1px, transparent 1px),
+    linear-gradient(90deg, #F0F2F5 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ─── Glass morphism for modals ─── */
+.glass-overlay {
+  background: rgba(13, 13, 18, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ─── Ondo-style metric card with green tint ─── */
+.metric-positive {
+  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+  border: 1px solid rgba(0, 196, 140, 0.15);
 }

@@ -35,8 +35,8 @@ function DashboardIntermediaire({ toast, onViewClients, onViewCustody }) {
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-navy">Bonjour, {profile?.full_name?.split(" ")[0] || "Intermédiaire"}</h2>
-        <p className="text-sm text-gray-400 mt-1">Pilotez votre activité d'intermédiation</p>
+        <h2 className="text-xl font-semibold text-[#0D0D12]">Bonjour, {profile?.full_name?.split(" ")[0] || "Intermédiaire"}</h2>
+        <p className="text-sm text-[#5F6B7A] mt-1">Pilotez votre activité d'intermédiation</p>
       </div>
 
       {/* KPIs */}
@@ -48,51 +48,51 @@ function DashboardIntermediaire({ toast, onViewClients, onViewCustody }) {
       </div>
 
       {/* Recent subscriptions */}
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-navy">Souscriptions récentes</h3>
-          <span className="text-xs text-gray-400">{myOrders.length} souscription{myOrders.length > 1 ? "s" : ""}</span>
+      <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#E8ECF1] flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-[#0D0D12]">Souscriptions récentes</h3>
+          <span className="text-xs text-[#9AA4B2]">{myOrders.length} souscription{myOrders.length > 1 ? "s" : ""}</span>
         </div>
 
         {myOrders.length === 0 ? (
           <div className="p-8 text-center">
-            <div className="w-12 h-12 bg-cream rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+            <div className="w-12 h-12 bg-[#F7F8FA] rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-[#5F6B7A]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
             </div>
-            <p className="text-sm text-gray-400">Aucune souscription pour le moment</p>
-            <p className="text-xs text-gray-300 mt-1">Souscrivez pour le compte de vos clients depuis le catalogue de fonds</p>
+            <p className="text-sm text-[#9AA4B2]">Aucune souscription pour le moment</p>
+            <p className="text-xs text-[#5F6B7A] mt-1">Souscrivez pour le compte de vos clients depuis le catalogue de fonds</p>
           </div>
         ) : (
           <table className="w-full text-sm text-left">
             <thead>
-              <tr className="border-b border-gray-100">
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Ref</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Client</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Classe</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Montant</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Paiement</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Statut</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
+              <tr className="border-b border-[#E8ECF1] bg-[#F7F8FA]">
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Ref</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Client</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Classe</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium text-right">Montant</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Paiement</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Statut</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Date</th>
               </tr>
             </thead>
             <tbody>
               {myOrders.sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 10).map((o) => (
-                <tr key={o.id} className="border-b border-gray-50 hover:bg-cream/50 transition-colors">
-                  <td className="px-5 py-3 font-mono text-xs text-navy">{o.id?.slice(0, 12)}...</td>
-                  <td className="px-5 py-3 text-navy font-medium text-xs">{o.lpName}</td>
+                <tr key={o.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC] transition-colors">
+                  <td className="px-5 py-3 font-mono text-xs text-[#0D0D12]">{o.id?.slice(0, 12)}...</td>
+                  <td className="px-5 py-3 text-[#0D0D12] font-medium text-xs">{o.lpName}</td>
                   <td className="px-5 py-3">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-navy/10 text-navy">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-[#EEF2FF] text-[#4F7DF3]">
                       Classe {o.shareClass || 1}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-right font-medium">{fmt(o.montant)}</td>
+                  <td className="px-5 py-3 text-right font-medium text-[#0D0D12]">{fmt(o.montant)}</td>
                   <td className="px-5 py-3">
-                    <span className={`text-xs font-medium ${o.paymentMethod === "crypto" ? "text-gold" : "text-gray-500"}`}>
+                    <span className={`text-xs font-medium ${o.paymentMethod === "crypto" ? "text-[#4F7DF3]" : "text-[#9AA4B2]"}`}>
                       {o.paymentMethod === "crypto" ? "Crypto (ADA)" : "Virement"}
                     </span>
                   </td>
                   <td className="px-5 py-3"><Badge status={statusLabel(o.status)} /></td>
-                  <td className="px-5 py-3 text-gray-400 text-xs">{o.date}</td>
+                  <td className="px-5 py-3 text-[#9AA4B2] text-xs">{o.date}</td>
                 </tr>
               ))}
             </tbody>
@@ -190,13 +190,13 @@ function SouscriptionIntermediee({ toast, fund, clients }) {
     <div className="animate-fade-in">
       {/* Fund context banner */}
       {fund && (
-        <div className="bg-navy/5 border border-navy/10 rounded-xl p-4 mb-6 flex items-center gap-3">
-          <div className="w-10 h-10 bg-navy rounded-xl flex items-center justify-center flex-shrink-0">
-            <span className="text-gold font-bold text-sm">BF</span>
+        <div className="bg-[#F7F8FA] border border-[#E8ECF1] rounded-xl p-4 mb-6 flex items-center gap-3">
+          <div className="w-10 h-10 bg-[#0D0D12] rounded-xl flex items-center justify-center flex-shrink-0">
+            <span className="text-white font-bold text-sm">BF</span>
           </div>
           <div>
-            <p className="text-sm font-semibold text-navy">{fund.name}</p>
-            <p className="text-xs text-gray-500">{fund.legalForm} · {fund.jurisdiction} · {fund.targetReturn}</p>
+            <p className="text-sm font-semibold text-[#0D0D12]">{fund.name}</p>
+            <p className="text-xs text-[#9AA4B2]">{fund.legalForm} · {fund.jurisdiction} · {fund.targetReturn}</p>
           </div>
         </div>
       )}
@@ -206,19 +206,19 @@ function SouscriptionIntermediee({ toast, fund, clients }) {
         {steps.map((s, i) => (
           <div key={s} className="flex items-center">
             <div className="flex flex-col items-center">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${i < step ? "bg-gold text-white" : i === step ? "bg-navy text-white" : "bg-gray-200 text-gray-400"}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${i < step ? "bg-[#0D0D12] text-white" : i === step ? "bg-[#0D0D12] text-white" : "bg-[#F7F8FA] text-[#9AA4B2]"}`}>
                 {i < step ? "✓" : i + 1}
               </div>
-              <span className={`text-xs mt-2 font-medium ${i <= step ? "text-navy" : "text-gray-400"}`}>{s}</span>
+              <span className={`text-xs mt-2 font-medium ${i <= step ? "text-[#0D0D12]" : "text-[#9AA4B2]"}`}>{s}</span>
             </div>
-            {i < 3 && <div className={`w-20 h-px mx-3 mt-[-16px] ${i < step ? "bg-gold" : "bg-gray-200"}`} />}
+            {i < 3 && <div className={`w-20 h-px mx-3 mt-[-16px] ${i < step ? "bg-[#0D0D12]" : "bg-[#E8ECF1]"}`} />}
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-8 max-w-2xl mx-auto">
+      <div className="bg-white rounded-2xl border border-[#E8ECF1] p-8 max-w-2xl mx-auto">
         {/* Intermediary banner */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-6 flex items-center gap-2 text-xs text-blue-800">
+        <div className="bg-[#EEF2FF] border border-[#E8ECF1] rounded-xl p-3 mb-6 flex items-center gap-2 text-xs text-[#4F7DF3]">
           <span className="font-bold text-sm">SL</span>
           <span>Souscription intermédiée par <strong>{intermediaireName}</strong> — dépositaire / custodian</span>
         </div>
@@ -226,14 +226,14 @@ function SouscriptionIntermediee({ toast, fund, clients }) {
         {/* Step 0: Select client & fund parameters */}
         {step === 0 && (
           <div className="animate-fade-in">
-            <h3 className="text-lg font-semibold text-navy mb-2">Sélection du client</h3>
-            <p className="text-xs text-gray-400 mb-5">Sélectionnez un client dont le KYC/KYB est validé puis définissez les paramètres de souscription</p>
+            <h3 className="text-lg font-semibold text-[#0D0D12] mb-2">Sélection du client</h3>
+            <p className="text-xs text-[#9AA4B2] mb-5">Sélectionnez un client dont le KYC/KYB est validé puis définissez les paramètres de souscription</p>
 
             <div className="space-y-4 text-left">
               <div>
-                <label className={labelCls}>Client <span className="text-red-400">*</span></label>
+                <label className={labelCls}>Client <span className="text-[#DC2626]">*</span></label>
                 {kycClients.length === 0 ? (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+                  <div className="bg-[#FFFBEB] border border-[#E8ECF1] rounded-xl p-3 text-xs text-[#D97706]">
                     Aucun client avec KYC validé. Onboardez d'abord un client depuis l'onglet "Mes clients".
                   </div>
                 ) : (
@@ -249,31 +249,31 @@ function SouscriptionIntermediee({ toast, fund, clients }) {
               </div>
 
               {selectedClient && (
-                <div className="bg-cream rounded-xl p-4 space-y-1.5 text-sm">
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-2">Fiche client</p>
-                  <div className="flex justify-between"><span className="text-gray-500">Nom</span><span className="text-navy font-medium">{selectedClient.full_name}</span></div>
-                  {selectedClient.company && <div className="flex justify-between"><span className="text-gray-500">Société</span><span className="text-navy">{selectedClient.company}</span></div>}
-                  <div className="flex justify-between"><span className="text-gray-500">Classification</span><span className="text-navy">{selectedClient.investor_classification || "Averti"}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="text-navy">{selectedClient.person_type === "morale" ? "Personne morale" : "Personne physique"}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">KYC</span><Badge status="Validé" /></div>
+                <div className="bg-[#F7F8FA] rounded-xl p-4 space-y-1.5 text-sm">
+                  <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-2">Fiche client</p>
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">Nom</span><span className="text-[#0D0D12] font-medium">{selectedClient.full_name}</span></div>
+                  {selectedClient.company && <div className="flex justify-between"><span className="text-[#9AA4B2]">Société</span><span className="text-[#0D0D12]">{selectedClient.company}</span></div>}
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">Classification</span><span className="text-[#0D0D12]">{selectedClient.investor_classification || "Averti"}</span></div>
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">Type</span><span className="text-[#0D0D12]">{selectedClient.person_type === "morale" ? "Personne morale" : "Personne physique"}</span></div>
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">KYC</span><Badge status="Validé" /></div>
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div className="col-span-2">
-                  <label className={labelCls}>Montant de souscription <span className="text-red-400">*</span></label>
+                  <label className={labelCls}>Montant de souscription <span className="text-[#DC2626]">*</span></label>
                   <input type="number" value={formData.montant} onChange={(e) => set("montant", Number(e.target.value))} min={100000} step={50000} className={inputCls} />
-                  <p className="text-xs text-gray-400 mt-1">Minimum : 100 000 EUR · Parts estimées : {(formData.montant / NAV_PER_PART).toFixed(2)}</p>
+                  <p className="text-xs text-[#9AA4B2] mt-1">Minimum : 100 000 EUR · Parts estimées : {(formData.montant / NAV_PER_PART).toFixed(2)}</p>
                 </div>
-                <div className="p-4 rounded-xl border-2 border-gray-100 bg-gray-50 text-left opacity-60 cursor-not-allowed relative">
-                  <p className="text-sm font-semibold text-gray-400">Share Class A</p>
-                  <p className="text-xs text-gray-400 mt-1">7-9% · 36 mois · Risque 5/7</p>
-                  <span className="absolute top-2 right-2 text-[10px] bg-navy/10 text-navy px-2 py-0.5 rounded-full font-medium">Souscription directe</span>
+                <div className="p-4 rounded-xl border-2 border-[#E8ECF1] bg-[#FAFBFC] text-left opacity-60 cursor-not-allowed relative">
+                  <p className="text-sm font-semibold text-[#9AA4B2]">Share Class A</p>
+                  <p className="text-xs text-[#9AA4B2] mt-1">7-9% · 36 mois · Risque 5/7</p>
+                  <span className="absolute top-2 right-2 text-[10px] bg-[#EEF2FF] text-[#4F7DF3] px-2 py-0.5 rounded-full font-medium">Souscription directe</span>
                 </div>
-                <button onClick={() => set("shareClass", 2)} className="p-4 rounded-xl border-2 border-navy bg-navy/5 text-left transition-all">
-                  <p className="text-sm font-semibold text-navy">Share Class B</p>
-                  <p className="text-xs text-gray-500 mt-1">5-6% · 24 mois · Risque 4/7</p>
-                  <p className="text-xs text-gold mt-0.5 font-medium">Exclusivité intermédiaires</p>
+                <button onClick={() => set("shareClass", 2)} className="p-4 rounded-xl border-2 border-[#4F7DF3] bg-[#FAFBFC] text-left transition-all">
+                  <p className="text-sm font-semibold text-[#0D0D12]">Share Class B</p>
+                  <p className="text-xs text-[#9AA4B2] mt-1">5-6% · 24 mois · Risque 4/7</p>
+                  <p className="text-xs text-[#4F7DF3] mt-0.5 font-medium">Exclusivité intermédiaires</p>
                 </button>
               </div>
             </div>
@@ -282,7 +282,7 @@ function SouscriptionIntermediee({ toast, fund, clients }) {
               <button
                 onClick={() => setStep(1)}
                 disabled={!formData.clientId || formData.montant < 100000}
-                className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-colors ${formData.clientId && formData.montant >= 100000 ? "bg-navy text-white hover:bg-navy-light" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+                className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-colors ${formData.clientId && formData.montant >= 100000 ? "bg-[#0D0D12] text-white hover:bg-[#1A1A2E]" : "bg-[#F7F8FA] text-[#9AA4B2] cursor-not-allowed"}`}
               >
                 Continuer →
               </button>
@@ -293,31 +293,31 @@ function SouscriptionIntermediee({ toast, fund, clients }) {
         {/* Step 1: Payment */}
         {step === 1 && (
           <div className="animate-fade-in">
-            <h3 className="text-lg font-semibold text-navy mb-2">Virement de souscription</h3>
-            <p className="text-xs text-gray-400 mb-5">Le client doit effectuer le virement aux coordonnées ci-dessous</p>
+            <h3 className="text-lg font-semibold text-[#0D0D12] mb-2">Virement de souscription</h3>
+            <p className="text-xs text-[#9AA4B2] mb-5">Le client doit effectuer le virement aux coordonnées ci-dessous</p>
 
-            <div className="bg-cream rounded-xl p-5 text-left text-sm space-y-2 mb-4">
-              <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Coordonnées bancaires du fonds</p>
-              <div className="flex justify-between"><span className="text-gray-500">IBAN</span><span className="font-mono text-navy text-xs">LU28 0019 4006 4475 0000</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">BIC</span><span className="font-mono text-navy text-xs">BABORLULLXXX</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Référence</span><span className="font-mono text-gold text-xs">{subRef}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Montant</span><span className="font-semibold text-navy">{fmt(formData.montant)}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Client</span><span className="text-navy">{selectedClient?.full_name}</span></div>
+            <div className="bg-[#F7F8FA] rounded-xl p-5 text-left text-sm space-y-2 mb-4">
+              <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-3">Coordonnées bancaires du fonds</p>
+              <div className="flex justify-between"><span className="text-[#9AA4B2]">IBAN</span><span className="font-mono text-[#0D0D12] text-xs">LU28 0019 4006 4475 0000</span></div>
+              <div className="flex justify-between"><span className="text-[#9AA4B2]">BIC</span><span className="font-mono text-[#0D0D12] text-xs">BABORLULLXXX</span></div>
+              <div className="flex justify-between"><span className="text-[#9AA4B2]">Référence</span><span className="font-mono text-[#4F7DF3] text-xs">{subRef}</span></div>
+              <div className="flex justify-between"><span className="text-[#9AA4B2]">Montant</span><span className="font-semibold text-[#0D0D12]">{fmt(formData.montant)}</span></div>
+              <div className="flex justify-between"><span className="text-[#9AA4B2]">Client</span><span className="text-[#0D0D12]">{selectedClient?.full_name}</span></div>
             </div>
 
             <div className="mt-4 mb-6">
               {paymentReceived ? (
-                <div className="flex items-center justify-center gap-2 text-emerald-600 text-sm font-medium">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" /> Paiement reçu
+                <div className="flex items-center justify-center gap-2 text-[#059669] text-sm font-medium">
+                  <span className="w-2 h-2 rounded-full bg-[#ECFDF5]0" /> Paiement reçu
                 </div>
               ) : (
-                <button onClick={handlePayment} className="bg-gold/10 text-gold px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-gold/20 transition-colors">Simuler réception</button>
+                <button onClick={handlePayment} className="bg-[#EEF2FF] text-[#4F7DF3] px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-[#EEF2FF] transition-colors">Simuler réception</button>
               )}
             </div>
 
             <div className="flex justify-between">
-              <button onClick={() => setStep(0)} className="text-sm text-gray-500 hover:text-navy transition-colors">← Retour</button>
-              {paymentReceived && <button onClick={() => setStep(2)} className="bg-navy text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-navy-light transition-colors">Continuer →</button>}
+              <button onClick={() => setStep(0)} className="text-sm text-[#9AA4B2] hover:text-[#0D0D12] transition-colors">← Retour</button>
+              {paymentReceived && <button onClick={() => setStep(2)} className="bg-[#0D0D12] text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-[#1A1A2E] transition-colors">Continuer →</button>}
             </div>
           </div>
         )}
@@ -325,20 +325,20 @@ function SouscriptionIntermediee({ toast, fund, clients }) {
         {/* Step 2: Signature */}
         {step === 2 && (
           <div className="animate-fade-in">
-            <h3 className="text-lg font-semibold text-navy mb-2">Signature du bulletin</h3>
-            <p className="text-xs text-gray-400 mb-5">Souscription intermédiée — signature du représentant habilité</p>
+            <h3 className="text-lg font-semibold text-[#0D0D12] mb-2">Signature du bulletin</h3>
+            <p className="text-xs text-[#9AA4B2] mb-5">Souscription intermédiée — signature du représentant habilité</p>
 
-            <div className="bg-cream rounded-xl p-5 text-left text-sm space-y-2 mb-6">
-              <div className="flex justify-between"><span className="text-gray-500">Client</span><span className="text-navy font-medium">{selectedClient?.full_name}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Fonds</span><span className="text-navy font-medium">{fund?.name || "Bridge Fund"}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Montant</span><span className="text-navy font-medium">{fmt(formData.montant)}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Share Class</span><span className="text-navy">Classe {formData.shareClass}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Parts estimées</span><span className="text-navy">{(formData.montant / NAV_PER_PART).toFixed(2)}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Intermédiaire</span><span className="text-navy font-medium">{intermediaireName}</span></div>
+            <div className="bg-[#F7F8FA] rounded-xl p-5 text-left text-sm space-y-2 mb-6">
+              <div className="flex justify-between"><span className="text-[#9AA4B2]">Client</span><span className="text-[#0D0D12] font-medium">{selectedClient?.full_name}</span></div>
+              <div className="flex justify-between"><span className="text-[#9AA4B2]">Fonds</span><span className="text-[#0D0D12] font-medium">{fund?.name || "Bridge Fund"}</span></div>
+              <div className="flex justify-between"><span className="text-[#9AA4B2]">Montant</span><span className="text-[#0D0D12] font-medium">{fmt(formData.montant)}</span></div>
+              <div className="flex justify-between"><span className="text-[#9AA4B2]">Share Class</span><span className="text-[#0D0D12]">Classe {formData.shareClass}</span></div>
+              <div className="flex justify-between"><span className="text-[#9AA4B2]">Parts estimées</span><span className="text-[#0D0D12]">{(formData.montant / NAV_PER_PART).toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-[#9AA4B2]">Intermédiaire</span><span className="text-[#0D0D12] font-medium">{intermediaireName}</span></div>
             </div>
 
             <div className="text-left space-y-3 mb-6">
-              <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold">Attestations réglementaires (CGP-CIF / Family Office)</p>
+              <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold">Attestations réglementaires (CGP-CIF / Family Office)</p>
               <Checkbox checked={consents.prospectus} onChange={() => setConsents({ ...consents, prospectus: !consents.prospectus })} required>Prospectus lu et remis au client (CSSF)</Checkbox>
               <Checkbox checked={consents.dici} onChange={() => setConsents({ ...consents, dici: !consents.dici })} required>DIC/KID remis au client (PRIIPs / Règlement 1286/2014)</Checkbox>
               <Checkbox checked={consents.risques} onChange={() => setConsents({ ...consents, risques: !consents.risques })} required>Client informé des risques de perte en capital (MiFID II)</Checkbox>
@@ -354,24 +354,24 @@ function SouscriptionIntermediee({ toast, fund, clients }) {
             )}
 
             {!signed ? (
-              <button onClick={handleSign} disabled={!canSign} className={`w-full py-3 rounded-xl text-sm font-medium transition-colors ${canSign ? "bg-navy text-white hover:bg-navy-light" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>
+              <button onClick={handleSign} disabled={!canSign} className={`w-full py-3 rounded-xl text-sm font-medium transition-colors ${canSign ? "bg-[#0D0D12] text-white hover:bg-[#1A1A2E]" : "bg-[#F7F8FA] text-[#9AA4B2] cursor-not-allowed"}`}>
                 Signer le bulletin intermédiaire
               </button>
             ) : (
               <div className="text-center space-y-3">
-                <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto">
-                  <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                <div className="w-16 h-16 bg-[#ECFDF5] rounded-full flex items-center justify-center mx-auto">
+                  <svg className="w-8 h-8 text-[#059669]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                 </div>
-                <p className="text-sm font-medium text-emerald-700">Bulletin signé — en attente de validation AIFM</p>
+                <p className="text-sm font-medium text-[#059669]">Bulletin signé — en attente de validation AIFM</p>
                 {pdfUrl && (
-                  <button onClick={() => window.open(pdfUrl, "_blank")} className="text-xs font-medium text-gold hover:text-gold-light transition-colors">Voir le PDF</button>
+                  <button onClick={() => window.open(pdfUrl, "_blank")} className="text-xs font-medium text-[#4F7DF3] hover:text-[#4F7DF3]-light transition-colors">Voir le PDF</button>
                 )}
               </div>
             )}
 
             <div className="mt-6 flex justify-between">
-              <button onClick={() => setStep(1)} className="text-sm text-gray-500 hover:text-navy transition-colors">← Retour</button>
-              {signed && <button onClick={() => setStep(3)} className="bg-navy text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-navy-light transition-colors">Continuer →</button>}
+              <button onClick={() => setStep(1)} className="text-sm text-[#9AA4B2] hover:text-[#0D0D12] transition-colors">← Retour</button>
+              {signed && <button onClick={() => setStep(3)} className="bg-[#0D0D12] text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-[#1A1A2E] transition-colors">Continuer →</button>}
             </div>
           </div>
         )}
@@ -379,17 +379,17 @@ function SouscriptionIntermediee({ toast, fund, clients }) {
         {/* Step 3: Confirmation */}
         {step === 3 && (
           <div className="animate-fade-in text-center">
-            <div className="w-20 h-20 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-10 h-10 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+            <div className="w-20 h-20 bg-[#EEF2FF] rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-10 h-10 text-[#4F7DF3]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
             </div>
-            <h3 className="text-lg font-semibold text-navy">Souscription envoyée</h3>
-            <p className="text-sm text-gray-500 mt-1">Ref: {subRef} · En attente de validation AIFM</p>
-            <div className="bg-cream rounded-xl p-5 text-sm space-y-2 mt-6 text-left">
-              <div className="flex justify-between"><span className="text-gray-500">Client</span><span className="text-navy font-medium">{selectedClient?.full_name}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Fonds</span><span className="text-navy font-medium">{fund?.name || "Bridge Fund"}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Montant</span><span className="text-navy font-medium">{fmt(formData.montant)}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Parts estimées</span><span className="text-navy font-medium">{(formData.montant / NAV_PER_PART).toFixed(2)}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Intermédiaire</span><span className="text-navy font-medium">{intermediaireName}</span></div>
+            <h3 className="text-lg font-semibold text-[#0D0D12]">Souscription envoyée</h3>
+            <p className="text-sm text-[#9AA4B2] mt-1">Ref: {subRef} · En attente de validation AIFM</p>
+            <div className="bg-[#F7F8FA] rounded-xl p-5 text-sm space-y-2 mt-6 text-left">
+              <div className="flex justify-between"><span className="text-[#9AA4B2]">Client</span><span className="text-[#0D0D12] font-medium">{selectedClient?.full_name}</span></div>
+              <div className="flex justify-between"><span className="text-[#9AA4B2]">Fonds</span><span className="text-[#0D0D12] font-medium">{fund?.name || "Bridge Fund"}</span></div>
+              <div className="flex justify-between"><span className="text-[#9AA4B2]">Montant</span><span className="text-[#0D0D12] font-medium">{fmt(formData.montant)}</span></div>
+              <div className="flex justify-between"><span className="text-[#9AA4B2]">Parts estimées</span><span className="text-[#0D0D12] font-medium">{(formData.montant / NAV_PER_PART).toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-[#9AA4B2]">Intermédiaire</span><span className="text-[#0D0D12] font-medium">{intermediaireName}</span></div>
             </div>
           </div>
         )}
@@ -480,18 +480,18 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
   const DocUploadRow = ({ type, refKey, label, sub }) => {
     const doc = documents.find((d) => d.type === type);
     return doc ? (
-      <div className="flex items-center gap-2 border border-emerald-200 bg-emerald-50/50 rounded-xl p-3 text-sm">
-        <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-        <span className="text-emerald-700 font-medium flex-1">{doc.name}</span>
-        <span className="text-xs text-emerald-500">{doc.size}</span>
-        <button onClick={() => window.open(doc.url, "_blank")} className="text-xs font-medium text-navy hover:text-gold transition-colors">Consulter</button>
+      <div className="flex items-center gap-2 border border-[#E8ECF1] bg-[#ECFDF5] rounded-xl p-3 text-sm">
+        <svg className="w-4 h-4 text-[#059669] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+        <span className="text-[#059669] font-medium flex-1">{doc.name}</span>
+        <span className="text-xs text-[#059669]">{doc.size}</span>
+        <button onClick={() => window.open(doc.url, "_blank")} className="text-xs font-medium text-[#0D0D12] hover:text-[#4F7DF3] transition-colors">Consulter</button>
       </div>
     ) : (
       <div>
         <input type="file" ref={fileRefs[refKey]} onChange={handleFileSelect(type)} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
-        <div className="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center hover:border-navy/30 transition-colors cursor-pointer" onClick={() => fileRefs[refKey]?.current?.click()}>
-          <p className="text-sm text-gray-400">{label}</p>
-          <p className="text-xs text-gray-300 mt-0.5">{sub}</p>
+        <div className="border-2 border-dashed border-[#E8ECF1] rounded-xl p-3 text-center hover:border-[#4F7DF3]/30 transition-colors cursor-pointer" onClick={() => fileRefs[refKey]?.current?.click()}>
+          <p className="text-sm text-[#9AA4B2]">{label}</p>
+          <p className="text-xs text-[#5F6B7A] mt-0.5">{sub}</p>
         </div>
       </div>
     );
@@ -578,10 +578,10 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
       <div className="animate-fade-in space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-navy">Onboarding client</h2>
-            <p className="text-sm text-gray-400 mt-1">Parcours KYC/KYB conforme — AMLD5, CSSF 12-02, MiFID II</p>
+            <h2 className="text-xl font-semibold text-[#0D0D12]">Onboarding client</h2>
+            <p className="text-sm text-[#9AA4B2] mt-1">Parcours KYC/KYB conforme — AMLD5, CSSF 12-02, MiFID II</p>
           </div>
-          <button onClick={resetOnboarding} className="px-4 py-2 text-xs text-gray-500 hover:text-navy transition-colors">Annuler</button>
+          <button onClick={resetOnboarding} className="px-4 py-2 text-xs text-[#9AA4B2] hover:text-[#0D0D12] transition-colors">Annuler</button>
         </div>
 
         {/* Stepper */}
@@ -589,39 +589,39 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
           {KYC_STEPS.map((s, i) => (
             <div key={s} className="flex items-center">
               <div className="flex flex-col items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${i < kycStep ? "bg-gold text-white" : i === kycStep ? "bg-navy text-white" : "bg-gray-200 text-gray-400"}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${i < kycStep ? "bg-[#0D0D12] text-white" : i === kycStep ? "bg-[#0D0D12] text-white" : "bg-[#F7F8FA] text-[#9AA4B2]"}`}>
                   {i < kycStep ? "✓" : i + 1}
                 </div>
-                <span className={`text-[10px] mt-1.5 font-medium max-w-[70px] text-center ${i <= kycStep ? "text-navy" : "text-gray-400"}`}>{s}</span>
+                <span className={`text-[10px] mt-1.5 font-medium max-w-[70px] text-center ${i <= kycStep ? "text-[#0D0D12]" : "text-[#9AA4B2]"}`}>{s}</span>
               </div>
-              {i < KYC_STEPS.length - 1 && <div className={`w-12 h-px mx-1.5 mt-[-14px] ${i < kycStep ? "bg-gold" : "bg-gray-200"}`} />}
+              {i < KYC_STEPS.length - 1 && <div className={`w-12 h-px mx-1.5 mt-[-14px] ${i < kycStep ? "bg-[#0D0D12]" : "bg-[#F7F8FA]"}`} />}
             </div>
           ))}
         </div>
 
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-8 max-w-3xl mx-auto">
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-8 max-w-3xl mx-auto">
 
           {/* ── Step 0: Identité ── */}
           {kycStep === 0 && (
             <div className="animate-fade-in">
-              <h3 className="text-lg font-semibold text-navy mb-1">Identification du client</h3>
-              <p className="text-xs text-gray-400 mb-5">Informations d'identité et coordonnées — Art. L.561-5 CMF</p>
+              <h3 className="text-lg font-semibold text-[#0D0D12] mb-1">Identification du client</h3>
+              <p className="text-xs text-[#9AA4B2] mb-5">Informations d'identité et coordonnées — Art. L.561-5 CMF</p>
 
-              <div className="flex bg-cream rounded-xl p-1 mb-6 max-w-xs">
-                <button onClick={() => setPersonType("physique")} className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${personType === "physique" ? "bg-white text-navy shadow-sm" : "text-gray-500"}`}>Personne physique</button>
-                <button onClick={() => setPersonType("morale")} className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${personType === "morale" ? "bg-white text-navy shadow-sm" : "text-gray-500"}`}>Personne morale</button>
+              <div className="flex bg-[#F7F8FA] rounded-xl p-1 mb-6 max-w-xs">
+                <button onClick={() => setPersonType("physique")} className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${personType === "physique" ? "bg-white text-[#0D0D12]" : "text-[#9AA4B2]"}`}>Personne physique</button>
+                <button onClick={() => setPersonType("morale")} className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${personType === "morale" ? "bg-white text-[#0D0D12]" : "text-[#9AA4B2]"}`}>Personne morale</button>
               </div>
 
               {/* Account info */}
               <div className="mb-4">
-                <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Accès plateforme</p>
+                <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-3">Accès plateforme</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={labelCls}>Email <span className="text-red-400">*</span></label>
+                    <label className={labelCls}>Email <span className="text-[#DC2626]">*</span></label>
                     <input type="email" value={clientData.email} onChange={(e) => setField("email", e.target.value)} className={inputCls} placeholder="client@email.com" />
                   </div>
                   <div>
-                    <label className={labelCls}>Mot de passe <span className="text-red-400">*</span></label>
+                    <label className={labelCls}>Mot de passe <span className="text-[#DC2626]">*</span></label>
                     <input type="password" value={clientData.password} onChange={(e) => setField("password", e.target.value)} className={inputCls} placeholder="Min. 6 caractères" />
                   </div>
                 </div>
@@ -629,45 +629,45 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
 
               {personType === "physique" ? (
                 <>
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">État civil</p>
+                  <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-3">État civil</p>
                   <div className="grid grid-cols-2 gap-4">
-                    <div><label className={labelCls}>Nom <span className="text-red-400">*</span></label><input value={clientData.nom} onChange={(e) => setField("nom", e.target.value)} className={inputCls} placeholder="Duval" /></div>
-                    <div><label className={labelCls}>Prénom <span className="text-red-400">*</span></label><input value={clientData.prenom} onChange={(e) => setField("prenom", e.target.value)} className={inputCls} placeholder="Marie-Claire" /></div>
-                    <div><label className={labelCls}>Date de naissance <span className="text-red-400">*</span></label><input type="date" value={clientData.dateNaissance} onChange={(e) => setField("dateNaissance", e.target.value)} className={inputCls} /></div>
-                    <div><label className={labelCls}>Nationalité <span className="text-red-400">*</span></label><input value={clientData.nationalite} onChange={(e) => setField("nationalite", e.target.value)} className={inputCls} /></div>
+                    <div><label className={labelCls}>Nom <span className="text-[#DC2626]">*</span></label><input value={clientData.nom} onChange={(e) => setField("nom", e.target.value)} className={inputCls} placeholder="Duval" /></div>
+                    <div><label className={labelCls}>Prénom <span className="text-[#DC2626]">*</span></label><input value={clientData.prenom} onChange={(e) => setField("prenom", e.target.value)} className={inputCls} placeholder="Marie-Claire" /></div>
+                    <div><label className={labelCls}>Date de naissance <span className="text-[#DC2626]">*</span></label><input type="date" value={clientData.dateNaissance} onChange={(e) => setField("dateNaissance", e.target.value)} className={inputCls} /></div>
+                    <div><label className={labelCls}>Nationalité <span className="text-[#DC2626]">*</span></label><input value={clientData.nationalite} onChange={(e) => setField("nationalite", e.target.value)} className={inputCls} /></div>
                     <div><label className={labelCls}>Profession</label><input value={clientData.profession} onChange={(e) => setField("profession", e.target.value)} className={inputCls} placeholder="Directeur financier" /></div>
                     <div><label className={labelCls}>Téléphone</label><input value={clientData.telephone} onChange={(e) => setField("telephone", e.target.value)} className={inputCls} placeholder="+33 6 12 34 56 78" /></div>
                   </div>
                   <div className="mt-4">
-                    <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Adresse</p>
+                    <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-3">Adresse</p>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="col-span-2"><label className={labelCls}>Adresse <span className="text-red-400">*</span></label><input value={clientData.adresse} onChange={(e) => setField("adresse", e.target.value)} className={inputCls} placeholder="12 rue de la Paix" /></div>
-                      <div><label className={labelCls}>Code postal <span className="text-red-400">*</span></label><input value={clientData.codePostal} onChange={(e) => setField("codePostal", e.target.value)} className={inputCls} /></div>
-                      <div><label className={labelCls}>Ville <span className="text-red-400">*</span></label><input value={clientData.ville} onChange={(e) => setField("ville", e.target.value)} className={inputCls} /></div>
-                      <div><label className={labelCls}>Pays <span className="text-red-400">*</span></label><select value={clientData.pays} onChange={(e) => setField("pays", e.target.value)} className={selectCls}>{["France", "Luxembourg", "Belgique", "Suisse", "Pays-Bas", "Allemagne", "Italie", "Espagne", "Royaume-Uni"].map((p) => <option key={p}>{p}</option>)}</select></div>
+                      <div className="col-span-2"><label className={labelCls}>Adresse <span className="text-[#DC2626]">*</span></label><input value={clientData.adresse} onChange={(e) => setField("adresse", e.target.value)} className={inputCls} placeholder="12 rue de la Paix" /></div>
+                      <div><label className={labelCls}>Code postal <span className="text-[#DC2626]">*</span></label><input value={clientData.codePostal} onChange={(e) => setField("codePostal", e.target.value)} className={inputCls} /></div>
+                      <div><label className={labelCls}>Ville <span className="text-[#DC2626]">*</span></label><input value={clientData.ville} onChange={(e) => setField("ville", e.target.value)} className={inputCls} /></div>
+                      <div><label className={labelCls}>Pays <span className="text-[#DC2626]">*</span></label><select value={clientData.pays} onChange={(e) => setField("pays", e.target.value)} className={selectCls}>{["France", "Luxembourg", "Belgique", "Suisse", "Pays-Bas", "Allemagne", "Italie", "Espagne", "Royaume-Uni"].map((p) => <option key={p}>{p}</option>)}</select></div>
                     </div>
                   </div>
                 </>
               ) : (
                 <>
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Informations société</p>
+                  <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-3">Informations société</p>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2"><label className={labelCls}>Dénomination sociale <span className="text-red-400">*</span></label><input value={clientData.societe} onChange={(e) => setField("societe", e.target.value)} className={inputCls} placeholder="Duval Patrimoine SAS" /></div>
+                    <div className="col-span-2"><label className={labelCls}>Dénomination sociale <span className="text-[#DC2626]">*</span></label><input value={clientData.societe} onChange={(e) => setField("societe", e.target.value)} className={inputCls} placeholder="Duval Patrimoine SAS" /></div>
                     <div><label className={labelCls}>Forme juridique</label><select value={clientData.formeJuridique} onChange={(e) => setField("formeJuridique", e.target.value)} className={selectCls}><option>SAS</option><option>SARL</option><option>SA</option><option>SCI</option><option>SCSp</option><option>GmbH</option><option>Ltd</option><option>Autre</option></select></div>
                     <div><label className={labelCls}>RCS / Registre</label><input value={clientData.rcs} onChange={(e) => setField("rcs", e.target.value)} className={inputCls} placeholder="Paris B 123 456 789" /></div>
                     <div><label className={labelCls}>LEI</label><input value={clientData.lei} onChange={(e) => setField("lei", e.target.value)} className={inputCls} placeholder="Code LEI 20 caractères" /></div>
                     <div><label className={labelCls}>Date de création</label><input type="date" value={clientData.dateCreation} onChange={(e) => setField("dateCreation", e.target.value)} className={inputCls} /></div>
-                    <div className="col-span-2"><label className={labelCls}>Siège social <span className="text-red-400">*</span></label><input value={clientData.siegeSocial} onChange={(e) => setField("siegeSocial", e.target.value)} className={inputCls} placeholder="12 rue de la Paix, 75002 Paris" /></div>
+                    <div className="col-span-2"><label className={labelCls}>Siège social <span className="text-[#DC2626]">*</span></label><input value={clientData.siegeSocial} onChange={(e) => setField("siegeSocial", e.target.value)} className={inputCls} placeholder="12 rue de la Paix, 75002 Paris" /></div>
                   </div>
                   <div className="mt-4">
-                    <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Représentant légal</p>
+                    <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-3">Représentant légal</p>
                     <div className="grid grid-cols-2 gap-4">
-                      <div><label className={labelCls}>Nom <span className="text-red-400">*</span></label><input value={clientData.nom} onChange={(e) => setField("nom", e.target.value)} className={inputCls} /></div>
-                      <div><label className={labelCls}>Prénom <span className="text-red-400">*</span></label><input value={clientData.prenom} onChange={(e) => setField("prenom", e.target.value)} className={inputCls} /></div>
+                      <div><label className={labelCls}>Nom <span className="text-[#DC2626]">*</span></label><input value={clientData.nom} onChange={(e) => setField("nom", e.target.value)} className={inputCls} /></div>
+                      <div><label className={labelCls}>Prénom <span className="text-[#DC2626]">*</span></label><input value={clientData.prenom} onChange={(e) => setField("prenom", e.target.value)} className={inputCls} /></div>
                     </div>
                   </div>
                   <div className="mt-4">
-                    <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Bénéficiaires effectifs (UBO > 25%)</p>
+                    <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-3">Bénéficiaires effectifs (UBO > 25%)</p>
                     <div className="grid grid-cols-3 gap-4">
                       <div><label className={labelCls}>Nom UBO 1</label><input value={clientData.ubo1Nom} onChange={(e) => setField("ubo1Nom", e.target.value)} className={inputCls} /></div>
                       <div><label className={labelCls}>% détention</label><input value={clientData.ubo1Pct} onChange={(e) => setField("ubo1Pct", e.target.value)} className={inputCls} placeholder="ex: 60%" /></div>
@@ -681,7 +681,7 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
               )}
 
               <div className="mt-6 flex justify-end">
-                <button onClick={() => setKycStep(1)} disabled={!clientData.nom || !clientData.prenom || !clientData.email || !clientData.password} className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-colors ${clientData.nom && clientData.prenom && clientData.email && clientData.password ? "bg-navy text-white hover:bg-navy-light" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}>
+                <button onClick={() => setKycStep(1)} disabled={!clientData.nom || !clientData.prenom || !clientData.email || !clientData.password} className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-colors ${clientData.nom && clientData.prenom && clientData.email && clientData.password ? "bg-[#0D0D12] text-white hover:bg-[#1A1A2E]" : "bg-[#F7F8FA] text-[#9AA4B2] cursor-not-allowed"}`}>
                   Continuer →
                 </button>
               </div>
@@ -691,8 +691,8 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
           {/* ── Step 1: Documents KYC/KYB ── */}
           {kycStep === 1 && (
             <div className="animate-fade-in">
-              <h3 className="text-lg font-semibold text-navy mb-1">Pièces justificatives</h3>
-              <p className="text-xs text-gray-400 mb-5">Documents requis — AMLD5 & Circulaire CSSF 12-02</p>
+              <h3 className="text-lg font-semibold text-[#0D0D12] mb-1">Pièces justificatives</h3>
+              <p className="text-xs text-[#9AA4B2] mb-5">Documents requis — AMLD5 & Circulaire CSSF 12-02</p>
 
               <div className="space-y-3">
                 <DocUploadRow type="Pièce d'identité" refKey="id" label={personType === "physique" ? "Passeport ou carte nationale d'identité" : "K-bis ou extrait du registre de commerce"} sub="PDF, JPG, PNG — max 10 Mo" />
@@ -709,15 +709,15 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
               </div>
 
               {documents.length > 0 && (
-                <div className="mt-4 flex items-center gap-2 text-xs text-emerald-600 font-medium">
+                <div className="mt-4 flex items-center gap-2 text-xs text-[#059669] font-medium">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                   {documents.length} document{documents.length > 1 ? "s" : ""} déposé{documents.length > 1 ? "s" : ""}
                 </div>
               )}
 
               <div className="mt-6 flex justify-between">
-                <button onClick={() => setKycStep(0)} className="text-sm text-gray-500 hover:text-navy transition-colors">← Retour</button>
-                <button onClick={() => setKycStep(2)} className="bg-navy text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-navy-light transition-colors">Continuer →</button>
+                <button onClick={() => setKycStep(0)} className="text-sm text-[#9AA4B2] hover:text-[#0D0D12] transition-colors">← Retour</button>
+                <button onClick={() => setKycStep(2)} className="bg-[#0D0D12] text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-[#1A1A2E] transition-colors">Continuer →</button>
               </div>
             </div>
           )}
@@ -725,12 +725,12 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
           {/* ── Step 2: Connaissance client ── */}
           {kycStep === 2 && (
             <div className="animate-fade-in">
-              <h3 className="text-lg font-semibold text-navy mb-1">Connaissance client</h3>
-              <p className="text-xs text-gray-400 mb-5">Évaluation du profil investisseur — MiFID II, Art. 25 Directive 2014/65/UE</p>
+              <h3 className="text-lg font-semibold text-[#0D0D12] mb-1">Connaissance client</h3>
+              <p className="text-xs text-[#9AA4B2] mb-5">Évaluation du profil investisseur — MiFID II, Art. 25 Directive 2014/65/UE</p>
 
               <div className="space-y-4">
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Situation patrimoniale</p>
+                  <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-3">Situation patrimoniale</p>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className={labelCls}>Patrimoine financier total</label>
@@ -756,7 +756,7 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
                 </div>
 
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Expérience & connaissances</p>
+                  <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-3">Expérience & connaissances</p>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className={labelCls}>Expérience en investissement</label>
@@ -790,7 +790,7 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
                 </div>
 
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Objectifs & horizon</p>
+                  <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-3">Objectifs & horizon</p>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className={labelCls}>Objectif principal</label>
@@ -825,8 +825,8 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
               </div>
 
               <div className="mt-6 flex justify-between">
-                <button onClick={() => setKycStep(1)} className="text-sm text-gray-500 hover:text-navy transition-colors">← Retour</button>
-                <button onClick={() => setKycStep(3)} className="bg-navy text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-navy-light transition-colors">Continuer →</button>
+                <button onClick={() => setKycStep(1)} className="text-sm text-[#9AA4B2] hover:text-[#0D0D12] transition-colors">← Retour</button>
+                <button onClick={() => setKycStep(3)} className="bg-[#0D0D12] text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-[#1A1A2E] transition-colors">Continuer →</button>
               </div>
             </div>
           )}
@@ -834,8 +834,8 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
           {/* ── Step 3: Classification investisseur ── */}
           {kycStep === 3 && (
             <div className="animate-fade-in">
-              <h3 className="text-lg font-semibold text-navy mb-1">Classification investisseur</h3>
-              <p className="text-xs text-gray-400 mb-5">Catégorisation selon la Loi du 12 juillet 2013 (AIFMD) et la CSSF — Art. 2 RAIF</p>
+              <h3 className="text-lg font-semibold text-[#0D0D12] mb-1">Classification investisseur</h3>
+              <p className="text-xs text-[#9AA4B2] mb-5">Catégorisation selon la Loi du 12 juillet 2013 (AIFMD) et la CSSF — Art. 2 RAIF</p>
 
               <div className="space-y-4">
                 {[
@@ -858,23 +858,23 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
                   <button
                     key={cat.value}
                     onClick={() => setField("investorClassification", cat.value)}
-                    className={`w-full p-4 rounded-xl border-2 text-left transition-all ${clientData.investorClassification === cat.value ? "border-navy bg-navy/5" : "border-gray-200 hover:border-gray-300"}`}
+                    className={`w-full p-4 rounded-xl border-2 text-left transition-all ${clientData.investorClassification === cat.value ? "border-blue-500 bg-[#FAFBFC]" : "border-[#E8ECF1] hover:border-[#E8ECF1]"}`}
                   >
-                    <p className="text-sm font-semibold text-navy">{cat.title}</p>
-                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">{cat.desc}</p>
+                    <p className="text-sm font-semibold text-[#0D0D12]">{cat.title}</p>
+                    <p className="text-xs text-[#9AA4B2] mt-1 leading-relaxed">{cat.desc}</p>
                   </button>
                 ))}
               </div>
 
               {clientData.investorClassification === "Averti (well-informed)" && (
-                <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+                <div className="mt-4 bg-[#FFFBEB] border border-[#E8ECF1] rounded-xl p-3 text-xs text-[#D97706]">
                   L'investisseur averti doit investir au minimum 125 000 EUR ou fournir une attestation d'un établissement de crédit, PSF ou société de gestion certifiant son expertise (CSSF FAQ RAIF, Q2).
                 </div>
               )}
 
               <div className="mt-6 flex justify-between">
-                <button onClick={() => setKycStep(2)} className="text-sm text-gray-500 hover:text-navy transition-colors">← Retour</button>
-                <button onClick={() => setKycStep(4)} className="bg-navy text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-navy-light transition-colors">Continuer →</button>
+                <button onClick={() => setKycStep(2)} className="text-sm text-[#9AA4B2] hover:text-[#0D0D12] transition-colors">← Retour</button>
+                <button onClick={() => setKycStep(4)} className="bg-[#0D0D12] text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-[#1A1A2E] transition-colors">Continuer →</button>
               </div>
             </div>
           )}
@@ -882,15 +882,15 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
           {/* ── Step 4: Conformité — PEP, sanctions, FATCA/CRS ── */}
           {kycStep === 4 && (
             <div className="animate-fade-in">
-              <h3 className="text-lg font-semibold text-navy mb-1">Vérifications de conformité</h3>
-              <p className="text-xs text-gray-400 mb-5">PEP, sanctions, origine des fonds, FATCA/CRS — AMLD5, Loi du 12 nov. 2004</p>
+              <h3 className="text-lg font-semibold text-[#0D0D12] mb-1">Vérifications de conformité</h3>
+              <p className="text-xs text-[#9AA4B2] mb-5">PEP, sanctions, origine des fonds, FATCA/CRS — AMLD5, Loi du 12 nov. 2004</p>
 
               <div className="space-y-5">
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Origine des fonds</p>
+                  <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-3">Origine des fonds</p>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">
-                      <label className={labelCls}>Source principale des fonds investis <span className="text-red-400">*</span></label>
+                      <label className={labelCls}>Source principale des fonds investis <span className="text-[#DC2626]">*</span></label>
                       <select value={clientData.origineFonds} onChange={(e) => setField("origineFonds", e.target.value)} className={selectCls}>
                         <option value="">Sélectionnez...</option>
                         <option>Revenus d'activité professionnelle</option>
@@ -905,7 +905,7 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
                 </div>
 
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Personne politiquement exposée (PEP)</p>
+                  <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-3">Personne politiquement exposée (PEP)</p>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className={labelCls}>Statut PEP</label>
@@ -918,7 +918,7 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
                     </div>
                     {clientData.pepStatus !== "non" && (
                       <div>
-                        <label className={labelCls}>Précisions PEP <span className="text-red-400">*</span></label>
+                        <label className={labelCls}>Précisions PEP <span className="text-[#DC2626]">*</span></label>
                         <input value={clientData.pepDetail} onChange={(e) => setField("pepDetail", e.target.value)} className={inputCls} placeholder="Fonction, pays, période" />
                       </div>
                     )}
@@ -926,8 +926,8 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
                 </div>
 
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Screening sanctions</p>
-                  <div className="bg-cream rounded-xl p-4">
+                  <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-3">Screening sanctions</p>
+                  <div className="bg-[#F7F8FA] rounded-xl p-4">
                     <Checkbox checked={clientData.sanctionsCheck} onChange={() => setField("sanctionsCheck", !clientData.sanctionsCheck)}>
                       J'atteste avoir vérifié que le client ne figure pas sur les listes de sanctions (UE, OFAC, ONU, gel des avoirs)
                     </Checkbox>
@@ -935,7 +935,7 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
                 </div>
 
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Échange automatique d'informations (CRS/FATCA)</p>
+                  <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-3">Échange automatique d'informations (CRS/FATCA)</p>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className={labelCls}>Statut fiscal US</label>
@@ -946,7 +946,7 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
                       </select>
                     </div>
                     <div>
-                      <label className={labelCls}>Pays de résidence fiscale <span className="text-red-400">*</span></label>
+                      <label className={labelCls}>Pays de résidence fiscale <span className="text-[#DC2626]">*</span></label>
                       <select value={clientData.paysResidenceFiscale} onChange={(e) => setField("paysResidenceFiscale", e.target.value)} className={selectCls}>
                         {["France", "Luxembourg", "Belgique", "Suisse", "Pays-Bas", "Allemagne", "Italie", "Espagne", "Royaume-Uni", "Autre"].map((p) => <option key={p}>{p}</option>)}
                       </select>
@@ -960,11 +960,11 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
               </div>
 
               <div className="mt-6 flex justify-between">
-                <button onClick={() => setKycStep(3)} className="text-sm text-gray-500 hover:text-navy transition-colors">← Retour</button>
+                <button onClick={() => setKycStep(3)} className="text-sm text-[#9AA4B2] hover:text-[#0D0D12] transition-colors">← Retour</button>
                 <button
                   onClick={() => setKycStep(5)}
                   disabled={!clientData.origineFonds || !clientData.sanctionsCheck}
-                  className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-colors ${clientData.origineFonds && clientData.sanctionsCheck ? "bg-navy text-white hover:bg-navy-light" : "bg-gray-200 text-gray-400 cursor-not-allowed"}`}
+                  className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-colors ${clientData.origineFonds && clientData.sanctionsCheck ? "bg-[#0D0D12] text-white hover:bg-[#1A1A2E]" : "bg-[#F7F8FA] text-[#9AA4B2] cursor-not-allowed"}`}
                 >
                   Continuer →
                 </button>
@@ -975,52 +975,52 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
           {/* ── Step 5: Validation & recap ── */}
           {kycStep === 5 && (
             <div className="animate-fade-in">
-              <h3 className="text-lg font-semibold text-navy mb-1">Récapitulatif & validation</h3>
-              <p className="text-xs text-gray-400 mb-5">Vérifiez les informations avant de finaliser l'onboarding</p>
+              <h3 className="text-lg font-semibold text-[#0D0D12] mb-1">Récapitulatif & validation</h3>
+              <p className="text-xs text-[#9AA4B2] mb-5">Vérifiez les informations avant de finaliser l'onboarding</p>
 
               <div className="space-y-4">
                 {/* Identity summary */}
-                <div className="bg-cream rounded-xl p-4 text-sm space-y-1.5">
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-2">Identité</p>
-                  <div className="flex justify-between"><span className="text-gray-500">Nom</span><span className="text-navy font-medium">{clientData.prenom} {clientData.nom}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="text-navy">{personType === "morale" ? "Personne morale" : "Personne physique"}</span></div>
-                  {clientData.societe && <div className="flex justify-between"><span className="text-gray-500">Société</span><span className="text-navy">{clientData.societe}</span></div>}
-                  <div className="flex justify-between"><span className="text-gray-500">Pays</span><span className="text-navy">{clientData.pays}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Email</span><span className="text-navy">{clientData.email}</span></div>
+                <div className="bg-[#F7F8FA] rounded-xl p-4 text-sm space-y-1.5">
+                  <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-2">Identité</p>
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">Nom</span><span className="text-[#0D0D12] font-medium">{clientData.prenom} {clientData.nom}</span></div>
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">Type</span><span className="text-[#0D0D12]">{personType === "morale" ? "Personne morale" : "Personne physique"}</span></div>
+                  {clientData.societe && <div className="flex justify-between"><span className="text-[#9AA4B2]">Société</span><span className="text-[#0D0D12]">{clientData.societe}</span></div>}
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">Pays</span><span className="text-[#0D0D12]">{clientData.pays}</span></div>
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">Email</span><span className="text-[#0D0D12]">{clientData.email}</span></div>
                 </div>
 
                 {/* KYC summary */}
-                <div className="bg-cream rounded-xl p-4 text-sm space-y-1.5">
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-2">Connaissance client</p>
-                  <div className="flex justify-between"><span className="text-gray-500">Patrimoine</span><span className="text-navy">{clientData.patrimoineTotalTranche}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Expérience</span><span className="text-navy capitalize">{clientData.experienceInvestissement}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Objectif</span><span className="text-navy capitalize">{clientData.objectifInvestissement}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Tolérance au risque</span><span className="text-navy capitalize">{clientData.toleranceRisque}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Horizon</span><span className="text-navy">{clientData.horizonPlacement}</span></div>
+                <div className="bg-[#F7F8FA] rounded-xl p-4 text-sm space-y-1.5">
+                  <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-2">Connaissance client</p>
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">Patrimoine</span><span className="text-[#0D0D12]">{clientData.patrimoineTotalTranche}</span></div>
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">Expérience</span><span className="text-[#0D0D12] capitalize">{clientData.experienceInvestissement}</span></div>
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">Objectif</span><span className="text-[#0D0D12] capitalize">{clientData.objectifInvestissement}</span></div>
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">Tolérance au risque</span><span className="text-[#0D0D12] capitalize">{clientData.toleranceRisque}</span></div>
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">Horizon</span><span className="text-[#0D0D12]">{clientData.horizonPlacement}</span></div>
                 </div>
 
                 {/* Classification & compliance summary */}
-                <div className="bg-cream rounded-xl p-4 text-sm space-y-1.5">
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-2">Classification & conformité</p>
-                  <div className="flex justify-between"><span className="text-gray-500">Classification</span><span className="text-navy font-medium">{clientData.investorClassification}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Origine fonds</span><span className="text-navy">{clientData.origineFonds}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">PEP</span><span className="text-navy">{clientData.pepStatus === "non" ? "Non" : `Oui — ${clientData.pepDetail}`}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Sanctions</span><Badge status="Validé" /></div>
-                  <div className="flex justify-between"><span className="text-gray-500">FATCA/CRS</span><span className="text-navy">{clientData.fatcaCrs === "non_us" ? "Non US Person" : "US Person"}</span></div>
+                <div className="bg-[#F7F8FA] rounded-xl p-4 text-sm space-y-1.5">
+                  <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-2">Classification & conformité</p>
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">Classification</span><span className="text-[#0D0D12] font-medium">{clientData.investorClassification}</span></div>
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">Origine fonds</span><span className="text-[#0D0D12]">{clientData.origineFonds}</span></div>
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">PEP</span><span className="text-[#0D0D12]">{clientData.pepStatus === "non" ? "Non" : `Oui — ${clientData.pepDetail}`}</span></div>
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">Sanctions</span><Badge status="Validé" /></div>
+                  <div className="flex justify-between"><span className="text-[#9AA4B2]">FATCA/CRS</span><span className="text-[#0D0D12]">{clientData.fatcaCrs === "non_us" ? "Non US Person" : "US Person"}</span></div>
                 </div>
 
                 {/* Documents summary */}
-                <div className="bg-cream rounded-xl p-4 text-sm">
-                  <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-2">Documents ({documents.length})</p>
+                <div className="bg-[#F7F8FA] rounded-xl p-4 text-sm">
+                  <p className="text-xs uppercase tracking-wider text-[#9AA4B2] font-semibold mb-2">Documents ({documents.length})</p>
                   {documents.length === 0 ? (
-                    <p className="text-xs text-amber-600">Aucun document déposé — les pièces justificatives devront être complétées</p>
+                    <p className="text-xs text-[#D97706]">Aucun document déposé — les pièces justificatives devront être complétées</p>
                   ) : (
                     <div className="space-y-1">
                       {documents.map((d, i) => (
                         <div key={i} className="flex items-center gap-2 text-xs">
-                          <svg className="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                          <span className="text-navy">{d.type}</span>
-                          <span className="text-gray-400">({d.name})</span>
+                          <svg className="w-3 h-3 text-[#059669]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                          <span className="text-[#0D0D12]">{d.type}</span>
+                          <span className="text-[#9AA4B2]">({d.name})</span>
                         </div>
                       ))}
                     </div>
@@ -1029,11 +1029,11 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
               </div>
 
               <div className="mt-6 flex justify-between">
-                <button onClick={() => setKycStep(4)} className="text-sm text-gray-500 hover:text-navy transition-colors">← Retour</button>
+                <button onClick={() => setKycStep(4)} className="text-sm text-[#9AA4B2] hover:text-[#0D0D12] transition-colors">← Retour</button>
                 <button
                   onClick={handleCreateClient}
                   disabled={creating}
-                  className="bg-navy text-white px-8 py-2.5 rounded-xl text-sm font-medium hover:bg-navy-light transition-colors disabled:opacity-50"
+                  className="bg-[#0D0D12] text-white px-8 py-2.5 rounded-xl text-sm font-medium hover:bg-[#1A1A2E] transition-colors disabled:opacity-50"
                 >
                   {creating ? "Création en cours…" : "Valider l'onboarding"}
                 </button>
@@ -1050,10 +1050,10 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
     <div className="animate-fade-in space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-navy">Mes clients</h2>
-          <p className="text-sm text-gray-400 mt-1">Gérez les comptes investisseurs rattachés à votre espace</p>
+          <h2 className="text-xl font-semibold text-[#0D0D12]">Mes clients</h2>
+          <p className="text-sm text-[#9AA4B2] mt-1">Gérez les comptes investisseurs rattachés à votre espace</p>
         </div>
-        <button onClick={() => setShowOnboarding(true)} className="px-4 py-2 bg-navy text-white text-xs rounded-xl hover:bg-navy-light transition-colors">
+        <button onClick={() => setShowOnboarding(true)} className="px-4 py-2 bg-[#0D0D12] text-white text-xs rounded-xl hover:bg-[#1A1A2E] transition-colors">
           + Onboarder un client
         </button>
       </div>
@@ -1065,48 +1065,48 @@ function MesClients({ toast, clients, clientsLoaded, onClientsChange }) {
         <KPICard label="Volume total" value={fmt(orders.filter((o) => (o.intermediaryId === user?.id || o.intermediaire) && o.status === "validated").reduce((s, o) => s + o.montant, 0))} />
       </div>
 
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-400 text-sm">Chargement…</div>
+          <div className="p-8 text-center text-[#9AA4B2] text-sm">Chargement…</div>
         ) : clients.length === 0 ? (
           <div className="p-8 text-center">
-            <div className="w-12 h-12 bg-cream rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            <div className="w-12 h-12 bg-[#F7F8FA] rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-[#5F6B7A]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             </div>
-            <p className="text-sm text-gray-400">Aucun client enregistré</p>
-            <p className="text-xs text-gray-300 mt-1">Onboardez votre premier client avec le parcours KYC/KYB complet</p>
+            <p className="text-sm text-[#9AA4B2]">Aucun client enregistré</p>
+            <p className="text-xs text-[#5F6B7A] mt-1">Onboardez votre premier client avec le parcours KYC/KYB complet</p>
           </div>
         ) : (
           <table className="w-full text-sm text-left">
             <thead>
-              <tr className="border-b border-gray-100">
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Nom</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Email</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Société</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">KYC</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Volume investi</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Souscriptions</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Créé le</th>
+              <tr className="border-b border-[#E8ECF1] bg-[#F7F8FA]">
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Nom</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Email</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Société</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">KYC</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium text-right">Volume investi</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Souscriptions</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Créé le</th>
               </tr>
             </thead>
             <tbody>
               {clients.map((c) => {
                 const stats = getClientStats(c.id);
                 return (
-                  <tr key={c.id} className="border-b border-gray-50 hover:bg-cream/50 transition-colors">
-                    <td className="px-5 py-3 font-medium text-navy">{c.full_name}</td>
-                    <td className="px-5 py-3 text-gray-500">{c.email}</td>
-                    <td className="px-5 py-3 text-gray-500">{c.company || "—"}</td>
+                  <tr key={c.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC] transition-colors">
+                    <td className="px-5 py-3 font-medium text-[#0D0D12]">{c.full_name}</td>
+                    <td className="px-5 py-3 text-[#9AA4B2]">{c.email}</td>
+                    <td className="px-5 py-3 text-[#9AA4B2]">{c.company || "—"}</td>
                     <td className="px-5 py-3"><Badge status={c.kyc_status === "validated" ? "Validé" : "En attente"} /></td>
                     <td className="px-5 py-3 text-right font-medium">{stats.totalInvested > 0 ? fmt(stats.totalInvested) : "—"}</td>
                     <td className="px-5 py-3">
                       {stats.orderCount > 0 ? (
                         <span className="text-xs">{stats.validatedCount}/{stats.orderCount} validée{stats.validatedCount > 1 ? "s" : ""}</span>
                       ) : (
-                        <span className="text-xs text-gray-400">Aucune</span>
+                        <span className="text-xs text-[#9AA4B2]">Aucune</span>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-gray-400 text-xs">{c.created_at?.split("T")[0]}</td>
+                    <td className="px-5 py-3 text-[#9AA4B2] text-xs">{c.created_at?.split("T")[0]}</td>
                   </tr>
                 );
               })}
@@ -1164,8 +1164,8 @@ function Custody({ toast, clients }) {
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-navy">Custody</h2>
-        <p className="text-sm text-gray-400 mt-1">Tokens sous garde pour le compte de vos clients — transférez-les à la demande</p>
+        <h2 className="text-xl font-semibold text-[#0D0D12]">Custody</h2>
+        <p className="text-sm text-[#9AA4B2] mt-1">Tokens sous garde pour le compte de vos clients — transférez-les à la demande</p>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
@@ -1175,46 +1175,46 @@ function Custody({ toast, clients }) {
         <KPICard label="NAV / part" value={fmtFull(NAV_PER_PART)} sub="Dernière valorisation" />
       </div>
 
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="text-sm font-semibold text-navy">Positions clients</h3>
+      <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#E8ECF1]">
+          <h3 className="text-sm font-semibold text-[#0D0D12]">Positions clients</h3>
         </div>
         {validatedOrders.length === 0 ? (
           <div className="p-8 text-center">
-            <div className="w-12 h-12 bg-cream rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+            <div className="w-12 h-12 bg-[#F7F8FA] rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-[#5F6B7A]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
             </div>
-            <p className="text-sm text-gray-400">Aucun client en custody</p>
-            <p className="text-xs text-gray-300 mt-1">Les souscriptions validées apparaîtront ici</p>
+            <p className="text-sm text-[#9AA4B2]">Aucun client en custody</p>
+            <p className="text-xs text-[#5F6B7A] mt-1">Les souscriptions validées apparaîtront ici</p>
           </div>
         ) : (
           <table className="w-full text-sm text-left">
             <thead>
-              <tr className="border-b border-gray-100">
-                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Client</th>
-                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Tokens</th>
-                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Valeur NAV</th>
-                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Classe</th>
-                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
-                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold">Statut</th>
-                <th className="px-5 py-3.5 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Action</th>
+              <tr className="border-b border-[#E8ECF1] bg-[#F7F8FA]">
+                <th className="px-5 py-3.5 text-[12px] text-[#9AA4B2] font-medium">Client</th>
+                <th className="px-5 py-3.5 text-[12px] text-[#9AA4B2] font-medium text-right">Tokens</th>
+                <th className="px-5 py-3.5 text-[12px] text-[#9AA4B2] font-medium text-right">Valeur NAV</th>
+                <th className="px-5 py-3.5 text-[12px] text-[#9AA4B2] font-medium">Classe</th>
+                <th className="px-5 py-3.5 text-[12px] text-[#9AA4B2] font-medium">Date</th>
+                <th className="px-5 py-3.5 text-[12px] text-[#9AA4B2] font-medium">Statut</th>
+                <th className="px-5 py-3.5 text-[12px] text-[#9AA4B2] font-medium text-right">Action</th>
               </tr>
             </thead>
             <tbody>
               {validatedOrders.map((o) => (
-                <tr key={o.id} className="border-b border-gray-50 hover:bg-cream/50 transition-colors">
-                  <td className="px-5 py-3.5 font-medium text-navy">{o.lpName}</td>
+                <tr key={o.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC] transition-colors">
+                  <td className="px-5 py-3.5 font-medium text-[#0D0D12]">{o.lpName}</td>
                   <td className="px-5 py-3.5 text-right font-mono">{Math.floor(o.montant / NAV_PER_PART).toLocaleString("fr-FR")}</td>
                   <td className="px-5 py-3.5 text-right">{fmt(o.montant)}</td>
                   <td className="px-5 py-3.5">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-navy/10 text-navy">Classe {o.shareClass || 1}</span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-[#EEF2FF] text-[#4F7DF3]">Classe {o.shareClass || 1}</span>
                   </td>
-                  <td className="px-5 py-3.5 text-gray-500">{o.date}</td>
+                  <td className="px-5 py-3.5 text-[#9AA4B2]">{o.date}</td>
                   <td className="px-5 py-3.5"><Badge status="Actif" /></td>
                   <td className="px-5 py-3.5 text-right">
                     <button
                       onClick={() => openTransfer(o)}
-                      className="px-3 py-1.5 text-xs font-medium bg-gold/10 text-gold rounded-lg hover:bg-gold/20 transition-colors"
+                      className="px-3 py-1.5 text-xs font-medium bg-[#EEF2FF] text-[#4F7DF3] rounded-lg hover:bg-[#EEF2FF] transition-colors"
                     >
                       Transférer
                     </button>
@@ -1228,55 +1228,55 @@ function Custody({ toast, clients }) {
 
       {/* Transfer Modal */}
       {transferModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => !transferring && setTransferModal(null)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-navy mb-1">Transférer des tokens</h3>
-            <p className="text-sm text-gray-400 mb-5">
+        <div className="fixed inset-0 bg-[#0D0D12]/40 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => !transferring && setTransferModal(null)}>
+          <div className="bg-white rounded-2xl border border-[#E8ECF1] w-full max-w-lg mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-[#0D0D12] mb-1">Transférer des tokens</h3>
+            <p className="text-sm text-[#9AA4B2] mb-5">
               Envoyez les tokens de {transferModal.lpName} vers un wallet externe
             </p>
 
             <div className="space-y-4">
-              <div className="bg-cream rounded-xl p-4 grid grid-cols-2 gap-3 text-sm">
+              <div className="bg-[#F7F8FA] rounded-xl p-4 grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-xs text-gray-400 block">Client</span>
-                  <span className="font-medium text-navy">{transferModal.lpName}</span>
+                  <span className="text-xs text-[#9AA4B2] block">Client</span>
+                  <span className="font-medium text-[#0D0D12]">{transferModal.lpName}</span>
                 </div>
                 <div>
-                  <span className="text-xs text-gray-400 block">Tokens</span>
-                  <span className="font-mono font-medium text-navy">{Math.floor(transferModal.montant / NAV_PER_PART)}</span>
+                  <span className="text-xs text-[#9AA4B2] block">Tokens</span>
+                  <span className="font-mono font-medium text-[#0D0D12]">{Math.floor(transferModal.montant / NAV_PER_PART)}</span>
                 </div>
                 <div>
-                  <span className="text-xs text-gray-400 block">Valeur</span>
-                  <span className="text-navy">{fmt(transferModal.montant)}</span>
+                  <span className="text-xs text-[#9AA4B2] block">Valeur</span>
+                  <span className="text-[#0D0D12]">{fmt(transferModal.montant)}</span>
                 </div>
                 <div>
-                  <span className="text-xs text-gray-400 block">Classe</span>
-                  <span className="text-navy">Classe {transferModal.shareClass || 1}</span>
+                  <span className="text-xs text-[#9AA4B2] block">Classe</span>
+                  <span className="text-[#0D0D12]">Classe {transferModal.shareClass || 1}</span>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                <label className="block text-xs font-medium text-[#9AA4B2] mb-1.5">
                   Adresse Cardano de destination
                 </label>
                 <input
                   value={transferAddress}
                   onChange={(e) => setTransferAddress(e.target.value)}
                   placeholder="addr_test1q..."
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-navy/20 transition-all"
+                  className="w-full px-3 py-2.5 rounded-xl border border-[#E8ECF1] text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#4F7DF3]/20 transition-all"
                   disabled={transferring}
                 />
               </div>
 
               {transferResult && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-                  <p className="text-sm font-medium text-emerald-800 mb-1">Transfert confirmé on-chain</p>
-                  <p className="text-xs text-emerald-600 font-mono break-all">Tx: {transferResult.txHash}</p>
+                <div className="bg-[#ECFDF5] border border-[#E8ECF1] rounded-xl p-4">
+                  <p className="text-sm font-medium text-[#059669] mb-1">Transfert confirmé on-chain</p>
+                  <p className="text-xs text-[#059669] font-mono break-all">Tx: {transferResult.txHash}</p>
                   <a
                     href={transferResult.explorerUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-emerald-700 underline mt-1 inline-block"
+                    className="text-xs text-[#059669] underline mt-1 inline-block"
                   >
                     Voir sur Cardanoscan
                   </a>
@@ -1288,7 +1288,7 @@ function Custody({ toast, clients }) {
               <button
                 onClick={() => setTransferModal(null)}
                 disabled={transferring}
-                className="px-4 py-2 border border-gray-200 text-gray-500 text-xs rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-white border border-[#E8ECF1] text-[#0D0D12] text-xs rounded-xl hover:border-[#D1D5DB] transition-colors disabled:opacity-50"
               >
                 {transferResult ? "Fermer" : "Annuler"}
               </button>
@@ -1296,7 +1296,7 @@ function Custody({ toast, clients }) {
                 <button
                   onClick={handleTransfer}
                   disabled={transferring || !transferAddress.startsWith("addr")}
-                  className="px-4 py-2 bg-gold text-white text-xs rounded-xl hover:bg-gold/90 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-[#0D0D12] text-white text-xs rounded-xl hover:bg-[#1A1A2E] transition-colors disabled:opacity-50"
                 >
                   {transferring ? "Transfert en cours..." : "Confirmer le transfert"}
                 </button>
@@ -1351,23 +1351,23 @@ function WalletSetup({ toast }) {
   };
 
   return (
-    <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-      <p className="text-sm font-semibold text-amber-800 mb-2">Wallet custody non configuré</p>
-      <p className="text-xs text-amber-600 mb-4">Pour gérer la collateralisation, vous devez configurer un wallet Cardano.</p>
+    <div className="mt-4 p-4 bg-[#FFFBEB] border border-[#E8ECF1] rounded-xl">
+      <p className="text-sm font-semibold text-[#D97706] mb-2">Wallet custody non configuré</p>
+      <p className="text-xs text-[#D97706] mb-4">Pour gérer la collateralisation, vous devez configurer un wallet Cardano.</p>
 
       {!mode && (
         <div className="flex gap-3">
           <button
             onClick={() => handleGenerate()}
             disabled={saving}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-navy text-white rounded-xl text-sm font-medium hover:bg-navy-light transition-colors disabled:opacity-50"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#0D0D12] text-white rounded-xl text-sm font-medium hover:bg-[#1A1A2E] transition-colors disabled:opacity-50"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             {saving ? "Génération..." : "Générer un wallet automatiquement"}
           </button>
           <button
             onClick={() => setMode("manual")}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 text-navy rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-[#E8ECF1] text-[#0D0D12] rounded-xl text-sm font-medium hover:border-[#D1D5DB] transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
             Connecter un wallet existant
@@ -1386,18 +1386,18 @@ function WalletSetup({ toast }) {
               placeholder="addr_test1q..."
               className={inputCls}
             />
-            <p className="text-[10px] text-gray-400 mt-1">Preprod: addr_test1... | Mainnet: addr1...</p>
+            <p className="text-[10px] text-[#9AA4B2] mt-1">Preprod: addr_test1... | Mainnet: addr1...</p>
           </div>
           <button
             onClick={handleSaveManual}
             disabled={saving || !manualAddress}
-            className="px-5 py-2.5 bg-navy text-white rounded-xl text-sm font-medium hover:bg-navy-light transition-colors disabled:opacity-50"
+            className="px-5 py-2.5 bg-[#0D0D12] text-white rounded-xl text-sm font-medium hover:bg-[#1A1A2E] transition-colors disabled:opacity-50"
           >
             {saving ? "..." : "Sauvegarder"}
           </button>
           <button
             onClick={() => setMode(null)}
-            className="px-3 py-2.5 text-gray-400 hover:text-gray-600 text-sm"
+            className="px-3 py-2.5 text-[#9AA4B2] hover:text-[#5F6B7A] text-sm"
           >
             Retour
           </button>
@@ -1529,24 +1529,24 @@ function CollateralClients({ toast, clients }) {
     ? vaultPositions.filter((p) => p.user_id === selectedClient.id && p.status === "locked")
     : vaultPositions.filter((p) => p.status === "locked");
 
-  if (loadingPositions) return <div className="text-center py-12 text-gray-400 text-sm">Chargement...</div>;
+  if (loadingPositions) return <div className="text-center py-12 text-[#9AA4B2] text-sm">Chargement...</div>;
 
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-navy">Collatéral & DeFi — Gestion pour compte client</h2>
-        <p className="text-sm text-gray-400 mt-1">Gérez la collateralisation des parts de vos clients en synthetic tokens</p>
+        <h2 className="text-xl font-semibold text-[#0D0D12]">Collatéral & DeFi — Gestion pour compte client</h2>
+        <p className="text-sm text-[#9AA4B2] mt-1">Gérez la collateralisation des parts de vos clients en synthetic tokens</p>
       </div>
 
       {/* Explainer */}
-      <div className="bg-gradient-to-r from-navy/5 to-gold/5 border border-navy/10 rounded-xl p-5">
+      <div className="bg-[#F7F8FA] border border-[#E8ECF1] rounded-xl p-5">
         <div className="flex items-start gap-4">
-          <div className="w-10 h-10 bg-navy rounded-xl flex items-center justify-center flex-shrink-0">
-            <span className="text-gold font-bold text-xs">sBF</span>
+          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center flex-shrink-0">
+            <span className="text-[#4F7DF3] font-bold text-xs">sBF</span>
           </div>
           <div>
-            <p className="text-sm font-semibold text-navy">Custody & Synthetic Tokens</p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-sm font-semibold text-[#0D0D12]">Custody & Synthetic Tokens</p>
+            <p className="text-xs text-[#9AA4B2] mt-1">
               En tant qu'intermédiaire, vous gérez la collateralisation pour le compte de vos clients.
               Sélectionnez un client, verrouillez ses <strong>security tokens (BF)</strong> dans le vault
               et recevez des <strong>synthetic tokens (sBF)</strong> librement transférables sur votre wallet custody.
@@ -1564,13 +1564,13 @@ function CollateralClients({ toast, clients }) {
       </div>
 
       {/* Client selector cards */}
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="text-sm font-semibold text-navy">Sélectionnez un client</h3>
+      <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#E8ECF1]">
+          <h3 className="text-sm font-semibold text-[#0D0D12]">Sélectionnez un client</h3>
         </div>
         {clientsWithStats.length === 0 ? (
           <div className="p-8 text-center">
-            <p className="text-sm text-gray-400">Aucun client avec des parts validées</p>
+            <p className="text-sm text-[#9AA4B2]">Aucun client avec des parts validées</p>
           </div>
         ) : (
           <div className="grid gap-3 p-5">
@@ -1580,40 +1580,40 @@ function CollateralClients({ toast, clients }) {
                 onClick={() => { setSelectedClient(c); setMintAmount(Math.min(10, c.available)); setTxResult(null); }}
                 className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all text-left ${
                   selectedClient?.id === c.id
-                    ? "border-navy bg-navy/5 ring-1 ring-navy/20"
-                    : "border-gray-100 hover:border-gray-200 hover:bg-cream/30"
+                    ? "border-[#4F7DF3] bg-[#FAFBFC] ring-1 ring-[#4F7DF3]/20"
+                    : "border-[#E8ECF1] hover:border-[#E8ECF1] hover:bg-[#FAFBFC]"
                 }`}
               >
                 <div className="flex items-center gap-4">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
-                    selectedClient?.id === c.id ? "bg-navy text-white" : "bg-gray-100 text-gray-500"
+                    selectedClient?.id === c.id ? "bg-[#0D0D12] text-white" : "bg-[#F7F8FA] text-[#9AA4B2]"
                   }`}>
                     {(c.full_name || "?").charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-navy">{c.full_name || "Client"}</p>
-                    <p className="text-xs text-gray-400">{c.email || "—"}</p>
+                    <p className="text-sm font-semibold text-[#0D0D12]">{c.full_name || "Client"}</p>
+                    <p className="text-xs text-[#9AA4B2]">{c.email || "—"}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-6 text-right">
                   <div>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Parts</p>
-                    <p className="text-sm font-semibold text-navy">{c.totalParts.toLocaleString("fr-FR")}</p>
+                    <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">Parts</p>
+                    <p className="text-sm font-semibold text-[#0D0D12]">{c.totalParts.toLocaleString("fr-FR")}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Lockés</p>
-                    <p className="text-sm font-semibold text-navy">{c.locked.toLocaleString("fr-FR")}</p>
+                    <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">Lockés</p>
+                    <p className="text-sm font-semibold text-[#0D0D12]">{c.locked.toLocaleString("fr-FR")}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">sBF</p>
-                    <p className="text-sm font-bold text-emerald-600">{c.sBF.toLocaleString("fr-FR")}</p>
+                    <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">sBF</p>
+                    <p className="text-sm font-bold text-[#059669]">{c.sBF.toLocaleString("fr-FR")}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Disponible</p>
-                    <p className="text-sm font-semibold text-gray-500">{c.available.toLocaleString("fr-FR")}</p>
+                    <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">Disponible</p>
+                    <p className="text-sm font-semibold text-[#9AA4B2]">{c.available.toLocaleString("fr-FR")}</p>
                   </div>
                   {selectedClient?.id === c.id && (
-                    <div className="w-6 h-6 bg-navy rounded-full flex items-center justify-center">
+                    <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
                       <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                     </div>
                   )}
@@ -1626,15 +1626,15 @@ function CollateralClients({ toast, clients }) {
 
       {/* Mint form — only when client selected */}
       {selectedClient && (
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 p-6">
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-sm font-semibold text-navy">Mint Synthetic pour {selectedClient.full_name}</h3>
-              <p className="text-xs text-gray-400">Lock BF → Recevez sBF 1:1 sur votre wallet custody</p>
+              <h3 className="text-sm font-semibold text-[#0D0D12]">Mint Synthetic pour {selectedClient.full_name}</h3>
+              <p className="text-xs text-[#9AA4B2]">Lock BF → Recevez sBF 1:1 sur votre wallet custody</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-gray-400">Parts disponibles</p>
-              <p className="text-lg font-bold text-navy">{clientAvailable.toLocaleString("fr-FR")} BF</p>
+              <p className="text-xs text-[#9AA4B2]">Parts disponibles</p>
+              <p className="text-lg font-bold text-[#0D0D12]">{clientAvailable.toLocaleString("fr-FR")} BF</p>
             </div>
           </div>
 
@@ -1660,18 +1660,18 @@ function CollateralClients({ toast, clients }) {
                 className={inputCls}
                 disabled={minting}
               />
-              <p className="text-xs text-gray-400 mt-1">{clientAvailable} disponibles</p>
+              <p className="text-xs text-[#9AA4B2] mt-1">{clientAvailable} disponibles</p>
             </div>
             <div>
               <label className={labelCls}>sBF reçus</label>
-              <div className="px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm font-mono text-emerald-600 font-semibold">
+              <div className="px-3 py-2.5 rounded-xl border border-[#E8ECF1] bg-[#FAFBFC] text-sm font-mono text-[#059669] font-semibold">
                 {mintAmount} sBF
               </div>
             </div>
             <button
               onClick={handleMintSynthetic}
               disabled={minting || mintAmount <= 0 || mintAmount > clientAvailable || !profile?.wallet_address}
-              className="py-2.5 rounded-xl text-sm font-medium transition-colors bg-navy text-white hover:bg-navy-light disabled:opacity-50 disabled:cursor-not-allowed"
+              className="py-2.5 rounded-xl text-sm font-medium transition-colors bg-[#0D0D12] text-white hover:bg-[#1A1A2E] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {minting ? "Transaction..." : `Lock ${mintAmount} BF → ${mintAmount} sBF`}
             </button>
@@ -1685,71 +1685,71 @@ function CollateralClients({ toast, clients }) {
 
       {/* Transaction result */}
       {txResult && (
-        <div className={`rounded-xl p-4 border ${txResult.type === "mint" ? "bg-emerald-50 border-emerald-200" : "bg-blue-50 border-blue-200"}`}>
+        <div className={`rounded-xl p-4 border ${txResult.type === "mint" ? "bg-[#ECFDF5] border-[#E8ECF1]" : "bg-[#EEF2FF] border-[#E8ECF1]"}`}>
           <p className="text-sm font-medium mb-1">{txResult.type === "mint" ? "Synthetic tokens mintés" : "Security tokens déverrouillés"}</p>
           <p className="text-xs font-mono break-all">Tx: {txResult.txHash}</p>
-          <a href={txResult.explorerUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-navy underline mt-1 inline-block">
+          <a href={txResult.explorerUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-[#4F7DF3] underline mt-1 inline-block">
             Voir sur Cardanoscan
           </a>
         </div>
       )}
 
       {/* Positions table */}
-      <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-navy">
+      <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#E8ECF1] flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-[#0D0D12]">
             Positions vault {selectedClient ? `— ${selectedClient.full_name}` : "— Tous les clients"}
           </h3>
           {selectedClient && (
-            <button onClick={() => setSelectedClient(null)} className="text-xs text-gray-400 hover:text-navy transition-colors">
+            <button onClick={() => setSelectedClient(null)} className="text-xs text-[#9AA4B2] hover:text-[#0D0D12] transition-colors">
               Voir tous les clients
             </button>
           )}
         </div>
         {allLockedPositions.length === 0 ? (
           <div className="p-8 text-center">
-            <p className="text-sm text-gray-400">Aucune position active</p>
-            <p className="text-xs text-gray-300 mt-1">Sélectionnez un client et mintez des sBF</p>
+            <p className="text-sm text-[#9AA4B2]">Aucune position active</p>
+            <p className="text-xs text-[#5F6B7A] mt-1">Sélectionnez un client et mintez des sBF</p>
           </div>
         ) : (
           <table className="w-full text-sm text-left">
             <thead>
-              <tr className="border-b border-gray-100">
-                {!selectedClient && <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Client</th>}
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Vault</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">BF lockés</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">sBF mintés</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Tx</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold">Date</th>
-                <th className="px-5 py-3 text-xs uppercase tracking-wider text-gray-400 font-semibold text-right">Action</th>
+              <tr className="border-b border-[#E8ECF1] bg-[#F7F8FA]">
+                {!selectedClient && <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Client</th>}
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Vault</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium text-right">BF lockés</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium text-right">sBF mintés</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Tx</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium">Date</th>
+                <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium text-right">Action</th>
               </tr>
             </thead>
             <tbody>
               {allLockedPositions.map((p) => {
                 const client = (clients || []).find((c) => c.id === p.user_id);
                 return (
-                  <tr key={p.id} className="border-b border-gray-50 hover:bg-cream/50 transition-colors">
+                  <tr key={p.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC] transition-colors">
                     {!selectedClient && (
                       <td className="px-5 py-3">
-                        <button onClick={() => setSelectedClient(clientsWithStats.find((c) => c.id === p.user_id))} className="text-xs font-medium text-navy hover:underline">
+                        <button onClick={() => setSelectedClient(clientsWithStats.find((c) => c.id === p.user_id))} className="text-xs font-medium text-[#0D0D12] hover:underline">
                           {client?.full_name || "—"}
                         </button>
                       </td>
                     )}
-                    <td className="px-5 py-3 font-mono text-xs text-gray-500">{p.vault_address?.slice(0, 16)}...</td>
-                    <td className="px-5 py-3 text-right font-mono font-medium text-navy">{p.security_token_count}</td>
-                    <td className="px-5 py-3 text-right font-mono text-emerald-600">{p.synthetic_token_count}</td>
+                    <td className="px-5 py-3 font-mono text-xs text-[#9AA4B2]">{p.vault_address?.slice(0, 16)}...</td>
+                    <td className="px-5 py-3 text-right font-mono font-medium text-[#0D0D12]">{p.security_token_count}</td>
+                    <td className="px-5 py-3 text-right font-mono text-[#059669]">{p.synthetic_token_count}</td>
                     <td className="px-5 py-3">
-                      <a href={`https://preprod.cardanoscan.io/transaction/${p.lock_tx_hash}`} target="_blank" rel="noopener noreferrer" className="text-xs text-navy underline font-mono">
+                      <a href={`https://preprod.cardanoscan.io/transaction/${p.lock_tx_hash}`} target="_blank" rel="noopener noreferrer" className="text-xs text-[#4F7DF3] underline font-mono">
                         {p.lock_tx_hash?.slice(0, 10)}...
                       </a>
                     </td>
-                    <td className="px-5 py-3 text-gray-500 text-xs">{p.created_at?.split("T")[0]}</td>
+                    <td className="px-5 py-3 text-[#9AA4B2] text-xs">{p.created_at?.split("T")[0]}</td>
                     <td className="px-5 py-3 text-right">
                       <button
                         onClick={() => handleBurnSynthetic(p)}
                         disabled={burning === p.id}
-                        className="px-3 py-1.5 text-xs font-medium bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                        className="px-3 py-1.5 text-xs font-medium bg-[#FEF2F2] text-[#DC2626] rounded-lg hover:bg-[#FEF2F2] transition-colors disabled:opacity-50"
                       >
                         {burning === p.id ? "Burn..." : "Burn sBF"}
                       </button>
@@ -1764,55 +1764,55 @@ function CollateralClients({ toast, clients }) {
 
       {/* DeFi Pools */}
       {totalAllSBF > 0 && (
-        <div className="bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
+          <div className="px-6 py-4 border-b border-[#E8ECF1] flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-navy">DeFi Pools</h3>
-              <p className="text-xs text-gray-400 mt-0.5">Déployez les sBF de vos clients sur les protocoles DeFi Cardano</p>
+              <h3 className="text-sm font-semibold text-[#0D0D12]">DeFi Pools</h3>
+              <p className="text-xs text-[#9AA4B2] mt-0.5">Déployez les sBF de vos clients sur les protocoles DeFi Cardano</p>
             </div>
-            <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">{totalAllSBF.toLocaleString("fr-FR")} sBF</span>
+            <span className="text-xs font-medium text-[#059669] bg-[#ECFDF5] px-3 py-1 rounded-full">{totalAllSBF.toLocaleString("fr-FR")} sBF</span>
           </div>
           <div className="grid grid-cols-3 gap-4 p-5">
-            <a href="https://app.minswap.org/swap" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-gray-100 rounded-xl hover:border-blue-200 hover:bg-blue-50/30 transition-all">
-              <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-blue-600 font-bold text-sm">M</span></div>
+            <a href="https://app.minswap.org/swap" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-[#E8ECF1] rounded-xl hover:border-[#E8ECF1] hover:bg-[#EEF2FF] transition-all">
+              <div className="w-9 h-9 bg-[#EEF2FF] rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-[#4F7DF3] font-bold text-sm">M</span></div>
               <div>
-                <p className="text-sm font-semibold text-navy">Minswap</p>
-                <p className="text-[10px] text-gray-400">DEX — Swap & Liquidity</p>
+                <p className="text-sm font-semibold text-[#0D0D12]">Minswap</p>
+                <p className="text-[10px] text-[#9AA4B2]">DEX — Swap & Liquidity</p>
               </div>
             </a>
-            <a href="https://app.sundae.fi/swap" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-gray-100 rounded-xl hover:border-purple-200 hover:bg-purple-50/30 transition-all">
-              <div className="w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-purple-600 font-bold text-sm">S</span></div>
+            <a href="https://app.sundae.fi/swap" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-[#E8ECF1] rounded-xl hover:border-purple-500/20 hover:bg-purple-500/5 transition-all">
+              <div className="w-9 h-9 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-purple-400 font-bold text-sm">S</span></div>
               <div>
-                <p className="text-sm font-semibold text-navy">SundaeSwap</p>
-                <p className="text-[10px] text-gray-400">DEX — Yield Farming</p>
+                <p className="text-sm font-semibold text-[#0D0D12]">SundaeSwap</p>
+                <p className="text-[10px] text-[#9AA4B2]">DEX — Yield Farming</p>
               </div>
             </a>
-            <a href="https://app.liqwid.finance" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-gray-100 rounded-xl hover:border-cyan-200 hover:bg-cyan-50/30 transition-all">
-              <div className="w-9 h-9 bg-cyan-100 rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-cyan-600 font-bold text-sm">L</span></div>
+            <a href="https://app.liqwid.finance" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-[#E8ECF1] rounded-xl hover:border-cyan-500/20 hover:bg-cyan-500/5 transition-all">
+              <div className="w-9 h-9 bg-cyan-500/20 rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-cyan-400 font-bold text-sm">L</span></div>
               <div>
-                <p className="text-sm font-semibold text-navy">Liqwid Finance</p>
-                <p className="text-[10px] text-gray-400">Lending — Collateral</p>
+                <p className="text-sm font-semibold text-[#0D0D12]">Liqwid Finance</p>
+                <p className="text-[10px] text-[#9AA4B2]">Lending — Collateral</p>
               </div>
             </a>
-            <a href="https://app.lenfi.io" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-gray-100 rounded-xl hover:border-emerald-200 hover:bg-emerald-50/30 transition-all">
-              <div className="w-9 h-9 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-emerald-600 font-bold text-sm">LF</span></div>
+            <a href="https://app.lenfi.io" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-[#E8ECF1] rounded-xl hover:border-[#E8ECF1] hover:bg-[#ECFDF5]/30 transition-all">
+              <div className="w-9 h-9 bg-[#ECFDF5] rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-[#059669] font-bold text-sm">LF</span></div>
               <div>
-                <p className="text-sm font-semibold text-navy">Lenfi</p>
-                <p className="text-[10px] text-gray-400">Lending — Peer-to-Pool</p>
+                <p className="text-sm font-semibold text-[#0D0D12]">Lenfi</p>
+                <p className="text-[10px] text-[#9AA4B2]">Lending — Peer-to-Pool</p>
               </div>
             </a>
-            <a href="https://app.splash.trade" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-gray-100 rounded-xl hover:border-orange-200 hover:bg-orange-50/30 transition-all">
-              <div className="w-9 h-9 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-orange-600 font-bold text-sm">SP</span></div>
+            <a href="https://app.splash.trade" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-[#E8ECF1] rounded-xl hover:border-orange-500/20 hover:bg-orange-500/5 transition-all">
+              <div className="w-9 h-9 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-orange-400 font-bold text-sm">SP</span></div>
               <div>
-                <p className="text-sm font-semibold text-navy">Splash</p>
-                <p className="text-[10px] text-gray-400">DEX — Concentrated Liquidity</p>
+                <p className="text-sm font-semibold text-[#0D0D12]">Splash</p>
+                <p className="text-[10px] text-[#9AA4B2]">DEX — Concentrated Liquidity</p>
               </div>
             </a>
-            <a href="https://www.jpg.store" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-gray-100 rounded-xl hover:border-pink-200 hover:bg-pink-50/30 transition-all">
-              <div className="w-9 h-9 bg-pink-100 rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-pink-600 font-bold text-sm">JPG</span></div>
+            <a href="https://www.jpg.store" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 p-4 border border-[#E8ECF1] rounded-xl hover:border-pink-500/20 hover:bg-pink-500/5 transition-all">
+              <div className="w-9 h-9 bg-pink-500/20 rounded-lg flex items-center justify-center flex-shrink-0"><span className="text-pink-400 font-bold text-sm">JPG</span></div>
               <div>
-                <p className="text-sm font-semibold text-navy">JPG Store</p>
-                <p className="text-[10px] text-gray-400">Marketplace OTC</p>
+                <p className="text-sm font-semibold text-[#0D0D12]">JPG Store</p>
+                <p className="text-[10px] text-[#9AA4B2]">Marketplace OTC</p>
               </div>
             </a>
           </div>
@@ -1860,15 +1860,15 @@ export default function PortailSwissLife({ toast }) {
   return (
     <div>
       {/* Top-level navigation tabs */}
-      <div className="flex border-b border-gray-100 mb-8">
+      <div className="flex border-b border-[#E8ECF1] mb-8">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => { setActiveTab(tab.id); if (tab.id === "fonds") setFundView("catalog"); }}
-            className={`px-5 py-3 text-sm font-medium transition-all relative ${activeTab === tab.id ? "text-navy" : "text-gray-400 hover:text-gray-600"}`}
+            className={`px-5 py-3 text-sm font-medium transition-all relative ${activeTab === tab.id ? "text-[#0D0D12]" : "text-[#9AA4B2] hover:text-[#5F6B7A]"}`}
           >
             {tab.label}
-            {activeTab === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-navy rounded-full" />}
+            {activeTab === tab.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0D0D12] rounded-full" />}
           </button>
         ))}
       </div>
@@ -1882,7 +1882,7 @@ export default function PortailSwissLife({ toast }) {
           {fundSlug && <FundDetail fundSlug={fundSlug} onBack={handleBackToFunds} onInvest={handleInvest} />}
           {fundView === "souscription" && (
             <div>
-              <button onClick={handleBackToFunds} className="mb-4 text-sm text-gray-400 hover:text-navy transition-colors">← Retour au catalogue</button>
+              <button onClick={handleBackToFunds} className="mb-4 text-sm text-[#9AA4B2] hover:text-[#0D0D12] transition-colors">← Retour au catalogue</button>
               <SouscriptionIntermediee toast={toast} fund={selectedFund} clients={clients} />
             </div>
           )}
