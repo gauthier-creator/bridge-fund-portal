@@ -4,13 +4,17 @@ import { useState, useCallback, useRef, useEffect } from "react";
 export function ToastContainer({ toasts, onDismiss }) {
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
-      {toasts.map((t) => (
+      {toasts.map((t, i) => (
         <div
           key={t.id}
-          className="animate-slide-in flex items-center gap-3 bg-[#0D0D12] text-white pl-4 pr-5 py-3.5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] max-w-sm text-[13px] font-medium cursor-pointer"
+          className="flex items-center gap-3 bg-[#0D0D12] text-white pl-4 pr-5 py-3.5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] max-w-sm text-[13px] font-medium cursor-pointer"
+          style={{
+            animation: `slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards`,
+            animationDelay: `${i * 50}ms`,
+          }}
           onClick={() => onDismiss(t.id)}
         >
-          <div className="w-5 h-5 rounded-full bg-[#00C48C] flex items-center justify-center flex-shrink-0">
+          <div className="w-5 h-5 rounded-full bg-[#00C48C] flex items-center justify-center flex-shrink-0 animate-badge-pop">
             <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
           </div>
           {t.message}
@@ -31,15 +35,74 @@ export function useToast() {
   return { toasts, toast, dismiss };
 }
 
-/* ─── KPI Card (Ondo-style: border card, clean metrics) ─── */
-export function KPICard({ label, value, sub, trend }) {
+/* ─── Animated Number Counter Hook ─── */
+export function useCountUp(end, duration = 1200, decimals = 0) {
+  const [value, setValue] = useState(0);
+  const prevRef = useRef(0);
+
+  useEffect(() => {
+    const startVal = prevRef.current;
+    const endVal = typeof end === "number" ? end : parseFloat(end) || 0;
+    if (startVal === endVal) return;
+
+    const startTime = performance.now();
+    const animate = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease-out expo
+      const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      const current = startVal + (endVal - startVal) * eased;
+      setValue(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        prevRef.current = endVal;
+      }
+    };
+    requestAnimationFrame(animate);
+  }, [end, duration]);
+
+  return decimals > 0 ? value.toFixed(decimals) : Math.round(value);
+}
+
+/* ─── Intersection Observer Hook for reveal animations ─── */
+export function useInView(options = {}) {
+  const ref = useRef(null);
+  const [isInView, setIsInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setIsInView(true); observer.unobserve(el); } },
+      { threshold: 0.15, ...options }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return [ref, isInView];
+}
+
+/* ─── KPI Card with animated entrance + optional counter ─── */
+export function KPICard({ label, value, sub, trend, delay = 0, animate = false }) {
+  const displayValue = value;
+
   return (
-    <div className="bg-white border border-[#E8ECF1] rounded-2xl p-5 hover:border-[#D1D5DB] transition-all duration-200 group">
+    <div
+      className="bg-white border border-[#E8ECF1] rounded-2xl p-5 group card-elevated"
+      style={delay > 0 ? { animationDelay: `${delay}ms` } : undefined}
+    >
       <p className="text-[13px] text-[#9AA4B2] mb-2.5 font-medium">{label}</p>
       <div className="flex items-baseline gap-2.5">
-        <p className="text-[22px] font-semibold text-[#0D0D12] tracking-[-0.02em] tabular-nums">{value}</p>
+        <p className="text-[22px] font-semibold text-[#0D0D12] tracking-[-0.02em] tabular-nums count-value">
+          {displayValue}
+        </p>
         {trend && (
-          <span className={`text-xs font-medium px-1.5 py-0.5 rounded-md ${trend > 0 ? "bg-[#ECFDF5] text-[#059669]" : "bg-[#FEF2F2] text-[#DC2626]"}`}>
+          <span className={`text-xs font-medium px-1.5 py-0.5 rounded-md animate-badge-pop ${trend > 0 ? "bg-[#ECFDF5] text-[#059669]" : "bg-[#FEF2F2] text-[#DC2626]"}`}
+            style={{ animationDelay: `${delay + 300}ms` }}
+          >
             {trend > 0 ? "+" : ""}{trend}%
           </span>
         )}
@@ -49,7 +112,7 @@ export function KPICard({ label, value, sub, trend }) {
   );
 }
 
-/* ─── Badge (Clean status pills) ─── */
+/* ─── Badge with subtle entrance ─── */
 export function Badge({ status }) {
   const styles = {
     "Validé": "bg-[#ECFDF5] text-[#059669]",
@@ -65,7 +128,7 @@ export function Badge({ status }) {
     "Racheté": "bg-[#F7F8FA] text-[#5F6B7A]",
   };
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold tracking-wide ${styles[status] || "bg-[#F7F8FA] text-[#5F6B7A]"}`}>
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold tracking-wide transition-all duration-200 ${styles[status] || "bg-[#F7F8FA] text-[#5F6B7A]"}`}>
       {status}
     </span>
   );
@@ -79,7 +142,7 @@ export function fmtFull(n) {
   return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", minimumFractionDigits: 2 }).format(n);
 }
 
-/* ─── Form helpers (Ondo-style clean inputs) ─── */
+/* ─── Form helpers ─── */
 export const inputCls = "w-full bg-white border border-[#E8ECF1] rounded-xl px-3.5 py-2.5 text-sm text-[#0D0D12] placeholder-[#C4CAD4] focus:outline-none focus:border-[#4F7DF3] focus:ring-2 focus:ring-[#4F7DF3]/10 transition-all duration-150";
 export const selectCls = inputCls + " appearance-none";
 export const labelCls = "block text-[13px] text-[#5F6B7A] mb-1.5 font-medium";
@@ -87,7 +150,7 @@ export const labelCls = "block text-[13px] text-[#5F6B7A] mb-1.5 font-medium";
 export function Checkbox({ checked, onChange, children, required }) {
   return (
     <label className="flex items-start gap-2.5 cursor-pointer group" onClick={onChange}>
-      <div className={`w-[18px] h-[18px] mt-0.5 rounded-md border-[1.5px] flex items-center justify-center flex-shrink-0 transition-all duration-150 ${checked ? "bg-[#0D0D12] border-[#0D0D12]" : "border-[#D1D5DB] group-hover:border-[#9AA4B2]"}`}>
+      <div className={`w-[18px] h-[18px] mt-0.5 rounded-md border-[1.5px] flex items-center justify-center flex-shrink-0 transition-all duration-200 ${checked ? "bg-[#0D0D12] border-[#0D0D12] scale-105" : "border-[#D1D5DB] group-hover:border-[#9AA4B2]"}`}>
         {checked && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
       </div>
       <span className="text-[13px] text-[#5F6B7A] leading-relaxed select-none">{children}{required && <span className="text-red-500 ml-0.5">*</span>}</span>
@@ -104,14 +167,14 @@ export function ComplianceAlert({ type, children }) {
   };
   const icons = { warning: "⚠", info: "ℹ", success: "✓", error: "✗" };
   return (
-    <div className={`flex items-start gap-3 p-4 rounded-xl border text-[13px] leading-relaxed ${styles[type]}`}>
+    <div className={`flex items-start gap-3 p-4 rounded-xl border text-[13px] leading-relaxed animate-fade-in ${styles[type]}`}>
       <span className="font-bold text-sm mt-[-1px] opacity-70">{icons[type]}</span>
       <div>{children}</div>
     </div>
   );
 }
 
-/* ─── Decorative illustration components ─── */
+/* ─── Decorative Components ─── */
 export function GeometricDecoration({ className = "" }) {
   return (
     <svg className={`absolute pointer-events-none opacity-[0.03] ${className}`} width="400" height="400" viewBox="0 0 400 400" fill="none">
@@ -133,6 +196,25 @@ export function GridPattern({ className = "" }) {
         </pattern>
       </defs>
       <rect width="100%" height="100%" fill="url(#grid-pattern)" />
+    </svg>
+  );
+}
+
+/* ─── Animated Progress Ring (for dashboards) ─── */
+export function ProgressRing({ value = 0, size = 56, stroke = 4, color = "#0D0D12" }) {
+  const radius = (size - stroke) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (value / 100) * circumference;
+
+  return (
+    <svg width={size} height={size} className="transform -rotate-90">
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#F0F2F5" strokeWidth={stroke} />
+      <circle
+        cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={stroke}
+        strokeDasharray={circumference} strokeDashoffset={offset}
+        strokeLinecap="round"
+        style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1)" }}
+      />
     </svg>
   );
 }
@@ -180,7 +262,7 @@ export function SignaturePad({ onSignature }) {
       </div>
       <div className="flex justify-between mt-2.5">
         <button onClick={clear} className="text-[13px] text-[#9AA4B2] hover:text-[#DC2626] transition-colors">Effacer</button>
-        <button onClick={confirm} disabled={!hasContent} className={`text-[13px] font-semibold px-4 py-1.5 rounded-xl transition-all duration-150 ${hasContent ? "bg-[#0D0D12] text-white hover:bg-[#1A1A2E]" : "bg-[#F0F2F5] text-[#C4CAD4] cursor-not-allowed"}`}>Confirmer la signature</button>
+        <button onClick={confirm} disabled={!hasContent} className={`text-[13px] font-semibold px-4 py-1.5 rounded-xl transition-all duration-200 btn-lift ${hasContent ? "bg-[#0D0D12] text-white hover:bg-[#1A1A2E]" : "bg-[#F0F2F5] text-[#C4CAD4] cursor-not-allowed"}`}>Confirmer la signature</button>
       </div>
     </div>
   );

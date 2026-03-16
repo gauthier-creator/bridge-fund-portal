@@ -83,9 +83,31 @@ body {
 *:hover > ::-webkit-scrollbar-thumb,
 *:hover::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.06); }
 
-/* ─── Animations ─── */
+/* ════════════════════════════════════════════════════
+   ANIMATION SYSTEM — Professional Fintech Grade
+   ════════════════════════════════════════════════════ */
+
+/* ─── Core Easing Functions ─── */
+:root {
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* ─── Entrance Animations ─── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -94,14 +116,40 @@ body {
   to { opacity: 1; transform: translateX(0); }
 }
 
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(40px) scale(0.97); filter: blur(4px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes revealScale {
+  from { opacity: 0; transform: scale(0.85); filter: blur(6px); }
+  to { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+
+/* ─── Micro-interaction Animations ─── */
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(2.2); opacity: 0; }
 }
 
 @keyframes shimmer {
@@ -114,62 +162,297 @@ body {
   50% { transform: translateY(-6px); }
 }
 
-@keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.05); opacity: 1; }
 }
 
+@keyframes orbit {
+  0% { transform: rotate(0deg) translateX(80px) rotate(0deg); }
+  100% { transform: rotate(360deg) translateX(80px) rotate(-360deg); }
+}
+
+@keyframes draw-line {
+  from { stroke-dashoffset: 100; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes progress-fill {
+  from { width: 0; }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 196, 140, 0); }
+  50% { box-shadow: 0 0 20px 4px rgba(0, 196, 140, 0.15); }
+}
+
+@keyframes card-lift {
+  from { opacity: 0; transform: translateY(32px) rotateX(4deg); }
+  to { opacity: 1; transform: translateY(0) rotateX(0); }
+}
+
+@keyframes hero-text {
+  from { opacity: 0; transform: translateY(32px); letter-spacing: 0.05em; }
+  to { opacity: 1; transform: translateY(0); letter-spacing: -0.02em; }
+}
+
+@keyframes badge-pop {
+  0% { opacity: 0; transform: scale(0.6); }
+  60% { transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes table-row {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes border-trace {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+/* ─── Animation Classes ─── */
 .animate-fade-in {
-  animation: fadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.5s var(--ease-out-expo) forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.65s var(--ease-out-expo) forwards;
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown 0.5s var(--ease-out-expo) forwards;
 }
 
 .animate-slide-in {
-  animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideIn 0.4s var(--ease-out-expo) forwards;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.5s var(--ease-out-expo) forwards;
 }
 
 .animate-slide-up {
-  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideUp 0.5s var(--ease-out-expo) forwards;
 }
 
 .animate-scale-in {
-  animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: scaleIn 0.35s var(--ease-out-expo) forwards;
+}
+
+.animate-reveal {
+  animation: revealUp 0.7s var(--ease-out-expo) forwards;
+}
+
+.animate-reveal-scale {
+  animation: revealScale 0.6s var(--ease-out-expo) forwards;
+}
+
+.animate-card-lift {
+  animation: card-lift 0.6s var(--ease-out-expo) forwards;
+}
+
+.animate-hero-text {
+  animation: hero-text 0.8s var(--ease-out-quint) forwards;
+}
+
+.animate-badge-pop {
+  animation: badge-pop 0.4s var(--ease-spring) forwards;
+}
+
+.animate-table-row {
+  animation: table-row 0.35s var(--ease-out-expo) forwards;
+}
+
+.animate-progress {
+  animation: progress-fill 1.2s var(--ease-out-expo) forwards;
+}
+
+.animate-glow {
+  animation: glow 3s ease-in-out infinite;
+}
+
+.animate-breathe {
+  animation: breathe 4s ease-in-out infinite;
 }
 
 .pulse-dot {
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
-/* ─── Stagger children ─── */
+.pulse-ring {
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+/* ─── Stagger Systems ─── */
+
+/* Standard stagger — cascade reveal for grids */
 .stagger-children > * {
   opacity: 0;
-  animation: fadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeInUp 0.55s var(--ease-out-expo) forwards;
 }
 .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
-.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
-.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
-.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
-.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
-.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
-.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
-.stagger-children > *:nth-child(8) { animation-delay: 420ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 70ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 140ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 210ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 280ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 350ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 420ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 490ms; }
+.stagger-children > *:nth-child(9) { animation-delay: 560ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 630ms; }
 
-/* ─── Card system (Ondo-style: border-based, clean) ─── */
+/* Fast stagger — for KPI rows */
+.stagger-fast > * {
+  opacity: 0;
+  animation: card-lift 0.5s var(--ease-out-expo) forwards;
+}
+.stagger-fast > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-fast > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-fast > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-fast > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-fast > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-fast > *:nth-child(6) { animation-delay: 300ms; }
+
+/* Slow cinematic stagger — for hero sections */
+.stagger-hero > * {
+  opacity: 0;
+  animation: revealUp 0.8s var(--ease-out-quint) forwards;
+}
+.stagger-hero > *:nth-child(1) { animation-delay: 100ms; }
+.stagger-hero > *:nth-child(2) { animation-delay: 250ms; }
+.stagger-hero > *:nth-child(3) { animation-delay: 400ms; }
+.stagger-hero > *:nth-child(4) { animation-delay: 550ms; }
+.stagger-hero > *:nth-child(5) { animation-delay: 700ms; }
+
+/* Table rows stagger */
+.stagger-rows > tr {
+  opacity: 0;
+  animation: table-row 0.35s var(--ease-out-expo) forwards;
+}
+.stagger-rows > tr:nth-child(1) { animation-delay: 50ms; }
+.stagger-rows > tr:nth-child(2) { animation-delay: 100ms; }
+.stagger-rows > tr:nth-child(3) { animation-delay: 150ms; }
+.stagger-rows > tr:nth-child(4) { animation-delay: 200ms; }
+.stagger-rows > tr:nth-child(5) { animation-delay: 250ms; }
+.stagger-rows > tr:nth-child(6) { animation-delay: 300ms; }
+.stagger-rows > tr:nth-child(7) { animation-delay: 350ms; }
+.stagger-rows > tr:nth-child(8) { animation-delay: 400ms; }
+.stagger-rows > tr:nth-child(9) { animation-delay: 450ms; }
+.stagger-rows > tr:nth-child(10) { animation-delay: 500ms; }
+
+/* ─── Card System (Ondo-style) ─── */
 .card-elevated {
   background: #FFFFFF;
   border: 1px solid #E8ECF1;
   border-radius: 16px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s var(--ease-out-expo);
 }
 
 .card-elevated:hover {
   border-color: #D1D5DB;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
 }
 
 .card-flat {
   background: #F7F8FA;
   border: 1px solid #F0F2F5;
   border-radius: 16px;
+}
+
+/* ─── Interactive Card — premium hover ─── */
+.card-interactive {
+  background: #FFFFFF;
+  border: 1px solid #E8ECF1;
+  border-radius: 16px;
+  transition: all 0.3s var(--ease-out-expo);
+  position: relative;
+  overflow: hidden;
+}
+
+.card-interactive::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(79, 125, 243, 0.03) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.card-interactive:hover {
+  border-color: #D1D5DB;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  transform: translateY(-3px);
+}
+
+.card-interactive:hover::before {
+  opacity: 1;
+}
+
+/* ─── Shimmer Loading Skeleton ─── */
+.skeleton {
+  background: linear-gradient(90deg, #F0F2F5 25%, #E8ECF1 50%, #F0F2F5 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+.skeleton-text {
+  height: 14px;
+  margin-bottom: 8px;
+}
+
+.skeleton-title {
+  height: 24px;
+  width: 60%;
+  margin-bottom: 12px;
+}
+
+.skeleton-card {
+  height: 120px;
+  border-radius: 16px;
+}
+
+/* ─── Number Counter Effect ─── */
+.count-value {
+  display: inline-block;
+  animation: count-up 0.6s var(--ease-out-expo) forwards;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Live Indicator ─── */
+.live-indicator {
+  position: relative;
+}
+
+.live-indicator::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse-ring 2s ease-out infinite;
+  background: inherit;
+}
+
+/* ─── Smooth page transitions ─── */
+.page-enter {
+  animation: revealUp 0.6s var(--ease-out-expo) forwards;
+}
+
+.page-exit {
+  animation: fadeIn 0.3s ease reverse forwards;
 }
 
 /* ─── Tabular numbers for financial data ─── */
@@ -221,4 +504,55 @@ input, select, textarea {
 .metric-positive {
   background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
   border: 1px solid rgba(0, 196, 140, 0.15);
+}
+
+/* ─── Hover lift for buttons ─── */
+.btn-lift {
+  transition: all 0.25s var(--ease-out-expo);
+}
+
+.btn-lift:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(13, 13, 18, 0.15);
+}
+
+.btn-lift:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* ─── Section reveal on scroll (JS-controlled) ─── */
+.reveal-section {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.7s var(--ease-out-expo);
+}
+
+.reveal-section.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── Smooth border trace for active elements ─── */
+.border-animated {
+  position: relative;
+}
+
+.border-animated::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #0D0D12;
+  border-radius: 1px;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s var(--ease-out-expo);
+}
+
+.border-animated.active::after,
+.border-animated:hover::after {
+  transform: scaleX(1);
 }
