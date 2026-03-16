@@ -11,29 +11,76 @@ import FundEditorComponent from "../components/FundEditor";
 const ROLE_LABELS = { investor: "Investisseur", intermediary: "Intermédiaire", aifm: "AIFM", admin: "Admin" };
 
 export default function PortailAdmin({ toast }) {
-  const { orders, collateralPositions } = useAppContext();
+  const { orders, collateralPositions, validateOrder, rejectOrder } = useAppContext();
   const [adminTab, setAdminTab] = useState("dashboard");
   const [docModal, setDocModal] = useState(null);
+  const [funds, setFunds] = useState([]);
+  const [selectedFundId, setSelectedFundId] = useState("all");
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [actionLoading, setActionLoading] = useState(null);
 
-  // Compute KPIs from real orders
-  const pendingOrders = orders.filter((o) => o.status === "pending");
-  const validatedOrders = orders.filter((o) => o.status === "validated");
-  const totalAUM = orders.filter((o) => o.status !== "rejected").reduce((s, o) => s + o.montant, 0);
+  // Load funds list
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from("funds").select("id, fund_name, slug, nav_per_share, cardano_policy_id").then(({ data }) => {
+      if (data?.length) setFunds(data);
+    });
+  }, []);
+
+  // Filter orders by selected fund
+  const filteredOrders = selectedFundId === "all" ? orders : orders.filter((o) => o.fundId === selectedFundId);
+  const selectedFundObj = funds.find((f) => f.id === selectedFundId);
+  const currentNAV = selectedFundObj?.nav_per_share || NAV_PER_PART;
+
+  // Compute KPIs from filtered orders
+  const pendingOrders = filteredOrders.filter((o) => o.status === "pending");
+  const validatedOrders = filteredOrders.filter((o) => o.status === "validated");
+  const rejectedOrders = filteredOrders.filter((o) => o.status === "rejected");
+  const totalAUM = filteredOrders.filter((o) => o.status !== "rejected").reduce((s, o) => s + o.montant, 0);
   const totalCollateral = collateralPositions.reduce((s, p) => s + p.tokens, 0);
 
-  // Share class distribution from orders
-  const class1Total = orders.filter((o) => o.shareClass === 1 && o.status !== "rejected").reduce((s, o) => s + o.montant, 0);
-  const class2Total = orders.filter((o) => o.shareClass === 2 && o.status !== "rejected").reduce((s, o) => s + o.montant, 0);
+  // Share class distribution from filtered orders
+  const class1Total = filteredOrders.filter((o) => o.shareClass === 1 && o.status !== "rejected").reduce((s, o) => s + o.montant, 0);
+  const class2Total = filteredOrders.filter((o) => o.shareClass === 2 && o.status !== "rejected").reduce((s, o) => s + o.montant, 0);
   const pieData = [
     { name: "Classe 1", value: class1Total },
     { name: "Classe 2", value: class2Total },
   ];
 
-  // Country distribution from orders
+  // Country distribution from filtered orders
   const countryData = {};
-  orders.filter((o) => o.status !== "rejected").forEach((o) => { if (o.pays) countryData[o.pays] = (countryData[o.pays] || 0) + o.montant; });
+  filteredOrders.filter((o) => o.status !== "rejected").forEach((o) => { if (o.pays) countryData[o.pays] = (countryData[o.pays] || 0) + o.montant; });
   const countryPie = Object.entries(countryData).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   const countryColors = ["#4F7DF3", "#7C3AED", "#059669", "#D97706", "#EC4899", "#DC2626"];
+
+  // Order actions
+  const handleValidate = async (orderId) => {
+    setActionLoading(orderId);
+    try {
+      await validateOrder(orderId);
+      toast("Ordre validé avec succès — tokens mintés");
+    } catch (err) {
+      toast("Erreur validation : " + err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectModal || !rejectReason) return;
+    setActionLoading(rejectModal);
+    try {
+      await rejectOrder(rejectModal, rejectReason);
+      toast("Ordre rejeté");
+      setRejectModal(null);
+      setRejectReason("");
+    } catch (err) {
+      toast("Erreur rejet : " + err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   return (
     <div className="animate-fade-in">
@@ -59,54 +106,75 @@ export default function PortailAdmin({ toast }) {
       {adminTab === "compliance" && <ComplianceManager toast={toast} />}
 
       {adminTab === "dashboard" && <>
+      {/* Fund selector bar */}
+      <div className="bg-white rounded-2xl border border-[#E8ECF1] p-4 mb-6 flex items-center gap-4">
+        <label className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] whitespace-nowrap">Fonds :</label>
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={() => setSelectedFundId("all")} className={`px-4 py-2 text-xs font-medium rounded-xl transition-all ${selectedFundId === "all" ? "bg-[#0D0D12] text-white" : "bg-[#F7F8FA] text-[#5F6B7A] hover:bg-[#F0F2F5] border border-[#E8ECF1]"}`}>
+            Tous les fonds
+            <span className="ml-1.5 text-[10px] opacity-70">{orders.length}</span>
+          </button>
+          {funds.map((f) => {
+            const count = orders.filter((o) => o.fundId === f.id).length;
+            return (
+              <button key={f.id} onClick={() => setSelectedFundId(f.id)} className={`px-4 py-2 text-xs font-medium rounded-xl transition-all ${selectedFundId === f.id ? "bg-[#0D0D12] text-white" : "bg-[#F7F8FA] text-[#5F6B7A] hover:bg-[#F0F2F5] border border-[#E8ECF1]"}`}>
+                {f.fund_name}
+                <span className="ml-1.5 text-[10px] opacity-70">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Overview KPIs */}
       <div className="grid grid-cols-5 gap-4 mb-8">
-        <KPICard label="AUM Total" value={fmt(totalAUM)} sub="Bridge Fund SCSp" />
-        <KPICard label="Souscriptions" value={orders.length} sub={`${validatedOrders.length} validées`} />
-        <KPICard label="NAV / part" value={fmtFull(NAV_PER_PART)} sub="Bridge Fund SCSp" />
+        <KPICard label="AUM Total" value={fmt(totalAUM)} sub={selectedFundId === "all" ? "Tous les fonds" : selectedFundObj?.fund_name || ""} />
+        <KPICard label="Souscriptions" value={filteredOrders.length} sub={`${validatedOrders.length} validées · ${rejectedOrders.length} rejetées`} />
+        <KPICard label="NAV / part" value={fmtFull(currentNAV)} sub={selectedFundId === "all" ? "Global" : selectedFundObj?.slug || ""} />
         <KPICard label="En attente" value={pendingOrders.length} sub={pendingOrders.length > 0 ? fmt(pendingOrders.reduce((s, o) => s + o.montant, 0)) : "—"} />
         <KPICard label="Collatéral total" value={totalCollateral + " BF"} sub={collateralPositions.length + " positions"} />
       </div>
 
       {/* Orders status */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2 h-2 rounded-full bg-amber-500" />
-            <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Ordres en attente</p>
+            <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">En attente</p>
           </div>
           <p className="text-3xl font-semibold text-[#0D0D12]">{pendingOrders.length}</p>
           {pendingOrders.length > 0 && (
-            <p className="text-xs text-amber-600 mt-2">
-              {fmt(pendingOrders.reduce((s, o) => s + o.montant, 0))} en attente de validation
-            </p>
+            <p className="text-xs text-amber-600 mt-2">{fmt(pendingOrders.reduce((s, o) => s + o.montant, 0))}</p>
           )}
         </div>
         <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2 h-2 rounded-full bg-[#00C48C]" />
-            <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Ordres validés</p>
+            <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Validés</p>
           </div>
           <p className="text-3xl font-semibold text-[#0D0D12]">{validatedOrders.length}</p>
-          <p className="text-xs text-[#059669] mt-2">
-            {fmt(validatedOrders.reduce((s, o) => s + o.montant, 0))} validés
-          </p>
+          <p className="text-xs text-[#059669] mt-2">{fmt(validatedOrders.reduce((s, o) => s + o.montant, 0))}</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="w-2 h-2 rounded-full bg-[#DC2626]" />
+            <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Rejetés</p>
+          </div>
+          <p className="text-3xl font-semibold text-[#0D0D12]">{rejectedOrders.length}</p>
+          <p className="text-xs text-[#DC2626] mt-2">{fmt(rejectedOrders.reduce((s, o) => s + o.montant, 0))}</p>
         </div>
         <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
           <div className="flex items-center gap-2 mb-3">
             <span className="w-2 h-2 rounded-full bg-[#4F7DF3]" />
-            <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Total ordres</p>
+            <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Total</p>
           </div>
-          <p className="text-3xl font-semibold text-[#0D0D12]">{orders.length}</p>
-          <p className="text-xs text-[#9AA4B2] mt-2">
-            {fmt(orders.reduce((s, o) => s + o.montant, 0))} total
-          </p>
+          <p className="text-3xl font-semibold text-[#0D0D12]">{filteredOrders.length}</p>
+          <p className="text-xs text-[#9AA4B2] mt-2">{fmt(filteredOrders.reduce((s, o) => s + o.montant, 0))}</p>
         </div>
       </div>
 
       {/* Charts row */}
       <div className="grid grid-cols-3 gap-4 mb-8">
-        {/* Share class distribution */}
         <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
           <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-4">Répartition Share Class</p>
           <div className="flex items-center gap-4">
@@ -122,8 +190,6 @@ export default function PortailAdmin({ toast }) {
             </div>
           </div>
         </div>
-
-        {/* Country distribution */}
         <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
           <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-4">Répartition géographique</p>
           <div className="flex items-center gap-4">
@@ -136,95 +202,141 @@ export default function PortailAdmin({ toast }) {
               {countryPie.map((c, i) => (
                 <div key={c.name} className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: countryColors[i % countryColors.length] }} />
-                  {c.name}
+                  {c.name} — {fmt(c.value)}
                 </div>
               ))}
+              {countryPie.length === 0 && <p className="text-[#9AA4B2]">Aucune donnée</p>}
             </div>
           </div>
         </div>
-
-        {/* Summary */}
         <div className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
-          <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-4">Résumé du fonds</p>
+          <p className="text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] mb-4">Résumé {selectedFundId !== "all" ? selectedFundObj?.fund_name : "global"}</p>
           <div className="space-y-3 text-sm">
-            <div className="flex justify-between"><span className="text-[#5F6B7A]">NAV / part</span><span className="font-medium text-[#0D0D12]">{fmtFull(NAV_PER_PART)}</span></div>
-            <div className="flex justify-between"><span className="text-[#5F6B7A]">Total souscriptions</span><span className="font-medium text-[#0D0D12]">{orders.length}</span></div>
+            <div className="flex justify-between"><span className="text-[#5F6B7A]">NAV / part</span><span className="font-medium text-[#0D0D12]">{fmtFull(currentNAV)}</span></div>
+            <div className="flex justify-between"><span className="text-[#5F6B7A]">Total souscriptions</span><span className="font-medium text-[#0D0D12]">{filteredOrders.length}</span></div>
             <div className="flex justify-between"><span className="text-[#5F6B7A]">Montant total</span><span className="font-medium text-[#0D0D12]">{fmt(totalAUM)}</span></div>
-            <div className="flex justify-between"><span className="text-[#5F6B7A]">Positions collatérales</span><span className="font-medium text-[#0D0D12]">{collateralPositions.length}</span></div>
+            <div className="flex justify-between"><span className="text-[#5F6B7A]">Parts émises</span><span className="font-medium text-[#0D0D12]">{Math.floor(totalAUM / currentNAV).toLocaleString("fr-FR")}</span></div>
+            {selectedFundObj?.cardano_policy_id && (
+              <div className="flex justify-between"><span className="text-[#5F6B7A]">Policy ID</span><span className="font-mono text-xs text-[#4F7DF3]">{selectedFundObj.cardano_policy_id.slice(0, 12)}...</span></div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Recent orders table */}
+      {/* Orders table with actions */}
       <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden mb-8">
-        <div className="px-6 py-4 border-b border-[#F0F2F5]">
-          <h3 className="text-sm font-semibold text-[#0D0D12]">Derniers ordres de souscription</h3>
+        <div className="px-6 py-4 border-b border-[#F0F2F5] flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-[#0D0D12]">Ordres de souscription</h3>
+            <p className="text-xs text-[#9AA4B2] mt-0.5">{selectedFundId === "all" ? "Tous les fonds" : selectedFundObj?.fund_name} — {filteredOrders.length} ordres</p>
+          </div>
+          {pendingOrders.length > 0 && (
+            <span className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-medium bg-amber-50 text-amber-700 ring-1 ring-amber-600/10">
+              {pendingOrders.length} en attente de traitement
+            </span>
+          )}
         </div>
         <table className="w-full text-sm text-left">
           <thead>
             <tr className="border-b border-[#F0F2F5] bg-[#F7F8FA]">
               <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Ref</th>
               <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Souscripteur</th>
+              {selectedFundId === "all" && <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Fonds</th>}
               <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Type</th>
+              <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Classe</th>
               <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] text-right">Montant</th>
               <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Statut</th>
               <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Docs</th>
               <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Date</th>
+              <th className="px-5 py-3 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {orders.map((o) => (
-              <tr key={o.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC] transition-colors">
-                <td className="px-5 py-3 font-mono text-xs text-[#0D0D12]">{o.id}</td>
-                <td className="px-5 py-3">
-                  <p className="font-medium text-[#0D0D12]">{o.lpName}</p>
-                  {o.intermediaire && <p className="text-xs text-[#4F7DF3]">via {o.intermediaire}</p>}
-                </td>
-                <td className="px-5 py-3">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ring-1 ${o.type === "direct" ? "ring-slate-600/10 bg-slate-50 text-slate-700" : "ring-[#4F7DF3]/10 bg-[#EEF2FF] text-[#4F7DF3]"}`}>
-                    {o.type === "direct" ? "Direct" : "Intermédié"}
-                  </span>
-                </td>
-                <td className="px-5 py-3 text-right font-medium text-[#0D0D12]">{fmt(o.montant)}</td>
-                <td className="px-5 py-3"><Badge status={o.status === "pending" ? "En attente" : o.status === "validated" ? "Approuvé" : "Rejeté"} /></td>
-                <td className="px-5 py-3">
-                  {o.documents && o.documents.length > 0 ? (
-                    <button onClick={() => setDocModal(o)} className="inline-flex items-center gap-1 text-xs text-[#059669] font-medium hover:text-[#4F7DF3] transition-colors">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                      {o.documents.length}
-                    </button>
-                  ) : (
-                    <span className="text-xs text-[#9AA4B2]">—</span>
+            {filteredOrders.length === 0 && (
+              <tr><td colSpan={10} className="px-5 py-8 text-center text-[#9AA4B2] text-xs">Aucun ordre pour ce fonds</td></tr>
+            )}
+            {filteredOrders.map((o) => {
+              const fundName = funds.find((f) => f.id === o.fundId)?.fund_name;
+              return (
+                <tr key={o.id} className="border-b border-[#F0F2F5] hover:bg-[#FAFBFC] transition-colors">
+                  <td className="px-5 py-3 font-mono text-xs text-[#0D0D12]">{o.id}</td>
+                  <td className="px-5 py-3">
+                    <p className="font-medium text-[#0D0D12]">{o.lpName}</p>
+                    {o.intermediaire && <p className="text-xs text-[#4F7DF3]">via {o.intermediaire}</p>}
+                  </td>
+                  {selectedFundId === "all" && (
+                    <td className="px-5 py-3 text-xs text-[#5F6B7A]">{fundName || "—"}</td>
                   )}
-                </td>
-                <td className="px-5 py-3 text-[#5F6B7A]">{o.date}</td>
-              </tr>
-            ))}
+                  <td className="px-5 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ring-1 ${o.type === "direct" ? "ring-[#E8ECF1] bg-[#F7F8FA] text-[#5F6B7A]" : "ring-[#4F7DF3]/10 bg-[#EEF2FF] text-[#4F7DF3]"}`}>
+                      {o.type === "direct" ? "Direct" : "Intermédié"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 text-xs text-[#0D0D12]">Classe {o.shareClass || "—"}</td>
+                  <td className="px-5 py-3 text-right font-medium text-[#0D0D12]">{fmt(o.montant)}</td>
+                  <td className="px-5 py-3"><Badge status={o.status === "pending" ? "En attente" : o.status === "validated" ? "Approuvé" : "Rejeté"} /></td>
+                  <td className="px-5 py-3">
+                    {o.documents && o.documents.length > 0 ? (
+                      <button onClick={() => setDocModal(o)} className="inline-flex items-center gap-1 text-xs text-[#059669] font-medium hover:text-[#4F7DF3] transition-colors">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        {o.documents.length}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-[#9AA4B2]">—</span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3 text-[#5F6B7A] text-xs">{o.date}</td>
+                  <td className="px-5 py-3 text-right">
+                    {o.status === "pending" ? (
+                      <div className="flex items-center gap-2 justify-end">
+                        <button onClick={() => handleValidate(o.id)} disabled={actionLoading === o.id} className="px-3 py-1.5 bg-[#059669] hover:bg-[#047857] text-white text-xs rounded-lg transition-colors disabled:opacity-50">
+                          {actionLoading === o.id ? "..." : "Valider"}
+                        </button>
+                        <button onClick={() => setRejectModal(o.id)} className="px-3 py-1.5 bg-white border border-[#FECACA] text-[#DC2626] text-xs rounded-lg hover:bg-[#FEF2F2] transition-colors">
+                          Rejeter
+                        </button>
+                      </div>
+                    ) : o.status === "validated" ? (
+                      <span className="text-xs text-[#059669]">✓ {o.validatedAt?.split("T")[0] || ""}</span>
+                    ) : (
+                      <span className="text-xs text-[#DC2626]">✕ Rejeté</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      {/* Capital calls + Collateral side by side */}
+      {/* Registry + Collateral side by side */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl border border-[#E8ECF1] p-6">
-          <h3 className="text-sm font-semibold text-[#0D0D12] mb-4">Registre des souscriptions</h3>
-          {orders.length === 0 ? (
-            <p className="text-sm text-[#9AA4B2] py-4 text-center">Aucune souscription enregistrée</p>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-[#0D0D12]">Registre des souscriptions</h3>
+            <span className="text-xs text-[#9AA4B2]">{validatedOrders.length} validées</span>
+          </div>
+          {filteredOrders.length === 0 ? (
+            <p className="text-sm text-[#9AA4B2] py-4 text-center">Aucune souscription</p>
           ) : (
             <table className="w-full text-sm text-left">
               <thead>
                 <tr className="border-b border-[#F0F2F5]">
                   <th className="pb-2 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Souscripteur</th>
+                  <th className="pb-2 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Classe</th>
                   <th className="pb-2 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] text-right">Montant</th>
+                  <th className="pb-2 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em] text-right">Parts</th>
                   <th className="pb-2 text-[12px] text-[#9AA4B2] font-medium uppercase tracking-[0.08em]">Statut</th>
                 </tr>
               </thead>
               <tbody>
-                {orders.map((o) => (
+                {filteredOrders.filter((o) => o.status !== "rejected").map((o) => (
                   <tr key={o.id} className="border-b border-[#F0F2F5]">
                     <td className="py-2 text-[#0D0D12] text-xs font-medium">{o.lpName}</td>
+                    <td className="py-2 text-xs text-[#5F6B7A]">C{o.shareClass || "—"}</td>
                     <td className="py-2 text-right font-medium text-xs text-[#0D0D12]">{fmt(o.montant)}</td>
-                    <td className="py-2"><Badge status={o.status === "pending" ? "En attente" : o.status === "validated" ? "Approuvé" : "Rejeté"} /></td>
+                    <td className="py-2 text-right font-mono text-xs text-[#0D0D12]">{Math.floor(o.montant / currentNAV)}</td>
+                    <td className="py-2"><Badge status={o.status === "pending" ? "En attente" : "Approuvé"} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -243,6 +355,9 @@ export default function PortailAdmin({ toast }) {
               </tr>
             </thead>
             <tbody>
+              {collateralPositions.length === 0 && (
+                <tr><td colSpan={3} className="py-4 text-center text-[#9AA4B2] text-xs">Aucune position</td></tr>
+              )}
               {collateralPositions.map((p) => (
                 <tr key={p.id} className="border-b border-[#F0F2F5]">
                   <td className="py-2 text-[#0D0D12] text-xs font-medium">{p.owner}</td>
@@ -255,6 +370,24 @@ export default function PortailAdmin({ toast }) {
         </div>
       </div>
       </>}
+
+      {/* Reject modal */}
+      {rejectModal && (
+        <div className="fixed inset-0 bg-[#0D0D12]/40 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => { setRejectModal(null); setRejectReason(""); }}>
+          <div className="bg-white rounded-2xl border border-[#E8ECF1] p-6 max-w-md w-full mx-4 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-[#0D0D12] mb-1">Rejeter l'ordre</h3>
+            <p className="text-xs text-[#9AA4B2] mb-4">Ordre #{rejectModal}</p>
+            <label className={labelCls}>Motif du rejet *</label>
+            <textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} rows={3} placeholder="KYC incomplet, documents manquants, montant incorrect..." className={inputCls + " w-full resize-none"} />
+            <div className="flex justify-end gap-3 mt-4">
+              <button onClick={() => { setRejectModal(null); setRejectReason(""); }} className="px-4 py-2 bg-white border border-[#E8ECF1] text-[#5F6B7A] text-sm rounded-xl hover:bg-[#F7F8FA] transition-colors">Annuler</button>
+              <button onClick={handleReject} disabled={!rejectReason || actionLoading} className="px-4 py-2 bg-[#DC2626] hover:bg-[#B91C1C] text-white text-sm rounded-xl transition-colors disabled:opacity-50">
+                {actionLoading ? "Rejet..." : "Confirmer le rejet"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Document viewer modal */}
       {docModal && (
