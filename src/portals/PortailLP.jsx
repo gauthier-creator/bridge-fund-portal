@@ -14,6 +14,7 @@ import FundCatalog from "../components/FundCatalog";
 import FundDetail from "../components/FundDetail";
 import InvestorDashboard from "../components/InvestorDashboard";
 import InvestorProfile from "../components/InvestorProfile";
+import CryptoCheckout from "../components/CryptoCheckout";
 
 /* ─── Sub-tab: Souscription directe ─── */
 function Souscription({ toast, fund }) {
@@ -52,7 +53,7 @@ function Souscription({ toast, fund }) {
   const [signatureData, setSignatureData] = useState(null);
   const [pdfUrl, setPdfUrl] = useState(null);
 
-  const steps = ["KYC / KYB", "Virement", "Signature", "Confirmation"];
+  const steps = ["KYC / KYB", formData.paymentMethod === "crypto" ? "Paiement crypto" : "Virement", "Signature", "Confirmation"];
   const allConsentsChecked = Object.values(consents).every(Boolean);
   const canSign = allConsentsChecked && signatureData;
   const set = (key, val) => setFormData((prev) => ({ ...prev, [key]: val }));
@@ -111,8 +112,13 @@ function Souscription({ toast, fund }) {
   };
 
   const handlePaymentSent = () => {
-    toast("Virement en cours de vérification — contrôle origine des fonds");
-    setTimeout(() => { setPaymentReceived(true); toast("Virement reçu et validé — €" + formData.montant.toLocaleString("fr-FR") + " · origine des fonds conforme"); }, 2500);
+    if (formData.paymentMethod === "crypto") {
+      toast("Transaction crypto en cours de confirmation on-chain...");
+      setTimeout(() => { setPaymentReceived(true); toast("Paiement crypto confirmé — " + fmt(formData.montant) + " · transaction vérifiée on-chain"); }, 2500);
+    } else {
+      toast("Virement en cours de vérification — contrôle origine des fonds");
+      setTimeout(() => { setPaymentReceived(true); toast("Virement reçu et validé — €" + formData.montant.toLocaleString("fr-FR") + " · origine des fonds conforme"); }, 2500);
+    }
   };
 
   const handleSign = async () => {
@@ -606,12 +612,14 @@ function Souscription({ toast, fund }) {
                 <div className="flex justify-between"><span className="text-[#5F6B7A]">Référence</span><span className="font-mono text-[#4F7DF3] text-xs">{subRef}</span></div>
               </div>
             ) : (
-              <div className="bg-[#F7F8FA] rounded-xl p-5 text-left text-sm space-y-2">
-                <p className="text-[11px] uppercase tracking-[0.08em] text-[#9AA4B2] font-semibold mb-3">Wallet de dépôt — Kraken Institutional (Travel Rule compliant)</p>
-                <div className="flex justify-between"><span className="text-[#5F6B7A]">Réseau</span><span className="text-[#0D0D12]">Cardano (ADA)</span></div>
-                <div className="flex justify-between"><span className="text-[#5F6B7A]">Adresse</span><span className="font-mono text-[#0D0D12] text-xs tabular-nums">addr1q92hn8f...4m7xk2</span></div>
-                <div className="flex justify-between"><span className="text-[#5F6B7A]">Memo</span><span className="font-mono text-[#4F7DF3] text-xs">BFUND-SUB</span></div>
-              </div>
+              <CryptoCheckout
+                montant={formData.montant}
+                subRef={subRef}
+                onPaymentComplete={() => {
+                  setPaymentReceived(true);
+                  toast("Paiement crypto confirmé — " + fmt(formData.montant) + " · transaction vérifiée on-chain");
+                }}
+              />
             )}
 
             {formData.paymentMethod === "crypto" && (
@@ -623,11 +631,13 @@ function Souscription({ toast, fund }) {
             <div className="mt-4">
               {paymentReceived ? (
                 <div className="flex items-center justify-center gap-2 text-[#059669] text-sm font-medium">
-                  <span className="w-2 h-2 rounded-full bg-[#00C48C]" /> Paiement reçu — origine des fonds vérifiée
+                  <span className="w-2 h-2 rounded-full bg-[#00C48C]" />
+                  {formData.paymentMethod === "crypto" ? "Paiement crypto confirmé — transaction vérifiée on-chain" : "Paiement reçu — origine des fonds vérifiée"}
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-2 text-amber-600 text-sm">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 pulse-dot" /> En attente de réception et vérification
+                  <span className="w-2 h-2 rounded-full bg-amber-500 pulse-dot" />
+                  {formData.paymentMethod === "crypto" ? "En attente de confirmation on-chain" : "En attente de réception et vérification"}
                 </div>
               )}
             </div>
@@ -635,7 +645,7 @@ function Souscription({ toast, fund }) {
             <div className="mt-6 flex justify-between">
               <button onClick={() => setStep(0)} className="text-sm text-[#5F6B7A] hover:text-[#0D0D12] transition-colors">← Retour</button>
               <div className="flex gap-3">
-                {!paymentReceived && <button onClick={handlePaymentSent} className="bg-[#EEF2FF] text-[#4F7DF3] px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-[#C7D2FE] transition-colors">Simuler réception</button>}
+                {!paymentReceived && <button onClick={handlePaymentSent} className="bg-[#EEF2FF] text-[#4F7DF3] px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-[#C7D2FE] transition-colors">{formData.paymentMethod === "crypto" ? "Simuler confirmation on-chain" : "Simuler réception"}</button>}
                 {paymentReceived && <button onClick={() => setStep(2)} className="bg-[#0D0D12] hover:bg-[#1A1A2E] text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors">Continuer →</button>}
               </div>
             </div>
@@ -765,6 +775,7 @@ function Souscription({ toast, fund }) {
               <div className="flex justify-between"><span className="text-[#5F6B7A]">Share Class</span><span className="text-[#0D0D12]">Classe {formData.shareClass}</span></div>
               <div className="flex justify-between"><span className="text-[#5F6B7A]">Parts estimées</span><span className="text-[#0D0D12] font-medium tabular-nums">{(formData.montant / NAV_PER_PART).toFixed(2)}</span></div>
               <div className="flex justify-between"><span className="text-[#5F6B7A]">NAV / part</span><span className="text-[#4F7DF3] font-medium tabular-nums">{fmtFull(NAV_PER_PART)}</span></div>
+              <div className="flex justify-between"><span className="text-[#5F6B7A]">Mode de paiement</span><span className={`font-medium ${formData.paymentMethod === "crypto" ? "text-[#4F7DF3]" : "text-[#0D0D12]"}`}>{formData.paymentMethod === "crypto" ? "Crypto (multi-chain)" : "Virement SEPA"}</span></div>
             </div>
 
             <div className="flex items-center gap-2 mb-4">
@@ -779,7 +790,7 @@ function Souscription({ toast, fund }) {
                 { label: "Screening AML/CFT", sub: "PEP, sanctions, médias négatifs — clear", done: true },
                 { label: "Éligibilité investisseur", sub: "MiFID II — profil adéquat", done: true },
                 { label: "Origine des fonds vérifiée", sub: "Conformité AMLD5", done: true },
-                { label: "Paiement reçu et réconcilié", sub: fmt(formData.montant) + " — compte ségrégué", done: true },
+                { label: "Paiement reçu et réconcilié", sub: fmt(formData.montant) + (formData.paymentMethod === "crypto" ? " — confirmation on-chain" : " — compte ségrégué"), done: true },
                 { label: "Bulletin signé (eIDAS)", sub: "Signature qualifiée horodatée", done: true },
                 { label: "Validation AIFM", sub: "Approbation du gestionnaire", done: false },
                 { label: "Émission des tokens", sub: "Mint on-chain Cardano · CIP-68", done: false },
