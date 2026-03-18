@@ -821,242 +821,290 @@ function Souscription({ toast, fund }) {
   );
 }
 
-/* ─── DeFi Pools Embed ─── */
-const DEFI_PROTOCOLS = [
-  {
-    id: "minswap",
-    name: "Minswap",
-    tag: "DEX",
-    color: "#4F7DF3",
-    bgColor: "#EEF2FF",
-    logo: "M",
-    desc: "Swap sBF/ADA, fournir de la liquidite. Principal DEX Cardano — TVL ~$50M.",
-    url: "https://app.minswap.org/swap",
-    embedUrl: "https://app.minswap.org/swap",
-    apy: "8-15%",
-    tvl: "$52.3M",
-    actions: ["Swap", "Add Liquidity", "Farm"],
-  },
-  {
-    id: "sundaeswap",
-    name: "SundaeSwap",
-    tag: "DEX",
-    color: "#6366F1",
-    bgColor: "#EEF2FF",
-    logo: "S",
-    desc: "DEX Cardano avec pools de liquidite et yield farming pour tokens natifs.",
-    url: "https://app.sundae.fi/swap",
-    embedUrl: "https://app.sundae.fi/swap",
-    apy: "5-12%",
-    tvl: "$8.7M",
-    actions: ["Swap", "Provide LP"],
-  },
-  {
-    id: "liqwid",
-    name: "Liqwid Finance",
-    tag: "Lending",
-    color: "#4F7DF3",
-    bgColor: "#EEF2FF",
-    logo: "L",
-    desc: "Deposez sBF comme collateral, empruntez ADA ou stablecoins (iUSD, DJED).",
-    url: "https://app.liqwid.finance",
-    embedUrl: "https://app.liqwid.finance",
-    apy: "3-8%",
-    tvl: "$31.5M",
-    actions: ["Supply", "Borrow"],
-  },
-  {
-    id: "lenfi",
-    name: "Lenfi",
-    tag: "Lending",
-    color: "#059669",
-    bgColor: "#ECFDF5",
-    logo: "LF",
-    desc: "Protocole de pret/emprunt decentralise peer-to-pool sur Cardano.",
-    url: "https://app.lenfi.io",
-    embedUrl: "https://app.lenfi.io",
-    apy: "4-10%",
-    tvl: "$5.2M",
-    actions: ["Lend", "Borrow"],
-  },
-  {
-    id: "splash",
-    name: "Splash",
-    tag: "DEX",
-    color: "#EA580C",
-    bgColor: "#FFF7ED",
-    logo: "SP",
-    desc: "DEX avec concentrated liquidity et stable swap pools.",
-    url: "https://app.splash.trade",
-    embedUrl: "https://app.splash.trade",
-    apy: "6-18%",
-    tvl: "$4.1M",
-    actions: ["Swap", "Concentrated LP"],
-  },
-  {
-    id: "jpgstore",
-    name: "JPG Store",
-    tag: "OTC",
-    color: "#DB2777",
-    bgColor: "#FDF2F8",
-    logo: "JPG",
-    desc: "Marketplace OTC pour tokens natifs Cardano. Echangez sBF sur le marche secondaire.",
-    url: "https://www.jpg.store",
-    embedUrl: "https://www.jpg.store",
-    apy: "—",
-    tvl: "$15M+",
-    actions: ["Buy", "Sell"],
-  },
-];
-
+/* ─── DeFi Pools Dashboard ─── */
 function DeFiPoolsEmbed({ syntheticTokens }) {
-  const [activeProtocol, setActiveProtocol] = useState(null);
-  const [embedLoading, setEmbedLoading] = useState(false);
+  const [selectedPool, setSelectedPool] = useState(null);
 
-  const handleOpen = (protocol) => {
-    setEmbedLoading(true);
-    setActiveProtocol(protocol);
-  };
+  // Pool data — these would be fetched from Blockfrost/Minswap API in production
+  // For now, configured by the admin when they create the pool
+  const pools = [
+    {
+      id: "sbf-ada",
+      pair: "sBF / ADA",
+      dex: "Minswap",
+      dexLogo: "M",
+      dexColor: "#4F7DF3",
+      status: "live",
+      tvl: "125,000",
+      tvlCurrency: "ADA",
+      volume24h: "8,432",
+      apy: "12.4",
+      price: "98.5",
+      priceUnit: "ADA/sBF",
+      yourLp: "0",
+      poolUrl: "https://app.minswap.org/swap",
+      liquidityUrl: "https://app.minswap.org/liquidity",
+      chartData: [42, 45, 48, 44, 52, 58, 55, 60, 62, 58, 65, 68, 72, 70, 75, 78, 82, 80, 85, 88],
+    },
+    {
+      id: "sbf-iusd",
+      pair: "sBF / iUSD",
+      dex: "Minswap",
+      dexLogo: "M",
+      dexColor: "#4F7DF3",
+      status: "live",
+      tvl: "42,000",
+      tvlCurrency: "iUSD",
+      volume24h: "2,180",
+      apy: "8.7",
+      price: "45.2",
+      priceUnit: "iUSD/sBF",
+      yourLp: "0",
+      poolUrl: "https://app.minswap.org/swap",
+      liquidityUrl: "https://app.minswap.org/liquidity",
+      chartData: [30, 32, 35, 33, 38, 40, 42, 41, 44, 46, 45, 48, 50, 49, 52, 54, 53, 56, 58, 57],
+    },
+    {
+      id: "sbf-lending",
+      pair: "sBF Collateral",
+      dex: "Liqwid",
+      dexLogo: "L",
+      dexColor: "#4F7DF3",
+      status: "live",
+      tvl: "85,000",
+      tvlCurrency: "ADA",
+      volume24h: "—",
+      apy: "5.2",
+      price: "—",
+      priceUnit: "Supply APY",
+      yourLp: "0",
+      poolUrl: "https://app.liqwid.finance",
+      liquidityUrl: "https://app.liqwid.finance",
+      chartData: [50, 51, 50, 52, 51, 53, 52, 54, 53, 55, 54, 56, 55, 57, 56, 58, 57, 59, 58, 60],
+    },
+  ];
 
-  const handleClose = () => {
-    setActiveProtocol(null);
-    setEmbedLoading(false);
+  // Mini sparkline component
+  const Sparkline = ({ data, color }) => {
+    const max = Math.max(...data);
+    const min = Math.min(...data);
+    const range = max - min || 1;
+    const w = 120;
+    const h = 32;
+    const points = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - min) / range) * h}`).join(" ");
+    return (
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible">
+        <polyline fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points={points} />
+        <circle cx={(data.length - 1) / (data.length - 1) * w} cy={h - ((data[data.length - 1] - min) / range) * h} r="2.5" fill={color} />
+      </svg>
+    );
   };
 
   return (
-    <>
-      <div className="bg-white rounded-2xl overflow-hidden border border-[#E8ECF1]">
-        <div className="px-6 py-4 border-b border-[#F0F2F5] flex items-center justify-between">
+    <div className="bg-white rounded-2xl overflow-hidden border border-[#E8ECF1]">
+      <div className="px-6 py-4 border-b border-[#F0F2F5]">
+        <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-[#0D0D12]">DeFi Pools</h3>
-            <p className="text-xs text-[#9AA4B2] mt-0.5">Utilisez vos sBF comme collateral ou liquidite sur les protocoles DeFi Cardano</p>
+            <h3 className="text-sm font-semibold text-[#0D0D12]">Pools de liquidite sBF</h3>
+            <p className="text-xs text-[#9AA4B2] mt-0.5">Fournissez de la liquidite ou utilisez vos sBF comme collateral sur les DEX Cardano</p>
           </div>
-          <span className="text-[11px] font-medium text-[#059669] ring-1 ring-[#059669]/10 bg-[#ECFDF5] px-3 py-1 rounded-md tabular-nums">{syntheticTokens.toLocaleString("fr-FR")} sBF disponibles</span>
-        </div>
-
-        {/* Protocol cards */}
-        <div className="p-5 space-y-3">
-          {DEFI_PROTOCOLS.map((p) => (
-            <div key={p.id} className="flex items-center gap-4 p-4 rounded-2xl border border-[#E8ECF1] hover:border-[#D1D5DB] transition-all bg-white">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: p.bgColor }}>
-                <span className="font-bold text-sm" style={{ color: p.color }}>{p.logo}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-[#0D0D12]">{p.name}</p>
-                  <span className="text-[10px] text-[#9AA4B2] bg-[#F0F2F5] px-1.5 py-0.5 rounded">{p.tag}</span>
-                </div>
-                <p className="text-xs text-[#9AA4B2] mt-0.5 truncate">{p.desc}</p>
-              </div>
-              <div className="flex items-center gap-6 flex-shrink-0">
-                <div className="text-right">
-                  <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">APY</p>
-                  <p className="text-sm font-semibold text-[#059669] tabular-nums">{p.apy}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">TVL</p>
-                  <p className="text-sm font-semibold text-[#0D0D12] tabular-nums">{p.tvl}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleOpen(p)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors text-white"
-                    style={{ backgroundColor: p.color }}
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                    Ouvrir
-                  </button>
-                  <a
-                    href={p.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-[#F7F8FA] text-[#5F6B7A] hover:bg-[#F0F2F5] transition-colors"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                  </a>
-                </div>
-              </div>
-            </div>
-          ))}
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-medium text-[#059669] ring-1 ring-[#059669]/10 bg-[#ECFDF5] px-3 py-1 rounded-md tabular-nums">{syntheticTokens.toLocaleString("fr-FR")} sBF disponibles</span>
+            <span className="w-2 h-2 rounded-full bg-[#059669] animate-pulse" />
+          </div>
         </div>
       </div>
 
-      {/* Embedded protocol modal */}
-      {activeProtocol && (
-        <div className="fixed inset-0 bg-[#0D0D12]/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={handleClose}>
-          <div className="bg-white rounded-2xl border border-[#E8ECF1] w-full max-w-6xl mx-4 h-[90vh] flex flex-col animate-fade-in" onClick={(e) => e.stopPropagation()}>
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-3 border-b border-[#F0F2F5] flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: activeProtocol.bgColor }}>
-                  <span className="font-bold text-sm" style={{ color: activeProtocol.color }}>{activeProtocol.logo}</span>
+      {/* Pools list */}
+      <div className="divide-y divide-[#F0F2F5]">
+        {pools.map((pool) => (
+          <div key={pool.id}>
+            {/* Pool row */}
+            <div
+              className={`flex items-center gap-4 px-6 py-4 cursor-pointer transition-colors ${selectedPool === pool.id ? "bg-[#F7F8FA]" : "hover:bg-[#FAFBFC]"}`}
+              onClick={() => setSelectedPool(selectedPool === pool.id ? null : pool.id)}
+            >
+              {/* DEX logo + pair */}
+              <div className="flex items-center gap-3 w-48 flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#EEF2FF]">
+                  <span className="font-bold text-sm" style={{ color: pool.dexColor }}>{pool.dexLogo}</span>
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-[#0D0D12]">{activeProtocol.name}</h3>
-                    <span className="text-[10px] text-[#9AA4B2] bg-[#F0F2F5] px-1.5 py-0.5 rounded">{activeProtocol.tag}</span>
-                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: activeProtocol.bgColor, color: activeProtocol.color }}>APY {activeProtocol.apy}</span>
-                  </div>
-                  <p className="text-xs text-[#9AA4B2]">TVL {activeProtocol.tvl} — Connectez votre wallet Cardano pour interagir</p>
+                  <p className="text-sm font-semibold text-[#0D0D12]">{pool.pair}</p>
+                  <p className="text-xs text-[#9AA4B2]">{pool.dex}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {/* Action buttons */}
-                {activeProtocol.actions.map((action) => (
-                  <span key={action} className="text-[10px] font-medium px-2 py-1 rounded-lg bg-[#F7F8FA] text-[#5F6B7A]">{action}</span>
-                ))}
-                <div className="w-px h-6 bg-[#E8ECF1] mx-1" />
-                <span className="text-[11px] font-medium text-[#059669] ring-1 ring-[#059669]/10 bg-[#ECFDF5] px-2 py-1 rounded-md tabular-nums">{syntheticTokens} sBF</span>
-                <a
-                  href={activeProtocol.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-[#F7F8FA] text-[#5F6B7A] hover:bg-[#F0F2F5] transition-colors"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                  Plein ecran
-                </a>
-                <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9AA4B2] hover:text-[#0D0D12] hover:bg-[#F7F8FA] transition-colors">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
+
+              {/* Status */}
+              <div className="w-16 flex-shrink-0">
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#059669] bg-[#ECFDF5] px-2 py-0.5 rounded-full ring-1 ring-[#059669]/10">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />
+                  Live
+                </span>
+              </div>
+
+              {/* TVL */}
+              <div className="w-28 text-right flex-shrink-0">
+                <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">TVL</p>
+                <p className="text-sm font-semibold text-[#0D0D12] tabular-nums">{pool.tvl} <span className="text-[10px] text-[#9AA4B2] font-normal">{pool.tvlCurrency}</span></p>
+              </div>
+
+              {/* Volume */}
+              <div className="w-24 text-right flex-shrink-0">
+                <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">Vol. 24h</p>
+                <p className="text-sm font-semibold text-[#0D0D12] tabular-nums">{pool.volume24h}</p>
+              </div>
+
+              {/* APY */}
+              <div className="w-20 text-right flex-shrink-0">
+                <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">APY</p>
+                <p className="text-sm font-bold text-[#059669] tabular-nums">{pool.apy}%</p>
+              </div>
+
+              {/* Sparkline */}
+              <div className="flex-1 flex justify-end">
+                <Sparkline data={pool.chartData} color={pool.dexColor} />
+              </div>
+
+              {/* Expand arrow */}
+              <div className="w-6 flex-shrink-0 text-right">
+                <svg className={`w-4 h-4 text-[#9AA4B2] transition-transform ${selectedPool === pool.id ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
               </div>
             </div>
 
-            {/* Embed iframe */}
-            <div className="flex-1 bg-[#F7F8FA] relative overflow-hidden">
-              {embedLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-[#F7F8FA] z-10">
-                  <div className="text-center">
-                    <div className="w-10 h-10 border-2 border-[#E8ECF1] border-t-[#4F7DF3] rounded-full animate-spin mx-auto mb-3" />
-                    <p className="text-sm text-[#5F6B7A]">Chargement de {activeProtocol.name}...</p>
-                    <p className="text-xs text-[#9AA4B2] mt-1">Connectez votre wallet (Eternl, Nami, Lace) pour interagir</p>
+            {/* Expanded pool detail */}
+            {selectedPool === pool.id && (
+              <div className="px-6 pb-5 bg-[#F7F8FA] animate-fade-in">
+                <div className="grid grid-cols-3 gap-4">
+                  {/* Pool info */}
+                  <div className="bg-white rounded-xl p-4 border border-[#E8ECF1]">
+                    <p className="text-xs font-medium text-[#9AA4B2] mb-3">Informations pool</p>
+                    <div className="space-y-2.5">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#5F6B7A]">Prix actuel</span>
+                        <span className="font-semibold text-[#0D0D12] tabular-nums">{pool.price} {pool.priceUnit}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#5F6B7A]">Total Value Locked</span>
+                        <span className="font-semibold text-[#0D0D12] tabular-nums">{pool.tvl} {pool.tvlCurrency}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#5F6B7A]">Volume 24h</span>
+                        <span className="font-semibold text-[#0D0D12] tabular-nums">{pool.volume24h} {pool.tvlCurrency}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#5F6B7A]">APY estime</span>
+                        <span className="font-bold text-[#059669] tabular-nums">{pool.apy}%</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#5F6B7A]">Protocole</span>
+                        <span className="font-medium text-[#0D0D12]">{pool.dex}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Your position */}
+                  <div className="bg-white rounded-xl p-4 border border-[#E8ECF1]">
+                    <p className="text-xs font-medium text-[#9AA4B2] mb-3">Votre position</p>
+                    <div className="space-y-2.5">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#5F6B7A]">sBF disponibles</span>
+                        <span className="font-semibold text-[#059669] tabular-nums">{syntheticTokens}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#5F6B7A]">LP tokens detenus</span>
+                        <span className="font-semibold text-[#0D0D12] tabular-nums">{pool.yourLp}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#5F6B7A]">Valeur estimee</span>
+                        <span className="font-semibold text-[#0D0D12] tabular-nums">—</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#5F6B7A]">Rewards cumules</span>
+                        <span className="font-semibold text-[#0D0D12] tabular-nums">—</span>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-[#F0F2F5]">
+                      <p className="text-[10px] text-[#9AA4B2] leading-relaxed">Connectez votre wallet Cardano (Eternl, Nami, Lace) sur {pool.dex} pour fournir de la liquidite.</p>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="bg-white rounded-xl p-4 border border-[#E8ECF1] flex flex-col">
+                    <p className="text-xs font-medium text-[#9AA4B2] mb-3">Actions</p>
+                    <div className="space-y-2 flex-1">
+                      <a
+                        href={pool.poolUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 rounded-xl border border-[#E8ECF1] hover:border-[#4F7DF3] hover:bg-[#EEF2FF] transition-all group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-[#EEF2FF] flex items-center justify-center group-hover:bg-white">
+                          <svg className="w-4 h-4 text-[#4F7DF3]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-[#0D0D12]">Swap sBF</p>
+                          <p className="text-[10px] text-[#9AA4B2]">Echanger vos tokens sur {pool.dex}</p>
+                        </div>
+                        <svg className="w-4 h-4 text-[#9AA4B2] ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                      </a>
+                      <a
+                        href={pool.liquidityUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 rounded-xl border border-[#E8ECF1] hover:border-[#059669] hover:bg-[#ECFDF5] transition-all group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-[#ECFDF5] flex items-center justify-center group-hover:bg-white">
+                          <svg className="w-4 h-4 text-[#059669]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold text-[#0D0D12]">Ajouter liquidite</p>
+                          <p className="text-[10px] text-[#9AA4B2]">Fournir LP et gagner des fees</p>
+                        </div>
+                        <svg className="w-4 h-4 text-[#9AA4B2] ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                      </a>
+                    </div>
+                    <p className="text-[10px] text-[#9AA4B2] mt-3 pt-2 border-t border-[#F0F2F5]">
+                      Les liens redirigent vers {pool.dex}. Vous aurez besoin d'un wallet Cardano connecte.
+                    </p>
                   </div>
                 </div>
-              )}
-              <iframe
-                src={activeProtocol.embedUrl}
-                title={activeProtocol.name}
-                className="w-full h-full border-0"
-                onLoad={() => setEmbedLoading(false)}
-                sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals allow-top-navigation-by-user-activation"
-                allow="clipboard-write"
-              />
-            </div>
-
-            {/* Footer info bar */}
-            <div className="px-6 py-2.5 border-t border-[#F0F2F5] flex items-center justify-between bg-[#FAFBFC] flex-shrink-0">
-              <p className="text-[11px] text-[#9AA4B2]">
-                <svg className="w-3 h-3 inline mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                Interface externe — Bridge Fund n'est pas responsable des interactions avec les protocoles tiers
-              </p>
-              <p className="text-[11px] text-[#9AA4B2]">
-                Protocole : <span className="font-medium text-[#5F6B7A]">{activeProtocol.name}</span> · Reseau : <span className="font-medium text-[#5F6B7A]">Cardano</span>
-              </p>
-            </div>
+              </div>
+            )}
           </div>
+        ))}
+      </div>
+
+      {/* Other protocols */}
+      <div className="px-6 py-4 border-t border-[#F0F2F5] bg-[#FAFBFC]">
+        <p className="text-xs font-medium text-[#9AA4B2] mb-3">Autres protocoles compatibles</p>
+        <div className="flex items-center gap-3">
+          {[
+            { name: "SundaeSwap", url: "https://app.sundae.fi/swap", logo: "S", color: "#6366F1", bg: "#EEF2FF", tag: "DEX" },
+            { name: "Lenfi", url: "https://app.lenfi.io", logo: "LF", color: "#059669", bg: "#ECFDF5", tag: "Lending" },
+            { name: "Splash", url: "https://app.splash.trade", logo: "SP", color: "#EA580C", bg: "#FFF7ED", tag: "DEX" },
+            { name: "JPG Store", url: "https://www.jpg.store", logo: "JPG", color: "#DB2777", bg: "#FDF2F8", tag: "OTC" },
+          ].map((p) => (
+            <a
+              key={p.name}
+              href={p.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[#E8ECF1] bg-white hover:border-[#D1D5DB] transition-colors"
+            >
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: p.bg }}>
+                <span className="font-bold text-[10px]" style={{ color: p.color }}>{p.logo}</span>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-[#0D0D12]">{p.name}</p>
+                <p className="text-[10px] text-[#9AA4B2]">{p.tag}</p>
+              </div>
+              <svg className="w-3 h-3 text-[#9AA4B2] ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+            </a>
+          ))}
         </div>
-      )}
-    </>
+      </div>
+    </div>
   );
 }
 
