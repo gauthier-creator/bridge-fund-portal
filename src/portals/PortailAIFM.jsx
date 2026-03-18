@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   PieChart, Pie, Cell,
 } from "recharts";
@@ -7,6 +7,77 @@ import { useAppContext } from "../context/AppContext";
 import { KPICard, Badge, fmt, fmtFull, useInView } from "../components/shared";
 import { getExplorerUrl, shortenHash } from "../services/cardanoService";
 import { listAllFunds } from "../services/fundService";
+import { getDocumentSignedUrl } from "../services/orderService";
+
+/* ─── Document row with fresh URL loading ─── */
+function DocumentRow({ doc, onPreview }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleView = async () => {
+    // If we have a valid URL, use it directly
+    if (doc.url) {
+      onPreview(doc.url, doc.name);
+      return;
+    }
+    // Otherwise, try to get a fresh signed URL from storagePath
+    if (doc.storagePath) {
+      setLoading(true);
+      try {
+        const freshUrl = await getDocumentSignedUrl(doc.storagePath);
+        if (freshUrl) {
+          onPreview(freshUrl, doc.name);
+        }
+      } catch (err) {
+        console.error("Failed to load document:", err);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+  };
+
+  const handleDownload = async () => {
+    let url = doc.url;
+    if (!url && doc.storagePath) {
+      try {
+        url = await getDocumentSignedUrl(doc.storagePath);
+      } catch { /* ignore */ }
+    }
+    if (url) window.open(url, "_blank");
+  };
+
+  const hasAccess = doc.url || doc.storagePath;
+
+  return (
+    <div className="flex items-center gap-3 bg-[#F7F8FA] rounded-xl px-4 py-2.5">
+      <div className="w-8 h-8 bg-[#EEF2FF] rounded-lg flex items-center justify-center flex-shrink-0">
+        <svg className="w-4 h-4 text-[#4F7DF3]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-[#0D0D12] truncate">{doc.name}</p>
+        <p className="text-xs text-[#9AA4B2]">{doc.type} · {doc.size} · {doc.date}</p>
+      </div>
+      {hasAccess ? (
+        <div className="flex items-center gap-2">
+          <button onClick={handleView} disabled={loading} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium bg-[#EEF2FF] text-[#4F7DF3] hover:bg-[#E0E7FF] transition-colors disabled:opacity-50">
+            {loading ? (
+              <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+            ) : (
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+            )}
+            Consulter
+          </button>
+          <button onClick={handleDownload} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium bg-[#EEF2FF] text-[#4F7DF3] hover:bg-[#E0E7FF] transition-colors">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            PDF
+          </button>
+        </div>
+      ) : (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#FEF3C7] text-[#D97706] border border-[#D97706]/20">Non disponible</span>
+      )}
+    </div>
+  );
+}
 
 /* ─── Sub-tab: Ordres à valider ─── */
 function ValidationOrdres({ toast, selectedFundId }) {
@@ -14,6 +85,7 @@ function ValidationOrdres({ toast, selectedFundId }) {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [docPreview, setDocPreview] = useState(null);
 
   const fundOrders = selectedFundId ? orders.filter((o) => o.fundId === selectedFundId) : orders;
   const pendingOrders = fundOrders.filter((o) => o.status === "pending");
@@ -197,32 +269,10 @@ function ValidationOrdres({ toast, selectedFundId }) {
             {/* Documents */}
             {selectedOrder.documents && selectedOrder.documents.length > 0 && (
               <div className="mt-5 pt-4 border-t border-[#F0F2F5]">
-                <p className="text-[12px] text-[#9AA4B2] font-medium mb-3">Pièces justificatives ({selectedOrder.documents.length})</p>
+                <p className="text-[12px] text-[#9AA4B2] font-medium mb-3">Pieces justificatives ({selectedOrder.documents.length})</p>
                 <div className="space-y-2">
                   {selectedOrder.documents.map((doc, i) => (
-                    <div key={i} className="flex items-center gap-3 bg-[#F7F8FA] rounded-xl px-4 py-2.5">
-                      <div className="w-8 h-8 bg-[#EEF2FF] rounded-lg flex items-center justify-center flex-shrink-0">
-                        <svg className="w-4 h-4 text-[#4F7DF3]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[#0D0D12] truncate">{doc.name}</p>
-                        <p className="text-xs text-[#9AA4B2]">{doc.type} · {doc.size} · {doc.date}</p>
-                      </div>
-                      {doc.url ? (
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => window.open(doc.url, "_blank")} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium bg-[#EEF2FF] text-[#4F7DF3] hover:bg-[#E0E7FF] transition-colors">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                            Consulter
-                          </button>
-                          <a href={doc.url} download={doc.name} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium bg-[#EEF2FF] text-[#4F7DF3] hover:bg-[#E0E7FF] transition-colors">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                            PDF
-                          </a>
-                        </div>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[#ECFDF5] text-[#059669] border border-[#059669]/20">Validé</span>
-                      )}
-                    </div>
+                    <DocumentRow key={i} doc={doc} onPreview={(url, name) => setDocPreview({ url, name })} />
                   ))}
                 </div>
               </div>
@@ -230,8 +280,8 @@ function ValidationOrdres({ toast, selectedFundId }) {
 
             {(!selectedOrder.documents || selectedOrder.documents.length === 0) && (
               <div className="mt-5 pt-4 border-t border-[#F0F2F5]">
-                <p className="text-[12px] text-[#9AA4B2] font-medium mb-2">Pièces justificatives</p>
-                <p className="text-xs text-amber-600">Aucun document joint à cet ordre</p>
+                <p className="text-[12px] text-[#9AA4B2] font-medium mb-2">Pieces justificatives</p>
+                <p className="text-xs text-amber-600">Aucun document joint a cet ordre</p>
               </div>
             )}
 
@@ -258,6 +308,43 @@ function ValidationOrdres({ toast, selectedFundId }) {
             <div className="flex gap-3 mt-4">
               <button onClick={() => { setShowRejectModal(false); setSelectedOrder(null); }} className="flex-1 bg-[#F7F8FA] text-[#5F6B7A] py-2.5 rounded-xl text-sm font-medium hover:bg-[#F0F2F5] transition-colors">Annuler</button>
               <button onClick={handleReject} disabled={!rejectReason} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${rejectReason ? "bg-red-600 text-white hover:bg-red-700" : "bg-[#F7F8FA] text-[#9AA4B2] cursor-not-allowed"}`}>Confirmer le rejet</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Document preview modal */}
+      {docPreview && (
+        <div className="fixed inset-0 bg-[#0D0D12]/60 backdrop-blur-sm flex items-center justify-center z-[60]" onClick={() => setDocPreview(null)}>
+          <div className="bg-white rounded-2xl border border-[#E8ECF1] w-full max-w-4xl mx-4 h-[85vh] flex flex-col animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#F0F2F5]">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-[#EEF2FF] rounded-lg flex items-center justify-center">
+                  <svg className="w-4 h-4 text-[#4F7DF3]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-[#0D0D12]">{docPreview.name}</h3>
+                  <p className="text-xs text-[#9AA4B2]">Piece justificative KYC</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => window.open(docPreview.url, "_blank")} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-[#EEF2FF] text-[#4F7DF3] hover:bg-[#E0E7FF] transition-colors">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                  Nouvel onglet
+                </button>
+                <button onClick={() => setDocPreview(null)} className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9AA4B2] hover:text-[#0D0D12] hover:bg-[#F7F8FA] transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 bg-[#F7F8FA] overflow-hidden">
+              {docPreview.name?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                <div className="h-full flex items-center justify-center p-4">
+                  <img src={docPreview.url} alt={docPreview.name} className="max-h-full max-w-full object-contain rounded-lg shadow-sm" />
+                </div>
+              ) : (
+                <iframe src={docPreview.url} title={docPreview.name} className="w-full h-full border-0" />
+              )}
             </div>
           </div>
         </div>
