@@ -8,6 +8,7 @@ import { listProfiles, createUser, updateUserProfile } from "../services/profile
 import { mintAndSendToken, burnSynthetic, transferToken, getFundTokenInfo, getExplorerUrl, shortenHash } from "../services/cardanoService";
 import FundEditorComponent from "../components/FundEditor";
 import { fetchAuditLogs, fetchAuditStats } from "../services/auditService";
+import { listAllFunds } from "../services/fundService";
 
 const ROLE_LABELS = { investor: "Investisseur", intermediary: "Intermédiaire", aifm: "AIFM", admin: "Admin" };
 
@@ -93,6 +94,7 @@ export default function PortailAdmin({ toast }) {
           { id: "fund", label: "Gestion des fonds" },
           { id: "vault", label: "Vault" },
           { id: "compliance", label: "Compliance CIP-113" },
+          { id: "defi", label: "DeFi Pools" },
           { id: "audit", label: "Audit Trail" },
         ].map((tab) => (
           <button key={tab.id} onClick={() => setAdminTab(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${adminTab === tab.id ? "text-[#0D0D12]" : "text-[#9AA4B2] hover:text-[#5F6B7A]"}`}>
@@ -106,6 +108,7 @@ export default function PortailAdmin({ toast }) {
       {adminTab === "fund" && <FundEditorComponent toast={toast} />}
       {adminTab === "vault" && <VaultManager toast={toast} />}
       {adminTab === "compliance" && <ComplianceManager toast={toast} />}
+      {adminTab === "defi" && <DefiPoolManager toast={toast} />}
       {adminTab === "audit" && <AuditTrailViewer />}
 
       {adminTab === "dashboard" && <>
@@ -1708,6 +1711,334 @@ function AuditTrailViewer() {
           {logs.length} événement{logs.length > 1 ? "s" : ""} affichés
         </p>
       )}
+    </div>
+  );
+}
+
+/* ─── DeFi Pool Manager ─── */
+function DefiPoolManager({ toast }) {
+  const [pools, setPools] = useState([]);
+  const [funds, setFunds] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    fund_id: "",
+    pool_name: "",
+    dex: "minswap",
+    pair_token_a: "sBF",
+    pair_token_b: "ADA",
+    synthetic_policy_id: "",
+    synthetic_asset_name: "",
+    pool_address: "",
+    pool_nft_policy_id: "",
+    pool_id_hex: "",
+    initial_price: "",
+    fee_percent: "0.3",
+    minswap_url: "",
+  });
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    const [poolRes, fundList] = await Promise.all([
+      supabase.from("defi_pools").select("*").order("created_at", { ascending: false }),
+      listAllFunds(),
+    ]);
+    setPools(poolRes.data || []);
+    setFunds(fundList);
+    setLoading(false);
+  };
+
+  const resetForm = () => {
+    setForm({ fund_id: "", pool_name: "", dex: "minswap", pair_token_a: "sBF", pair_token_b: "ADA", synthetic_policy_id: "", synthetic_asset_name: "", pool_address: "", pool_nft_policy_id: "", pool_id_hex: "", initial_price: "", fee_percent: "0.3", minswap_url: "" });
+    setEditing(null);
+  };
+
+  const handleEdit = (pool) => {
+    setForm({
+      fund_id: pool.fund_id || "",
+      pool_name: pool.pool_name || "",
+      dex: pool.dex || "minswap",
+      pair_token_a: pool.pair_token_a || "sBF",
+      pair_token_b: pool.pair_token_b || "ADA",
+      synthetic_policy_id: pool.synthetic_policy_id || "",
+      synthetic_asset_name: pool.synthetic_asset_name || "",
+      pool_address: pool.pool_address || "",
+      pool_nft_policy_id: pool.pool_nft_policy_id || "",
+      pool_id_hex: pool.pool_id_hex || "",
+      initial_price: pool.initial_price?.toString() || "",
+      fee_percent: pool.fee_percent?.toString() || "0.3",
+      minswap_url: pool.minswap_url || "",
+    });
+    setEditing(pool.id);
+    setShowForm(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.pool_name) { toast("Nom de pool requis"); return; }
+    setSaving(true);
+    const payload = {
+      ...form,
+      initial_price: form.initial_price ? Number(form.initial_price) : 0,
+      fee_percent: form.fee_percent ? Number(form.fee_percent) : 0.3,
+      fund_id: form.fund_id || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (editing) {
+      const { error } = await supabase.from("defi_pools").update(payload).eq("id", editing);
+      if (error) { toast("Erreur : " + error.message); setSaving(false); return; }
+      toast("Pool mise a jour");
+    } else {
+      const { error } = await supabase.from("defi_pools").insert(payload);
+      if (error) { toast("Erreur : " + error.message); setSaving(false); return; }
+      toast("Pool creee");
+    }
+    resetForm();
+    setShowForm(false);
+    setSaving(false);
+    loadData();
+  };
+
+  const handleDelete = async (id) => {
+    const { error } = await supabase.from("defi_pools").delete().eq("id", id);
+    if (error) { toast("Erreur : " + error.message); return; }
+    toast("Pool supprimee");
+    loadData();
+  };
+
+  const handleToggleStatus = async (pool) => {
+    const newStatus = pool.status === "active" ? "paused" : "active";
+    await supabase.from("defi_pools").update({ status: newStatus, updated_at: new Date().toISOString() }).eq("id", pool.id);
+    toast(`Pool ${newStatus === "active" ? "activee" : "mise en pause"}`);
+    loadData();
+  };
+
+  // Auto-fill synthetic token info from selected fund
+  const handleFundChange = (fundId) => {
+    setForm((f) => ({ ...f, fund_id: fundId }));
+    const fund = funds.find((f) => f.id === fundId);
+    if (fund) {
+      const slug = fund.slug || fund.fund_name?.toLowerCase().replace(/[^a-z0-9]/g, "");
+      setForm((f) => ({
+        ...f,
+        fund_id: fundId,
+        pool_name: `s${slug?.toUpperCase()} / ADA`,
+        pair_token_a: `s${slug?.toUpperCase()}`,
+        synthetic_asset_name: `s${slug?.toUpperCase()}`,
+        synthetic_policy_id: fund.cardano_policy_id || "",
+      }));
+    }
+  };
+
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  if (loading) return <div className="text-center py-12 text-[#9AA4B2] text-sm">Chargement...</div>;
+
+  return (
+    <div className="animate-fade-in space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-[#0D0D12]">DeFi Pools</h2>
+          <p className="text-sm text-[#9AA4B2] mt-1">Configurez les pools de liquidite pour les synthetic tokens de vos fonds</p>
+        </div>
+        <button
+          onClick={() => { resetForm(); setShowForm(!showForm); }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-[#0D0D12] text-white hover:bg-[#1A1A2E] transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+          Nouvelle pool
+        </button>
+      </div>
+
+      {/* Pool creation/edit form */}
+      {showForm && (
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-6 animate-fade-in">
+          <h3 className="text-sm font-semibold text-[#0D0D12] mb-4">{editing ? "Modifier la pool" : "Creer une pool DeFi"}</h3>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Fonds associe</label>
+              <select value={form.fund_id} onChange={(e) => handleFundChange(e.target.value)} className={selectCls}>
+                <option value="">— Selectionner un fonds —</option>
+                {funds.map((f) => <option key={f.id} value={f.id}>{f.fund_name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>DEX</label>
+              <select value={form.dex} onChange={(e) => set("dex", e.target.value)} className={selectCls}>
+                <option value="minswap">Minswap</option>
+                <option value="sundaeswap">SundaeSwap</option>
+                <option value="splash">Splash</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+
+            <div>
+              <label className={labelCls}>Nom de la pool</label>
+              <input value={form.pool_name} onChange={(e) => set("pool_name", e.target.value)} className={inputCls} placeholder="sBF / ADA" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className={labelCls}>Token A</label>
+                <input value={form.pair_token_a} onChange={(e) => set("pair_token_a", e.target.value)} className={inputCls} placeholder="sBF" />
+              </div>
+              <div>
+                <label className={labelCls}>Token B</label>
+                <input value={form.pair_token_b} onChange={(e) => set("pair_token_b", e.target.value)} className={inputCls} placeholder="ADA" />
+              </div>
+            </div>
+
+            <div className="col-span-2">
+              <label className={labelCls}>Policy ID du token synthetique</label>
+              <input value={form.synthetic_policy_id} onChange={(e) => set("synthetic_policy_id", e.target.value)} className={inputCls + " font-mono text-xs"} placeholder="abc123def456..." />
+            </div>
+
+            <div>
+              <label className={labelCls}>Asset name du token synthetique</label>
+              <input value={form.synthetic_asset_name} onChange={(e) => set("synthetic_asset_name", e.target.value)} className={inputCls + " font-mono text-xs"} placeholder="sBRIDGEFUND" />
+            </div>
+            <div>
+              <label className={labelCls}>Adresse de la pool (on-chain)</label>
+              <input value={form.pool_address} onChange={(e) => set("pool_address", e.target.value)} className={inputCls + " font-mono text-xs"} placeholder="addr_test1..." />
+            </div>
+
+            <div>
+              <label className={labelCls}>Pool NFT Policy ID (Minswap)</label>
+              <input value={form.pool_nft_policy_id} onChange={(e) => set("pool_nft_policy_id", e.target.value)} className={inputCls + " font-mono text-xs"} placeholder="Identifiant unique de la pool" />
+            </div>
+            <div>
+              <label className={labelCls}>Pool ID hex</label>
+              <input value={form.pool_id_hex} onChange={(e) => set("pool_id_hex", e.target.value)} className={inputCls + " font-mono text-xs"} placeholder="Pool identifier hex" />
+            </div>
+
+            <div>
+              <label className={labelCls}>Prix initial (Token B / Token A)</label>
+              <input type="number" value={form.initial_price} onChange={(e) => set("initial_price", e.target.value)} className={inputCls} placeholder="98.5" />
+            </div>
+            <div>
+              <label className={labelCls}>Fee pool (%)</label>
+              <input type="number" step="0.01" value={form.fee_percent} onChange={(e) => set("fee_percent", e.target.value)} className={inputCls} placeholder="0.3" />
+            </div>
+
+            <div className="col-span-2">
+              <label className={labelCls}>URL Minswap (deeplink vers la pool)</label>
+              <input value={form.minswap_url} onChange={(e) => set("minswap_url", e.target.value)} className={inputCls + " text-xs"} placeholder="https://app.minswap.org/swap?currencySymbolA=...&tokenNameA=..." />
+              <p className="text-[10px] text-[#9AA4B2] mt-1">Format : https://app.minswap.org/swap?currencySymbolA=&tokenNameA=&currencySymbolB=POLICY_ID&tokenNameB=ASSET_NAME</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 mt-5 pt-4 border-t border-[#F0F2F5]">
+            <button onClick={handleSave} disabled={saving} className="px-5 py-2 rounded-xl text-sm font-medium bg-[#0D0D12] text-white hover:bg-[#1A1A2E] transition-colors disabled:opacity-50">
+              {saving ? "Enregistrement..." : editing ? "Mettre a jour" : "Creer la pool"}
+            </button>
+            <button onClick={() => { setShowForm(false); resetForm(); }} className="px-5 py-2 rounded-xl text-sm font-medium bg-[#F7F8FA] text-[#5F6B7A] hover:bg-[#F0F2F5] transition-colors">
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Existing pools */}
+      {pools.length === 0 && !showForm ? (
+        <div className="bg-white rounded-2xl border border-[#E8ECF1] p-12 text-center">
+          <div className="w-14 h-14 bg-[#F0F2F5] rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-7 h-7 text-[#9AA4B2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+          </div>
+          <p className="text-sm font-medium text-[#0D0D12]">Aucune pool configuree</p>
+          <p className="text-xs text-[#9AA4B2] mt-1 mb-4">Creez une pool pour permettre aux investisseurs de swapper et fournir de la liquidite sur leurs synthetic tokens</p>
+          <button onClick={() => setShowForm(true)} className="text-sm font-medium text-[#4F7DF3] hover:underline">Creer une pool →</button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {pools.map((pool) => {
+            const fund = funds.find((f) => f.id === pool.fund_id);
+            return (
+              <div key={pool.id} className="bg-white rounded-2xl border border-[#E8ECF1] p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-[#EEF2FF] flex items-center justify-center">
+                      <span className="text-[#4F7DF3] font-bold text-sm">{pool.dex === "minswap" ? "M" : pool.dex === "sundaeswap" ? "S" : pool.dex?.charAt(0)?.toUpperCase()}</span>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-[#0D0D12]">{pool.pool_name}</p>
+                        <span className="text-[10px] text-[#9AA4B2] bg-[#F0F2F5] px-1.5 py-0.5 rounded capitalize">{pool.dex}</span>
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ring-1 ${pool.status === "active" ? "text-[#059669] bg-[#ECFDF5] ring-[#059669]/10" : "text-[#D97706] bg-[#FEF3C7] ring-[#D97706]/10"}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${pool.status === "active" ? "bg-[#059669]" : "bg-[#D97706]"}`} />
+                          {pool.status === "active" ? "Active" : "En pause"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#9AA4B2] mt-0.5">{fund?.fund_name || "Fonds non associe"} · {pool.pair_token_a}/{pool.pair_token_b} · Fee {pool.fee_percent}%</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-6">
+                    {pool.initial_price > 0 && (
+                      <div className="text-right">
+                        <p className="text-[10px] text-[#9AA4B2]">Prix initial</p>
+                        <p className="text-sm font-semibold text-[#0D0D12] tabular-nums">{pool.initial_price} {pool.pair_token_b}</p>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => handleToggleStatus(pool)} className={`text-xs font-medium px-3 py-1.5 rounded-xl transition-colors ${pool.status === "active" ? "bg-[#FEF3C7] text-[#D97706] hover:bg-[#FDE68A]" : "bg-[#ECFDF5] text-[#059669] hover:bg-[#D1FAE5]"}`}>
+                        {pool.status === "active" ? "Pause" : "Activer"}
+                      </button>
+                      <button onClick={() => handleEdit(pool)} className="text-xs font-medium px-3 py-1.5 rounded-xl bg-[#EEF2FF] text-[#4F7DF3] hover:bg-[#E0E7FF] transition-colors">
+                        Modifier
+                      </button>
+                      <button onClick={() => handleDelete(pool.id)} className="text-xs font-medium px-3 py-1.5 rounded-xl bg-[#FEF2F2] text-[#DC2626] hover:bg-[#FECACA] transition-colors">
+                        Supprimer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pool details */}
+                {(pool.synthetic_policy_id || pool.pool_address) && (
+                  <div className="mt-3 pt-3 border-t border-[#F0F2F5] grid grid-cols-2 gap-3">
+                    {pool.synthetic_policy_id && (
+                      <div>
+                        <p className="text-[10px] text-[#9AA4B2]">Synthetic Policy ID</p>
+                        <p className="text-xs font-mono text-[#5F6B7A] truncate">{pool.synthetic_policy_id}</p>
+                      </div>
+                    )}
+                    {pool.pool_address && (
+                      <div>
+                        <p className="text-[10px] text-[#9AA4B2]">Pool Address</p>
+                        <p className="text-xs font-mono text-[#5F6B7A] truncate">{pool.pool_address}</p>
+                      </div>
+                    )}
+                    {pool.minswap_url && (
+                      <div className="col-span-2">
+                        <p className="text-[10px] text-[#9AA4B2]">Minswap URL</p>
+                        <a href={pool.minswap_url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#4F7DF3] hover:underline truncate block">{pool.minswap_url}</a>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Help section */}
+      <div className="bg-[#EEF2FF] rounded-2xl p-5">
+        <p className="text-xs font-semibold text-[#4F7DF3] mb-2">Comment configurer une pool Minswap</p>
+        <ol className="space-y-1.5 text-xs text-[#5F6B7A] list-decimal list-inside">
+          <li>Creez la pool sur <a href="https://minswap.org/launch-bowl/create-pool" target="_blank" rel="noopener noreferrer" className="text-[#4F7DF3] underline">Minswap Launch Bowl</a> avec votre wallet admin</li>
+          <li>Recuperez le Policy ID du synthetic token depuis votre vault position (visible dans l'onglet Vault)</li>
+          <li>Remplissez les champs ci-dessus avec les informations de la pool creee</li>
+          <li>L'URL Minswap sera utilisee comme deeplink pour les investisseurs dans leur portail DeFi</li>
+          <li>Les investisseurs pourront swapper et fournir de la liquidite directement depuis leur interface</li>
+        </ol>
+      </div>
     </div>
   );
 }

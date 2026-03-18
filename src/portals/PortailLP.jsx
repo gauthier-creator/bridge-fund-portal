@@ -822,14 +822,12 @@ function Souscription({ toast, fund }) {
 }
 
 /* ─── DeFi Pools — In-app Swap & Liquidity ─── */
-const POOL_RATE = 98.5; // 1 sBF = 98.5 ADA (simulated pool price)
-const POOL_FEE = 0.003; // 0.3% swap fee
-const POOL_APY = 12.4;
-const POOL_TVL = 125000;
-
 function DeFiPoolsEmbed({ syntheticTokens, toast }) {
-  const [tab, setTab] = useState("swap"); // swap | liquidity | positions
-  const [swapDirection, setSwapDirection] = useState("sell"); // sell sBF → ADA, buy ADA → sBF
+  const [pools, setPools] = useState([]);
+  const [activePool, setActivePool] = useState(null);
+  const [poolsLoading, setPoolsLoading] = useState(true);
+  const [tab, setTab] = useState("swap");
+  const [swapDirection, setSwapDirection] = useState("sell");
   const [swapAmount, setSwapAmount] = useState("");
   const [lpAmountSbf, setLpAmountSbf] = useState("");
   const [lpAmountAda, setLpAmountAda] = useState("");
@@ -837,6 +835,29 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
   const [txHistory, setTxHistory] = useState([]);
   const [lpPositions, setLpPositions] = useState([]);
   const chartData = [42, 45, 48, 44, 52, 58, 55, 60, 62, 58, 65, 68, 72, 70, 75, 78, 82, 80, 85, 88, 92, 90, 95, 98];
+
+  // Fetch pools from Supabase
+  useEffect(() => {
+    async function loadPools() {
+      if (!supabase) { setPoolsLoading(false); return; }
+      const { data } = await supabase.from("defi_pools").select("*").eq("status", "active").order("created_at");
+      const activePools = data || [];
+      setPools(activePools);
+      if (activePools.length > 0 && !activePool) setActivePool(activePools[0]);
+      setPoolsLoading(false);
+    }
+    loadPools();
+  }, []);
+
+  // Pool config from active pool or defaults
+  const POOL_RATE = activePool?.initial_price || 98.5;
+  const POOL_FEE = (activePool?.fee_percent || 0.3) / 100;
+  const POOL_APY = 12.4;
+  const POOL_TVL = 125000;
+  const tokenA = activePool?.pair_token_a || "sBF";
+  const tokenB = activePool?.pair_token_b || "ADA";
+  const dexName = activePool?.dex || "Minswap";
+  const poolUrl = activePool?.minswap_url || "";
 
   const swapOutput = swapAmount ? (
     swapDirection === "sell"
@@ -849,14 +870,18 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
   const handleSwap = async () => {
     if (!swapAmount || Number(swapAmount) <= 0) return;
     setProcessing(true);
+    // In production, this would call a Supabase Edge Function that interacts with Minswap smart contracts
     await new Promise((r) => setTimeout(r, 2000));
+    const fromToken = swapDirection === "sell" ? tokenA : tokenB;
+    const toToken = swapDirection === "sell" ? tokenB : tokenA;
     const tx = {
       id: "tx-" + Date.now(),
-      type: swapDirection === "sell" ? "Swap sBF → ADA" : "Swap ADA → sBF",
-      amountIn: `${swapAmount} ${swapDirection === "sell" ? "sBF" : "ADA"}`,
-      amountOut: `${swapOutput} ${swapDirection === "sell" ? "ADA" : "sBF"}`,
+      type: `Swap ${fromToken} → ${toToken}`,
+      amountIn: `${swapAmount} ${fromToken}`,
+      amountOut: `${swapOutput} ${toToken}`,
       date: new Date().toLocaleString("fr-FR"),
       status: "confirmed",
+      pool: activePool?.pool_name,
     };
     setTxHistory((prev) => [tx, ...prev]);
     toast?.(`Swap execute — ${tx.amountIn} → ${tx.amountOut}`);
@@ -878,8 +903,8 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
       date: new Date().toLocaleString("fr-FR"),
     };
     setLpPositions((prev) => [pos, ...prev]);
-    setTxHistory((prev) => [{ id: pos.id, type: "Add Liquidity", amountIn: `${pos.sbf} sBF + ${pos.ada} ADA`, amountOut: `${lpTokens} LP`, date: pos.date, status: "confirmed" }, ...prev]);
-    toast?.(`Liquidite ajoutee — ${pos.sbf} sBF + ${pos.ada} ADA → ${lpTokens} LP tokens`);
+    setTxHistory((prev) => [{ id: pos.id, type: "Add Liquidity", amountIn: `${pos.sbf} ${tokenA} + ${pos.ada} ${tokenB}`, amountOut: `${lpTokens} LP`, date: pos.date, status: "confirmed" }, ...prev]);
+    toast?.(`Liquidite ajoutee — ${pos.sbf} ${tokenA} + ${pos.ada} ${tokenB} → ${lpTokens} LP tokens`);
     setLpAmountSbf("");
     setLpAmountAda("");
     setProcessing(false);
@@ -891,8 +916,8 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
     const pos = lpPositions.find((p) => p.id === posId);
     setLpPositions((prev) => prev.filter((p) => p.id !== posId));
     if (pos) {
-      setTxHistory((prev) => [{ id: "rm-" + Date.now(), type: "Remove Liquidity", amountIn: `${pos.lpTokens} LP`, amountOut: `${pos.sbf} sBF + ${pos.ada} ADA`, date: new Date().toLocaleString("fr-FR"), status: "confirmed" }, ...prev]);
-      toast?.(`Liquidite retiree — ${pos.sbf} sBF + ${pos.ada} ADA recuperes`);
+      setTxHistory((prev) => [{ id: "rm-" + Date.now(), type: "Remove Liquidity", amountIn: `${pos.lpTokens} LP`, amountOut: `${pos.sbf} ${tokenA} + ${pos.ada} ${tokenB}`, date: new Date().toLocaleString("fr-FR"), status: "confirmed" }, ...prev]);
+      toast?.(`Liquidite retiree — ${pos.sbf} ${tokenA} + ${pos.ada} ${tokenB} recuperes`);
     }
     setProcessing(false);
   };
@@ -913,6 +938,18 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
 
   const tabCls = (t) => `px-4 py-2 text-xs font-medium rounded-xl transition-colors ${tab === t ? "bg-[#0D0D12] text-white" : "text-[#5F6B7A] hover:bg-[#F0F2F5]"}`;
 
+  if (poolsLoading) return <div className="bg-white rounded-2xl border border-[#E8ECF1] p-8 text-center text-sm text-[#9AA4B2]">Chargement des pools...</div>;
+
+  if (pools.length === 0) return (
+    <div className="bg-white rounded-2xl border border-[#E8ECF1] p-8 text-center">
+      <div className="w-12 h-12 bg-[#F0F2F5] rounded-full flex items-center justify-center mx-auto mb-3">
+        <svg className="w-6 h-6 text-[#9AA4B2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+      </div>
+      <p className="text-sm font-medium text-[#0D0D12]">Aucune pool DeFi disponible</p>
+      <p className="text-xs text-[#9AA4B2] mt-1">L'administrateur n'a pas encore configure de pool de liquidite pour les synthetic tokens.</p>
+    </div>
+  );
+
   return (
     <div className="bg-white rounded-2xl overflow-hidden border border-[#E8ECF1]">
       {/* Header with pool stats */}
@@ -920,25 +957,41 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-[#0D0D12]">Pool sBF / ADA</h3>
+              {pools.length > 1 ? (
+                <select
+                  value={activePool?.id || ""}
+                  onChange={(e) => setActivePool(pools.find((p) => p.id === e.target.value))}
+                  className="text-sm font-semibold text-[#0D0D12] bg-transparent border-none outline-none cursor-pointer pr-1"
+                >
+                  {pools.map((p) => <option key={p.id} value={p.id}>{p.pool_name}</option>)}
+                </select>
+              ) : (
+                <h3 className="text-sm font-semibold text-[#0D0D12]">{activePool?.pool_name || "Pool"}</h3>
+              )}
               <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#059669] bg-[#ECFDF5] px-2 py-0.5 rounded-full ring-1 ring-[#059669]/10">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" />
                 Live
               </span>
-              <span className="text-[10px] text-[#9AA4B2] bg-[#F0F2F5] px-1.5 py-0.5 rounded">Minswap</span>
+              <span className="text-[10px] text-[#9AA4B2] bg-[#F0F2F5] px-1.5 py-0.5 rounded capitalize">{dexName}</span>
+              {poolUrl && (
+                <a href={poolUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[#4F7DF3] hover:underline flex items-center gap-0.5">
+                  Voir sur {dexName}
+                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                </a>
+              )}
             </div>
             <p className="text-xs text-[#9AA4B2] mt-0.5">Swappez et fournissez de la liquidite directement depuis votre portail</p>
           </div>
-          <span className="text-[11px] font-medium text-[#059669] ring-1 ring-[#059669]/10 bg-[#ECFDF5] px-3 py-1 rounded-md tabular-nums">{syntheticTokens.toLocaleString("fr-FR")} sBF</span>
+          <span className="text-[11px] font-medium text-[#059669] ring-1 ring-[#059669]/10 bg-[#ECFDF5] px-3 py-1 rounded-md tabular-nums">{syntheticTokens.toLocaleString("fr-FR")} {tokenA}</span>
         </div>
         <div className="grid grid-cols-5 gap-4">
           <div className="bg-[#F7F8FA] rounded-xl p-3">
             <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">Prix</p>
-            <p className="text-base font-bold text-[#0D0D12] tabular-nums mt-0.5">{POOL_RATE} <span className="text-[10px] font-normal text-[#9AA4B2]">ADA</span></p>
+            <p className="text-base font-bold text-[#0D0D12] tabular-nums mt-0.5">{POOL_RATE} <span className="text-[10px] font-normal text-[#9AA4B2]">{tokenB}</span></p>
           </div>
           <div className="bg-[#F7F8FA] rounded-xl p-3">
             <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">TVL</p>
-            <p className="text-base font-bold text-[#0D0D12] tabular-nums mt-0.5">{POOL_TVL.toLocaleString("fr-FR")} <span className="text-[10px] font-normal text-[#9AA4B2]">ADA</span></p>
+            <p className="text-base font-bold text-[#0D0D12] tabular-nums mt-0.5">{POOL_TVL.toLocaleString("fr-FR")} <span className="text-[10px] font-normal text-[#9AA4B2]">{tokenB}</span></p>
           </div>
           <div className="bg-[#F7F8FA] rounded-xl p-3">
             <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">APY</p>
@@ -946,7 +999,7 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
           </div>
           <div className="bg-[#F7F8FA] rounded-xl p-3">
             <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">Fee</p>
-            <p className="text-base font-bold text-[#0D0D12] tabular-nums mt-0.5">0.3%</p>
+            <p className="text-base font-bold text-[#0D0D12] tabular-nums mt-0.5">{activePool?.fee_percent || 0.3}%</p>
           </div>
           <div className="bg-[#F7F8FA] rounded-xl p-3 flex items-center justify-center">
             <Sparkline data={chartData} color="#4F7DF3" />
@@ -977,7 +1030,7 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
             <div className="bg-[#F7F8FA] rounded-2xl p-4 border border-[#E8ECF1]">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs text-[#9AA4B2]">Vous envoyez</p>
-                <p className="text-xs text-[#9AA4B2]">Solde : <span className="font-medium text-[#5F6B7A]">{swapDirection === "sell" ? syntheticTokens : "—"} {swapDirection === "sell" ? "sBF" : "ADA"}</span></p>
+                <p className="text-xs text-[#9AA4B2]">Solde : <span className="font-medium text-[#5F6B7A]">{swapDirection === "sell" ? syntheticTokens : "—"} {swapDirection === "sell" ? tokenA : tokenB}</span></p>
               </div>
               <div className="flex items-center gap-3">
                 <input
@@ -989,9 +1042,9 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
                 />
                 <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-[#E8ECF1]">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center ${swapDirection === "sell" ? "bg-[#EEF2FF]" : "bg-[#F0F2F5]"}`}>
-                    <span className={`text-[10px] font-bold ${swapDirection === "sell" ? "text-[#4F7DF3]" : "text-[#0D0D12]"}`}>{swapDirection === "sell" ? "sBF" : "A"}</span>
+                    <span className={`text-[10px] font-bold ${swapDirection === "sell" ? "text-[#4F7DF3]" : "text-[#0D0D12]"}`}>{swapDirection === "sell" ? tokenA : tokenB.charAt(0)}</span>
                   </div>
-                  <span className="text-sm font-semibold text-[#0D0D12]">{swapDirection === "sell" ? "sBF" : "ADA"}</span>
+                  <span className="text-sm font-semibold text-[#0D0D12]">{swapDirection === "sell" ? tokenA : tokenB}</span>
                 </div>
               </div>
               {swapDirection === "sell" && syntheticTokens > 0 && (
@@ -1019,9 +1072,9 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
                 <p className="flex-1 text-2xl font-bold text-[#0D0D12] tabular-nums">{swapOutput}</p>
                 <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-[#E8ECF1]">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center ${swapDirection === "sell" ? "bg-[#F0F2F5]" : "bg-[#EEF2FF]"}`}>
-                    <span className={`text-[10px] font-bold ${swapDirection === "sell" ? "text-[#0D0D12]" : "text-[#4F7DF3]"}`}>{swapDirection === "sell" ? "A" : "sBF"}</span>
+                    <span className={`text-[10px] font-bold ${swapDirection === "sell" ? "text-[#0D0D12]" : "text-[#4F7DF3]"}`}>{swapDirection === "sell" ? tokenB.charAt(0) : tokenA}</span>
                   </div>
-                  <span className="text-sm font-semibold text-[#0D0D12]">{swapDirection === "sell" ? "ADA" : "sBF"}</span>
+                  <span className="text-sm font-semibold text-[#0D0D12]">{swapDirection === "sell" ? tokenB : tokenA}</span>
                 </div>
               </div>
             </div>
@@ -1029,8 +1082,8 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
             {/* Swap details */}
             {swapAmount && Number(swapAmount) > 0 && (
               <div className="mt-3 bg-[#FAFBFC] rounded-xl p-3 space-y-1.5">
-                <div className="flex justify-between text-xs"><span className="text-[#9AA4B2]">Taux</span><span className="text-[#0D0D12] tabular-nums">1 sBF = {POOL_RATE} ADA</span></div>
-                <div className="flex justify-between text-xs"><span className="text-[#9AA4B2]">Frais pool (0.3%)</span><span className="text-[#0D0D12] tabular-nums">{swapFee} {swapDirection === "sell" ? "sBF" : "ADA"}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-[#9AA4B2]">Taux</span><span className="text-[#0D0D12] tabular-nums">1 {tokenA} = {POOL_RATE} {tokenB}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-[#9AA4B2]">Frais pool (0.3%)</span><span className="text-[#0D0D12] tabular-nums">{swapFee} {swapDirection === "sell" ? tokenA : tokenB}</span></div>
                 <div className="flex justify-between text-xs"><span className="text-[#9AA4B2]">Impact prix</span><span className={`tabular-nums ${Number(priceImpact) > 1 ? "text-amber-600" : "text-[#059669]"}`}>{priceImpact}%</span></div>
               </div>
             )}
@@ -1044,9 +1097,9 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
               {processing ? (
                 <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Transaction en cours...</span>
               ) : swapDirection === "sell" && Number(swapAmount) > syntheticTokens ? (
-                "Solde sBF insuffisant"
+                `Solde ${tokenA} insuffisant`
               ) : (
-                `Swap ${swapAmount || "0"} ${swapDirection === "sell" ? "sBF" : "ADA"} → ${swapOutput} ${swapDirection === "sell" ? "ADA" : "sBF"}`
+                `Swap ${swapAmount || "0"} ${swapDirection === "sell" ? tokenA : tokenB} → ${swapOutput} ${swapDirection === "sell" ? tokenB : tokenA}`
               )}
             </button>
           </div>
@@ -1056,14 +1109,14 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
         {tab === "liquidity" && (
           <div className="max-w-md mx-auto">
             <div className="bg-[#EEF2FF] rounded-xl p-3 mb-4">
-              <p className="text-xs text-[#4F7DF3] font-medium">En fournissant de la liquidite, vous gagnez {POOL_APY}% APY en frais de swap sur la paire sBF/ADA.</p>
+              <p className="text-xs text-[#4F7DF3] font-medium">En fournissant de la liquidite, vous gagnez {POOL_APY}% APY en frais de swap sur la paire {tokenA}/{tokenB}.</p>
             </div>
 
             {/* sBF input */}
             <div className="bg-[#F7F8FA] rounded-2xl p-4 border border-[#E8ECF1] mb-3">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs text-[#9AA4B2]">sBF a deposer</p>
-                <p className="text-xs text-[#9AA4B2]">Solde : <span className="font-medium text-[#5F6B7A]">{syntheticTokens} sBF</span></p>
+                <p className="text-xs text-[#9AA4B2]">{tokenA} a deposer</p>
+                <p className="text-xs text-[#9AA4B2]">Solde : <span className="font-medium text-[#5F6B7A]">{syntheticTokens} {tokenA}</span></p>
               </div>
               <div className="flex items-center gap-3">
                 <input
@@ -1074,8 +1127,8 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
                   className="flex-1 bg-transparent text-2xl font-bold text-[#0D0D12] placeholder-[#C4CAD4] outline-none tabular-nums"
                 />
                 <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-[#E8ECF1]">
-                  <div className="w-6 h-6 rounded-full bg-[#EEF2FF] flex items-center justify-center"><span className="text-[10px] font-bold text-[#4F7DF3]">sBF</span></div>
-                  <span className="text-sm font-semibold text-[#0D0D12]">sBF</span>
+                  <div className="w-6 h-6 rounded-full bg-[#EEF2FF] flex items-center justify-center"><span className="text-[10px] font-bold text-[#4F7DF3]">{tokenA}</span></div>
+                  <span className="text-sm font-semibold text-[#0D0D12]">{tokenA}</span>
                 </div>
               </div>
             </div>
@@ -1089,7 +1142,7 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
             {/* ADA input */}
             <div className="bg-[#F7F8FA] rounded-2xl p-4 border border-[#E8ECF1] mt-3">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs text-[#9AA4B2]">ADA a deposer</p>
+                <p className="text-xs text-[#9AA4B2]">{tokenB} a deposer</p>
                 <p className="text-xs text-[#9AA4B2]">Auto-calcule au ratio de la pool</p>
               </div>
               <div className="flex items-center gap-3">
@@ -1102,7 +1155,7 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
                 />
                 <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-[#E8ECF1]">
                   <div className="w-6 h-6 rounded-full bg-[#F0F2F5] flex items-center justify-center"><span className="text-[10px] font-bold text-[#0D0D12]">A</span></div>
-                  <span className="text-sm font-semibold text-[#0D0D12]">ADA</span>
+                  <span className="text-sm font-semibold text-[#0D0D12]">{tokenB}</span>
                 </div>
               </div>
             </div>
@@ -1124,7 +1177,7 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
               {processing ? (
                 <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Ajout en cours...</span>
               ) : (
-                `Ajouter liquidite — ${lpAmountSbf || "0"} sBF + ${lpAmountAda || "0"} ADA`
+                `Ajouter liquidite — ${lpAmountSbf || "0"} ${tokenA} + ${lpAmountAda || "0"} ${tokenB}`
               )}
             </button>
           </div>
@@ -1149,11 +1202,11 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div className="flex -space-x-2">
-                          <div className="w-8 h-8 rounded-full bg-[#EEF2FF] border-2 border-white flex items-center justify-center"><span className="text-[9px] font-bold text-[#4F7DF3]">sBF</span></div>
-                          <div className="w-8 h-8 rounded-full bg-[#F0F2F5] border-2 border-white flex items-center justify-center"><span className="text-[9px] font-bold text-[#0D0D12]">ADA</span></div>
+                          <div className="w-8 h-8 rounded-full bg-[#EEF2FF] border-2 border-white flex items-center justify-center"><span className="text-[9px] font-bold text-[#4F7DF3]">{tokenA}</span></div>
+                          <div className="w-8 h-8 rounded-full bg-[#F0F2F5] border-2 border-white flex items-center justify-center"><span className="text-[9px] font-bold text-[#0D0D12]">{tokenB}</span></div>
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-[#0D0D12]">sBF / ADA</p>
+                          <p className="text-sm font-semibold text-[#0D0D12]">{tokenA} / {tokenB}</p>
                           <p className="text-[10px] text-[#9AA4B2]">{pos.date}</p>
                         </div>
                       </div>
@@ -1166,8 +1219,8 @@ function DeFiPoolsEmbed({ syntheticTokens, toast }) {
                       </button>
                     </div>
                     <div className="grid grid-cols-4 gap-3">
-                      <div><p className="text-[10px] text-[#9AA4B2]">sBF depose</p><p className="text-sm font-semibold text-[#0D0D12] tabular-nums">{pos.sbf}</p></div>
-                      <div><p className="text-[10px] text-[#9AA4B2]">ADA depose</p><p className="text-sm font-semibold text-[#0D0D12] tabular-nums">{Number(pos.ada).toLocaleString("fr-FR")}</p></div>
+                      <div><p className="text-[10px] text-[#9AA4B2]">{tokenA} depose</p><p className="text-sm font-semibold text-[#0D0D12] tabular-nums">{pos.sbf}</p></div>
+                      <div><p className="text-[10px] text-[#9AA4B2]">{tokenB} depose</p><p className="text-sm font-semibold text-[#0D0D12] tabular-nums">{Number(pos.ada).toLocaleString("fr-FR")}</p></div>
                       <div><p className="text-[10px] text-[#9AA4B2]">LP tokens</p><p className="text-sm font-semibold text-[#4F7DF3] tabular-nums">{pos.lpTokens}</p></div>
                       <div><p className="text-[10px] text-[#9AA4B2]">Part pool</p><p className="text-sm font-semibold text-[#059669] tabular-nums">{pos.share}%</p></div>
                     </div>
