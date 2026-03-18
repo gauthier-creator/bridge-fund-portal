@@ -821,288 +821,394 @@ function Souscription({ toast, fund }) {
   );
 }
 
-/* ─── DeFi Pools Dashboard ─── */
-function DeFiPoolsEmbed({ syntheticTokens }) {
-  const [selectedPool, setSelectedPool] = useState(null);
+/* ─── DeFi Pools — In-app Swap & Liquidity ─── */
+const POOL_RATE = 98.5; // 1 sBF = 98.5 ADA (simulated pool price)
+const POOL_FEE = 0.003; // 0.3% swap fee
+const POOL_APY = 12.4;
+const POOL_TVL = 125000;
 
-  // Pool data — these would be fetched from Blockfrost/Minswap API in production
-  // For now, configured by the admin when they create the pool
-  const pools = [
-    {
-      id: "sbf-ada",
-      pair: "sBF / ADA",
-      dex: "Minswap",
-      dexLogo: "M",
-      dexColor: "#4F7DF3",
-      status: "live",
-      tvl: "125,000",
-      tvlCurrency: "ADA",
-      volume24h: "8,432",
-      apy: "12.4",
-      price: "98.5",
-      priceUnit: "ADA/sBF",
-      yourLp: "0",
-      poolUrl: "https://app.minswap.org/swap",
-      liquidityUrl: "https://app.minswap.org/liquidity",
-      chartData: [42, 45, 48, 44, 52, 58, 55, 60, 62, 58, 65, 68, 72, 70, 75, 78, 82, 80, 85, 88],
-    },
-    {
-      id: "sbf-iusd",
-      pair: "sBF / iUSD",
-      dex: "Minswap",
-      dexLogo: "M",
-      dexColor: "#4F7DF3",
-      status: "live",
-      tvl: "42,000",
-      tvlCurrency: "iUSD",
-      volume24h: "2,180",
-      apy: "8.7",
-      price: "45.2",
-      priceUnit: "iUSD/sBF",
-      yourLp: "0",
-      poolUrl: "https://app.minswap.org/swap",
-      liquidityUrl: "https://app.minswap.org/liquidity",
-      chartData: [30, 32, 35, 33, 38, 40, 42, 41, 44, 46, 45, 48, 50, 49, 52, 54, 53, 56, 58, 57],
-    },
-    {
-      id: "sbf-lending",
-      pair: "sBF Collateral",
-      dex: "Liqwid",
-      dexLogo: "L",
-      dexColor: "#4F7DF3",
-      status: "live",
-      tvl: "85,000",
-      tvlCurrency: "ADA",
-      volume24h: "—",
-      apy: "5.2",
-      price: "—",
-      priceUnit: "Supply APY",
-      yourLp: "0",
-      poolUrl: "https://app.liqwid.finance",
-      liquidityUrl: "https://app.liqwid.finance",
-      chartData: [50, 51, 50, 52, 51, 53, 52, 54, 53, 55, 54, 56, 55, 57, 56, 58, 57, 59, 58, 60],
-    },
-  ];
+function DeFiPoolsEmbed({ syntheticTokens, toast }) {
+  const [tab, setTab] = useState("swap"); // swap | liquidity | positions
+  const [swapDirection, setSwapDirection] = useState("sell"); // sell sBF → ADA, buy ADA → sBF
+  const [swapAmount, setSwapAmount] = useState("");
+  const [lpAmountSbf, setLpAmountSbf] = useState("");
+  const [lpAmountAda, setLpAmountAda] = useState("");
+  const [processing, setProcessing] = useState(false);
+  const [txHistory, setTxHistory] = useState([]);
+  const [lpPositions, setLpPositions] = useState([]);
+  const chartData = [42, 45, 48, 44, 52, 58, 55, 60, 62, 58, 65, 68, 72, 70, 75, 78, 82, 80, 85, 88, 92, 90, 95, 98];
 
-  // Mini sparkline component
-  const Sparkline = ({ data, color }) => {
-    const max = Math.max(...data);
-    const min = Math.min(...data);
-    const range = max - min || 1;
-    const w = 120;
-    const h = 32;
-    const points = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - min) / range) * h}`).join(" ");
+  const swapOutput = swapAmount ? (
+    swapDirection === "sell"
+      ? (Number(swapAmount) * POOL_RATE * (1 - POOL_FEE)).toFixed(2)
+      : (Number(swapAmount) / POOL_RATE * (1 - POOL_FEE)).toFixed(4)
+  ) : "0";
+  const swapFee = swapAmount ? (Number(swapAmount) * POOL_FEE).toFixed(4) : "0";
+  const priceImpact = swapAmount ? Math.min(Number(swapAmount) * 0.01, 5).toFixed(2) : "0";
+
+  const handleSwap = async () => {
+    if (!swapAmount || Number(swapAmount) <= 0) return;
+    setProcessing(true);
+    await new Promise((r) => setTimeout(r, 2000));
+    const tx = {
+      id: "tx-" + Date.now(),
+      type: swapDirection === "sell" ? "Swap sBF → ADA" : "Swap ADA → sBF",
+      amountIn: `${swapAmount} ${swapDirection === "sell" ? "sBF" : "ADA"}`,
+      amountOut: `${swapOutput} ${swapDirection === "sell" ? "ADA" : "sBF"}`,
+      date: new Date().toLocaleString("fr-FR"),
+      status: "confirmed",
+    };
+    setTxHistory((prev) => [tx, ...prev]);
+    toast?.(`Swap execute — ${tx.amountIn} → ${tx.amountOut}`);
+    setSwapAmount("");
+    setProcessing(false);
+  };
+
+  const handleAddLiquidity = async () => {
+    if (!lpAmountSbf || Number(lpAmountSbf) <= 0) return;
+    setProcessing(true);
+    await new Promise((r) => setTimeout(r, 2500));
+    const lpTokens = (Number(lpAmountSbf) * 2).toFixed(2);
+    const pos = {
+      id: "lp-" + Date.now(),
+      sbf: lpAmountSbf,
+      ada: lpAmountAda || (Number(lpAmountSbf) * POOL_RATE).toFixed(0),
+      lpTokens,
+      share: ((Number(lpAmountSbf) / POOL_TVL) * 100).toFixed(3),
+      date: new Date().toLocaleString("fr-FR"),
+    };
+    setLpPositions((prev) => [pos, ...prev]);
+    setTxHistory((prev) => [{ id: pos.id, type: "Add Liquidity", amountIn: `${pos.sbf} sBF + ${pos.ada} ADA`, amountOut: `${lpTokens} LP`, date: pos.date, status: "confirmed" }, ...prev]);
+    toast?.(`Liquidite ajoutee — ${pos.sbf} sBF + ${pos.ada} ADA → ${lpTokens} LP tokens`);
+    setLpAmountSbf("");
+    setLpAmountAda("");
+    setProcessing(false);
+  };
+
+  const handleRemoveLp = async (posId) => {
+    setProcessing(true);
+    await new Promise((r) => setTimeout(r, 1500));
+    const pos = lpPositions.find((p) => p.id === posId);
+    setLpPositions((prev) => prev.filter((p) => p.id !== posId));
+    if (pos) {
+      setTxHistory((prev) => [{ id: "rm-" + Date.now(), type: "Remove Liquidity", amountIn: `${pos.lpTokens} LP`, amountOut: `${pos.sbf} sBF + ${pos.ada} ADA`, date: new Date().toLocaleString("fr-FR"), status: "confirmed" }, ...prev]);
+      toast?.(`Liquidite retiree — ${pos.sbf} sBF + ${pos.ada} ADA recuperes`);
+    }
+    setProcessing(false);
+  };
+
+  // Sparkline
+  const Sparkline = ({ data, color, w = 200, h = 48 }) => {
+    const max = Math.max(...data), min = Math.min(...data), range = max - min || 1;
+    const pts = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - ((v - min) / range) * h}`).join(" ");
+    const fillPts = pts + ` ${w},${h} 0,${h}`;
     return (
-      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="overflow-visible">
-        <polyline fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points={points} />
-        <circle cx={(data.length - 1) / (data.length - 1) * w} cy={h - ((data[data.length - 1] - min) / range) * h} r="2.5" fill={color} />
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+        <defs><linearGradient id="spFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity="0.15" /><stop offset="100%" stopColor={color} stopOpacity="0" /></linearGradient></defs>
+        <polygon fill="url(#spFill)" points={fillPts} />
+        <polyline fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points={pts} />
       </svg>
     );
   };
 
+  const tabCls = (t) => `px-4 py-2 text-xs font-medium rounded-xl transition-colors ${tab === t ? "bg-[#0D0D12] text-white" : "text-[#5F6B7A] hover:bg-[#F0F2F5]"}`;
+
   return (
     <div className="bg-white rounded-2xl overflow-hidden border border-[#E8ECF1]">
+      {/* Header with pool stats */}
       <div className="px-6 py-4 border-b border-[#F0F2F5]">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold text-[#0D0D12]">Pools de liquidite sBF</h3>
-            <p className="text-xs text-[#9AA4B2] mt-0.5">Fournissez de la liquidite ou utilisez vos sBF comme collateral sur les DEX Cardano</p>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-[#0D0D12]">Pool sBF / ADA</h3>
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#059669] bg-[#ECFDF5] px-2 py-0.5 rounded-full ring-1 ring-[#059669]/10">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" />
+                Live
+              </span>
+              <span className="text-[10px] text-[#9AA4B2] bg-[#F0F2F5] px-1.5 py-0.5 rounded">Minswap</span>
+            </div>
+            <p className="text-xs text-[#9AA4B2] mt-0.5">Swappez et fournissez de la liquidite directement depuis votre portail</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-medium text-[#059669] ring-1 ring-[#059669]/10 bg-[#ECFDF5] px-3 py-1 rounded-md tabular-nums">{syntheticTokens.toLocaleString("fr-FR")} sBF disponibles</span>
-            <span className="w-2 h-2 rounded-full bg-[#059669] animate-pulse" />
+          <span className="text-[11px] font-medium text-[#059669] ring-1 ring-[#059669]/10 bg-[#ECFDF5] px-3 py-1 rounded-md tabular-nums">{syntheticTokens.toLocaleString("fr-FR")} sBF</span>
+        </div>
+        <div className="grid grid-cols-5 gap-4">
+          <div className="bg-[#F7F8FA] rounded-xl p-3">
+            <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">Prix</p>
+            <p className="text-base font-bold text-[#0D0D12] tabular-nums mt-0.5">{POOL_RATE} <span className="text-[10px] font-normal text-[#9AA4B2]">ADA</span></p>
+          </div>
+          <div className="bg-[#F7F8FA] rounded-xl p-3">
+            <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">TVL</p>
+            <p className="text-base font-bold text-[#0D0D12] tabular-nums mt-0.5">{POOL_TVL.toLocaleString("fr-FR")} <span className="text-[10px] font-normal text-[#9AA4B2]">ADA</span></p>
+          </div>
+          <div className="bg-[#F7F8FA] rounded-xl p-3">
+            <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">APY</p>
+            <p className="text-base font-bold text-[#059669] tabular-nums mt-0.5">{POOL_APY}%</p>
+          </div>
+          <div className="bg-[#F7F8FA] rounded-xl p-3">
+            <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">Fee</p>
+            <p className="text-base font-bold text-[#0D0D12] tabular-nums mt-0.5">0.3%</p>
+          </div>
+          <div className="bg-[#F7F8FA] rounded-xl p-3 flex items-center justify-center">
+            <Sparkline data={chartData} color="#4F7DF3" />
           </div>
         </div>
       </div>
 
-      {/* Pools list */}
-      <div className="divide-y divide-[#F0F2F5]">
-        {pools.map((pool) => (
-          <div key={pool.id}>
-            {/* Pool row */}
-            <div
-              className={`flex items-center gap-4 px-6 py-4 cursor-pointer transition-colors ${selectedPool === pool.id ? "bg-[#F7F8FA]" : "hover:bg-[#FAFBFC]"}`}
-              onClick={() => setSelectedPool(selectedPool === pool.id ? null : pool.id)}
-            >
-              {/* DEX logo + pair */}
-              <div className="flex items-center gap-3 w-48 flex-shrink-0">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#EEF2FF]">
-                  <span className="font-bold text-sm" style={{ color: pool.dexColor }}>{pool.dexLogo}</span>
+      {/* Tabs */}
+      <div className="px-6 py-3 border-b border-[#F0F2F5] flex items-center gap-2">
+        <button onClick={() => setTab("swap")} className={tabCls("swap")}>Swap</button>
+        <button onClick={() => setTab("liquidity")} className={tabCls("liquidity")}>Ajouter liquidite</button>
+        <button onClick={() => setTab("positions")} className={tabCls("positions")}>
+          Mes positions {lpPositions.length > 0 && <span className="ml-1 bg-[#4F7DF3] text-white text-[9px] px-1.5 py-0.5 rounded-full">{lpPositions.length}</span>}
+        </button>
+        {txHistory.length > 0 && (
+          <button onClick={() => setTab("history")} className={tabCls("history")}>
+            Historique <span className="ml-1 bg-[#9AA4B2] text-white text-[9px] px-1.5 py-0.5 rounded-full">{txHistory.length}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Tab content */}
+      <div className="p-6">
+        {/* ─── SWAP ─── */}
+        {tab === "swap" && (
+          <div className="max-w-md mx-auto">
+            {/* From */}
+            <div className="bg-[#F7F8FA] rounded-2xl p-4 border border-[#E8ECF1]">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-[#9AA4B2]">Vous envoyez</p>
+                <p className="text-xs text-[#9AA4B2]">Solde : <span className="font-medium text-[#5F6B7A]">{swapDirection === "sell" ? syntheticTokens : "—"} {swapDirection === "sell" ? "sBF" : "ADA"}</span></p>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  value={swapAmount}
+                  onChange={(e) => setSwapAmount(e.target.value)}
+                  placeholder="0.0"
+                  className="flex-1 bg-transparent text-2xl font-bold text-[#0D0D12] placeholder-[#C4CAD4] outline-none tabular-nums"
+                />
+                <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-[#E8ECF1]">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${swapDirection === "sell" ? "bg-[#EEF2FF]" : "bg-[#F0F2F5]"}`}>
+                    <span className={`text-[10px] font-bold ${swapDirection === "sell" ? "text-[#4F7DF3]" : "text-[#0D0D12]"}`}>{swapDirection === "sell" ? "sBF" : "A"}</span>
+                  </div>
+                  <span className="text-sm font-semibold text-[#0D0D12]">{swapDirection === "sell" ? "sBF" : "ADA"}</span>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-[#0D0D12]">{pool.pair}</p>
-                  <p className="text-xs text-[#9AA4B2]">{pool.dex}</p>
+              </div>
+              {swapDirection === "sell" && syntheticTokens > 0 && (
+                <div className="flex gap-2 mt-2">
+                  {[25, 50, 75, 100].map((pct) => (
+                    <button key={pct} onClick={() => setSwapAmount(String(Math.floor(syntheticTokens * pct / 100)))} className="text-[10px] font-medium text-[#4F7DF3] bg-[#EEF2FF] px-2 py-1 rounded-lg hover:bg-[#E0E7FF] transition-colors">{pct}%</button>
+                  ))}
                 </div>
-              </div>
+              )}
+            </div>
 
-              {/* Status */}
-              <div className="w-16 flex-shrink-0">
-                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#059669] bg-[#ECFDF5] px-2 py-0.5 rounded-full ring-1 ring-[#059669]/10">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />
-                  Live
-                </span>
-              </div>
+            {/* Swap direction button */}
+            <div className="flex justify-center -my-3 relative z-10">
+              <button onClick={() => setSwapDirection(swapDirection === "sell" ? "buy" : "sell")} className="w-10 h-10 bg-white border-4 border-[#F7F8FA] rounded-xl flex items-center justify-center hover:bg-[#F0F2F5] transition-colors shadow-sm">
+                <svg className="w-4 h-4 text-[#5F6B7A]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>
+              </button>
+            </div>
 
-              {/* TVL */}
-              <div className="w-28 text-right flex-shrink-0">
-                <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">TVL</p>
-                <p className="text-sm font-semibold text-[#0D0D12] tabular-nums">{pool.tvl} <span className="text-[10px] text-[#9AA4B2] font-normal">{pool.tvlCurrency}</span></p>
+            {/* To */}
+            <div className="bg-[#F7F8FA] rounded-2xl p-4 border border-[#E8ECF1]">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-[#9AA4B2]">Vous recevez</p>
               </div>
-
-              {/* Volume */}
-              <div className="w-24 text-right flex-shrink-0">
-                <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">Vol. 24h</p>
-                <p className="text-sm font-semibold text-[#0D0D12] tabular-nums">{pool.volume24h}</p>
-              </div>
-
-              {/* APY */}
-              <div className="w-20 text-right flex-shrink-0">
-                <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">APY</p>
-                <p className="text-sm font-bold text-[#059669] tabular-nums">{pool.apy}%</p>
-              </div>
-
-              {/* Sparkline */}
-              <div className="flex-1 flex justify-end">
-                <Sparkline data={pool.chartData} color={pool.dexColor} />
-              </div>
-
-              {/* Expand arrow */}
-              <div className="w-6 flex-shrink-0 text-right">
-                <svg className={`w-4 h-4 text-[#9AA4B2] transition-transform ${selectedPool === pool.id ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              <div className="flex items-center gap-3">
+                <p className="flex-1 text-2xl font-bold text-[#0D0D12] tabular-nums">{swapOutput}</p>
+                <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-[#E8ECF1]">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${swapDirection === "sell" ? "bg-[#F0F2F5]" : "bg-[#EEF2FF]"}`}>
+                    <span className={`text-[10px] font-bold ${swapDirection === "sell" ? "text-[#0D0D12]" : "text-[#4F7DF3]"}`}>{swapDirection === "sell" ? "A" : "sBF"}</span>
+                  </div>
+                  <span className="text-sm font-semibold text-[#0D0D12]">{swapDirection === "sell" ? "ADA" : "sBF"}</span>
+                </div>
               </div>
             </div>
 
-            {/* Expanded pool detail */}
-            {selectedPool === pool.id && (
-              <div className="px-6 pb-5 bg-[#F7F8FA] animate-fade-in">
-                <div className="grid grid-cols-3 gap-4">
-                  {/* Pool info */}
-                  <div className="bg-white rounded-xl p-4 border border-[#E8ECF1]">
-                    <p className="text-xs font-medium text-[#9AA4B2] mb-3">Informations pool</p>
-                    <div className="space-y-2.5">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-[#5F6B7A]">Prix actuel</span>
-                        <span className="font-semibold text-[#0D0D12] tabular-nums">{pool.price} {pool.priceUnit}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-[#5F6B7A]">Total Value Locked</span>
-                        <span className="font-semibold text-[#0D0D12] tabular-nums">{pool.tvl} {pool.tvlCurrency}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-[#5F6B7A]">Volume 24h</span>
-                        <span className="font-semibold text-[#0D0D12] tabular-nums">{pool.volume24h} {pool.tvlCurrency}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-[#5F6B7A]">APY estime</span>
-                        <span className="font-bold text-[#059669] tabular-nums">{pool.apy}%</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-[#5F6B7A]">Protocole</span>
-                        <span className="font-medium text-[#0D0D12]">{pool.dex}</span>
-                      </div>
-                    </div>
-                  </div>
+            {/* Swap details */}
+            {swapAmount && Number(swapAmount) > 0 && (
+              <div className="mt-3 bg-[#FAFBFC] rounded-xl p-3 space-y-1.5">
+                <div className="flex justify-between text-xs"><span className="text-[#9AA4B2]">Taux</span><span className="text-[#0D0D12] tabular-nums">1 sBF = {POOL_RATE} ADA</span></div>
+                <div className="flex justify-between text-xs"><span className="text-[#9AA4B2]">Frais pool (0.3%)</span><span className="text-[#0D0D12] tabular-nums">{swapFee} {swapDirection === "sell" ? "sBF" : "ADA"}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-[#9AA4B2]">Impact prix</span><span className={`tabular-nums ${Number(priceImpact) > 1 ? "text-amber-600" : "text-[#059669]"}`}>{priceImpact}%</span></div>
+              </div>
+            )}
 
-                  {/* Your position */}
-                  <div className="bg-white rounded-xl p-4 border border-[#E8ECF1]">
-                    <p className="text-xs font-medium text-[#9AA4B2] mb-3">Votre position</p>
-                    <div className="space-y-2.5">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-[#5F6B7A]">sBF disponibles</span>
-                        <span className="font-semibold text-[#059669] tabular-nums">{syntheticTokens}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-[#5F6B7A]">LP tokens detenus</span>
-                        <span className="font-semibold text-[#0D0D12] tabular-nums">{pool.yourLp}</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-[#5F6B7A]">Valeur estimee</span>
-                        <span className="font-semibold text-[#0D0D12] tabular-nums">—</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-[#5F6B7A]">Rewards cumules</span>
-                        <span className="font-semibold text-[#0D0D12] tabular-nums">—</span>
-                      </div>
-                    </div>
-                    <div className="mt-3 pt-3 border-t border-[#F0F2F5]">
-                      <p className="text-[10px] text-[#9AA4B2] leading-relaxed">Connectez votre wallet Cardano (Eternl, Nami, Lace) sur {pool.dex} pour fournir de la liquidite.</p>
-                    </div>
-                  </div>
+            {/* Swap button */}
+            <button
+              onClick={handleSwap}
+              disabled={processing || !swapAmount || Number(swapAmount) <= 0 || (swapDirection === "sell" && Number(swapAmount) > syntheticTokens)}
+              className={`w-full mt-4 py-3.5 rounded-2xl text-sm font-semibold transition-all ${processing || !swapAmount || Number(swapAmount) <= 0 ? "bg-[#F0F2F5] text-[#9AA4B2] cursor-not-allowed" : "bg-[#0D0D12] text-white hover:bg-[#1A1A2E] active:scale-[0.98]"}`}
+            >
+              {processing ? (
+                <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Transaction en cours...</span>
+              ) : swapDirection === "sell" && Number(swapAmount) > syntheticTokens ? (
+                "Solde sBF insuffisant"
+              ) : (
+                `Swap ${swapAmount || "0"} ${swapDirection === "sell" ? "sBF" : "ADA"} → ${swapOutput} ${swapDirection === "sell" ? "ADA" : "sBF"}`
+              )}
+            </button>
+          </div>
+        )}
 
-                  {/* Actions */}
-                  <div className="bg-white rounded-xl p-4 border border-[#E8ECF1] flex flex-col">
-                    <p className="text-xs font-medium text-[#9AA4B2] mb-3">Actions</p>
-                    <div className="space-y-2 flex-1">
-                      <a
-                        href={pool.poolUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 p-3 rounded-xl border border-[#E8ECF1] hover:border-[#4F7DF3] hover:bg-[#EEF2FF] transition-all group"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-[#EEF2FF] flex items-center justify-center group-hover:bg-white">
-                          <svg className="w-4 h-4 text-[#4F7DF3]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-[#0D0D12]">Swap sBF</p>
-                          <p className="text-[10px] text-[#9AA4B2]">Echanger vos tokens sur {pool.dex}</p>
-                        </div>
-                        <svg className="w-4 h-4 text-[#9AA4B2] ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                      </a>
-                      <a
-                        href={pool.liquidityUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 p-3 rounded-xl border border-[#E8ECF1] hover:border-[#059669] hover:bg-[#ECFDF5] transition-all group"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-[#ECFDF5] flex items-center justify-center group-hover:bg-white">
-                          <svg className="w-4 h-4 text-[#059669]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-[#0D0D12]">Ajouter liquidite</p>
-                          <p className="text-[10px] text-[#9AA4B2]">Fournir LP et gagner des fees</p>
-                        </div>
-                        <svg className="w-4 h-4 text-[#9AA4B2] ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                      </a>
-                    </div>
-                    <p className="text-[10px] text-[#9AA4B2] mt-3 pt-2 border-t border-[#F0F2F5]">
-                      Les liens redirigent vers {pool.dex}. Vous aurez besoin d'un wallet Cardano connecte.
-                    </p>
-                  </div>
+        {/* ─── ADD LIQUIDITY ─── */}
+        {tab === "liquidity" && (
+          <div className="max-w-md mx-auto">
+            <div className="bg-[#EEF2FF] rounded-xl p-3 mb-4">
+              <p className="text-xs text-[#4F7DF3] font-medium">En fournissant de la liquidite, vous gagnez {POOL_APY}% APY en frais de swap sur la paire sBF/ADA.</p>
+            </div>
+
+            {/* sBF input */}
+            <div className="bg-[#F7F8FA] rounded-2xl p-4 border border-[#E8ECF1] mb-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-[#9AA4B2]">sBF a deposer</p>
+                <p className="text-xs text-[#9AA4B2]">Solde : <span className="font-medium text-[#5F6B7A]">{syntheticTokens} sBF</span></p>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  value={lpAmountSbf}
+                  onChange={(e) => { setLpAmountSbf(e.target.value); setLpAmountAda(e.target.value ? (Number(e.target.value) * POOL_RATE).toFixed(0) : ""); }}
+                  placeholder="0"
+                  className="flex-1 bg-transparent text-2xl font-bold text-[#0D0D12] placeholder-[#C4CAD4] outline-none tabular-nums"
+                />
+                <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-[#E8ECF1]">
+                  <div className="w-6 h-6 rounded-full bg-[#EEF2FF] flex items-center justify-center"><span className="text-[10px] font-bold text-[#4F7DF3]">sBF</span></div>
+                  <span className="text-sm font-semibold text-[#0D0D12]">sBF</span>
                 </div>
+              </div>
+            </div>
+
+            <div className="flex justify-center -my-1.5 relative z-10">
+              <div className="w-8 h-8 bg-white border-4 border-[#F7F8FA] rounded-lg flex items-center justify-center">
+                <span className="text-[#9AA4B2] text-lg font-bold">+</span>
+              </div>
+            </div>
+
+            {/* ADA input */}
+            <div className="bg-[#F7F8FA] rounded-2xl p-4 border border-[#E8ECF1] mt-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-[#9AA4B2]">ADA a deposer</p>
+                <p className="text-xs text-[#9AA4B2]">Auto-calcule au ratio de la pool</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  value={lpAmountAda}
+                  onChange={(e) => setLpAmountAda(e.target.value)}
+                  placeholder="0"
+                  className="flex-1 bg-transparent text-2xl font-bold text-[#0D0D12] placeholder-[#C4CAD4] outline-none tabular-nums"
+                />
+                <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-[#E8ECF1]">
+                  <div className="w-6 h-6 rounded-full bg-[#F0F2F5] flex items-center justify-center"><span className="text-[10px] font-bold text-[#0D0D12]">A</span></div>
+                  <span className="text-sm font-semibold text-[#0D0D12]">ADA</span>
+                </div>
+              </div>
+            </div>
+
+            {/* LP details */}
+            {lpAmountSbf && Number(lpAmountSbf) > 0 && (
+              <div className="mt-3 bg-[#FAFBFC] rounded-xl p-3 space-y-1.5">
+                <div className="flex justify-between text-xs"><span className="text-[#9AA4B2]">LP tokens recus</span><span className="font-semibold text-[#0D0D12] tabular-nums">{(Number(lpAmountSbf) * 2).toFixed(2)}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-[#9AA4B2]">Part de la pool</span><span className="font-semibold text-[#0D0D12] tabular-nums">{((Number(lpAmountSbf) / POOL_TVL) * 100).toFixed(3)}%</span></div>
+                <div className="flex justify-between text-xs"><span className="text-[#9AA4B2]">APY estime</span><span className="font-bold text-[#059669] tabular-nums">{POOL_APY}%</span></div>
+              </div>
+            )}
+
+            <button
+              onClick={handleAddLiquidity}
+              disabled={processing || !lpAmountSbf || Number(lpAmountSbf) <= 0 || Number(lpAmountSbf) > syntheticTokens}
+              className={`w-full mt-4 py-3.5 rounded-2xl text-sm font-semibold transition-all ${processing || !lpAmountSbf || Number(lpAmountSbf) <= 0 ? "bg-[#F0F2F5] text-[#9AA4B2] cursor-not-allowed" : "bg-[#059669] text-white hover:bg-[#047857] active:scale-[0.98]"}`}
+            >
+              {processing ? (
+                <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Ajout en cours...</span>
+              ) : (
+                `Ajouter liquidite — ${lpAmountSbf || "0"} sBF + ${lpAmountAda || "0"} ADA`
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* ─── POSITIONS ─── */}
+        {tab === "positions" && (
+          <div>
+            {lpPositions.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-12 h-12 bg-[#F0F2F5] rounded-full flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-6 h-6 text-[#9AA4B2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                </div>
+                <p className="text-sm text-[#9AA4B2]">Aucune position LP active</p>
+                <p className="text-xs text-[#C4CAD4] mt-1">Ajoutez de la liquidite pour commencer a gagner des frais</p>
+                <button onClick={() => setTab("liquidity")} className="mt-3 text-xs font-medium text-[#4F7DF3] hover:underline">Ajouter liquidite →</button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {lpPositions.map((pos) => (
+                  <div key={pos.id} className="bg-[#F7F8FA] rounded-2xl p-4 border border-[#E8ECF1]">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex -space-x-2">
+                          <div className="w-8 h-8 rounded-full bg-[#EEF2FF] border-2 border-white flex items-center justify-center"><span className="text-[9px] font-bold text-[#4F7DF3]">sBF</span></div>
+                          <div className="w-8 h-8 rounded-full bg-[#F0F2F5] border-2 border-white flex items-center justify-center"><span className="text-[9px] font-bold text-[#0D0D12]">ADA</span></div>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-[#0D0D12]">sBF / ADA</p>
+                          <p className="text-[10px] text-[#9AA4B2]">{pos.date}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveLp(pos.id)}
+                        disabled={processing}
+                        className="text-xs font-medium px-3 py-1.5 rounded-xl ring-1 ring-[#DC2626]/10 bg-[#FEF2F2] text-[#DC2626] hover:bg-[#FECACA] transition-colors disabled:opacity-50"
+                      >
+                        Retirer
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-4 gap-3">
+                      <div><p className="text-[10px] text-[#9AA4B2]">sBF depose</p><p className="text-sm font-semibold text-[#0D0D12] tabular-nums">{pos.sbf}</p></div>
+                      <div><p className="text-[10px] text-[#9AA4B2]">ADA depose</p><p className="text-sm font-semibold text-[#0D0D12] tabular-nums">{Number(pos.ada).toLocaleString("fr-FR")}</p></div>
+                      <div><p className="text-[10px] text-[#9AA4B2]">LP tokens</p><p className="text-sm font-semibold text-[#4F7DF3] tabular-nums">{pos.lpTokens}</p></div>
+                      <div><p className="text-[10px] text-[#9AA4B2]">Part pool</p><p className="text-sm font-semibold text-[#059669] tabular-nums">{pos.share}%</p></div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
-        ))}
-      </div>
+        )}
 
-      {/* Other protocols */}
-      <div className="px-6 py-4 border-t border-[#F0F2F5] bg-[#FAFBFC]">
-        <p className="text-xs font-medium text-[#9AA4B2] mb-3">Autres protocoles compatibles</p>
-        <div className="flex items-center gap-3">
-          {[
-            { name: "SundaeSwap", url: "https://app.sundae.fi/swap", logo: "S", color: "#6366F1", bg: "#EEF2FF", tag: "DEX" },
-            { name: "Lenfi", url: "https://app.lenfi.io", logo: "LF", color: "#059669", bg: "#ECFDF5", tag: "Lending" },
-            { name: "Splash", url: "https://app.splash.trade", logo: "SP", color: "#EA580C", bg: "#FFF7ED", tag: "DEX" },
-            { name: "JPG Store", url: "https://www.jpg.store", logo: "JPG", color: "#DB2777", bg: "#FDF2F8", tag: "OTC" },
-          ].map((p) => (
-            <a
-              key={p.name}
-              href={p.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[#E8ECF1] bg-white hover:border-[#D1D5DB] transition-colors"
-            >
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: p.bg }}>
-                <span className="font-bold text-[10px]" style={{ color: p.color }}>{p.logo}</span>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-[#0D0D12]">{p.name}</p>
-                <p className="text-[10px] text-[#9AA4B2]">{p.tag}</p>
-              </div>
-              <svg className="w-3 h-3 text-[#9AA4B2] ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-            </a>
-          ))}
-        </div>
+        {/* ─── HISTORY ─── */}
+        {tab === "history" && (
+          <div>
+            {txHistory.length === 0 ? (
+              <p className="text-center text-sm text-[#9AA4B2] py-12">Aucune transaction</p>
+            ) : (
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b border-[#F0F2F5]">
+                    <th className="pb-2 text-[10px] text-[#9AA4B2] font-medium">Type</th>
+                    <th className="pb-2 text-[10px] text-[#9AA4B2] font-medium">Envoye</th>
+                    <th className="pb-2 text-[10px] text-[#9AA4B2] font-medium">Recu</th>
+                    <th className="pb-2 text-[10px] text-[#9AA4B2] font-medium">Date</th>
+                    <th className="pb-2 text-[10px] text-[#9AA4B2] font-medium">Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {txHistory.map((tx) => (
+                    <tr key={tx.id} className="border-b border-[#F0F2F5]">
+                      <td className="py-2.5 text-xs font-medium text-[#0D0D12]">{tx.type}</td>
+                      <td className="py-2.5 text-xs text-[#5F6B7A] tabular-nums">{tx.amountIn}</td>
+                      <td className="py-2.5 text-xs text-[#059669] font-medium tabular-nums">{tx.amountOut}</td>
+                      <td className="py-2.5 text-xs text-[#9AA4B2]">{tx.date}</td>
+                      <td className="py-2.5"><span className="text-[10px] font-medium text-[#059669] bg-[#ECFDF5] px-2 py-0.5 rounded-full">{tx.status}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1330,7 +1436,7 @@ function Collateral({ toast }) {
 
       {/* DeFi Pools — Embedded protocols */}
       {syntheticTokens > 0 && (
-        <DeFiPoolsEmbed syntheticTokens={syntheticTokens} />
+        <DeFiPoolsEmbed syntheticTokens={syntheticTokens} toast={toast} />
       )}
 
       {/* Transaction result */}
