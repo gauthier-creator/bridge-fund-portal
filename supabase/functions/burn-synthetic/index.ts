@@ -121,7 +121,7 @@ Deno.serve(async (req: Request) => {
     if (lockedTokens >= BigInt(tokenCount)) {
       // ═════════════════════════════════════════════════════════════
       // PATH A: Vault has tokens → full on-chain burn
-      // Collect BF from vault, burn them + burn sBF if available
+      // Collect BF from vault, send security tokens back to user
       // ═════════════════════════════════════════════════════════════
       let collected = 0n;
       const selectedVaultUtxos = [];
@@ -134,29 +134,34 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      const currentSlot = lucid.currentSlot();
+      // For native script UTxOs in Lucid 0.10:
+      // - collectFrom with the native script witness
+      // - addSigner to satisfy the "sig" condition
+      // - validFrom to satisfy the "after slot 0" condition
+      const nowMs = Date.now() - 120_000; // 2 min in the past for safety
 
       let txBuilder = lucid
         .newTx()
-        .validFrom(currentSlot)
-        // 1. Collect BF from vault
-        .collectFrom(selectedVaultUtxos, Data.void())
+        // Required: time validity for "after slot 0" in vault script
+        .validFrom(nowMs)
+        // Spend vault UTxOs — pass native script as witness for script UTxOs
+        .collectFrom(selectedVaultUtxos)
+        // Attach native script as spending witness
         .attachSpendingValidator(vaultScript)
-        // 2. Burn the BF (they were minted for the vault, now destroy them)
-        .mintAssets({ [securityUnit]: BigInt(-tokenCount) })
-        .attachMintingPolicy(securityPolicy)
-        // 3. Admin signer (required by vault script)
+        // Send security tokens back to the user (unlock)
+        .payToAddress(userAddress, { [securityUnit]: BigInt(tokenCount) })
+        // Required signer (satisfies "sig" condition in vault native script)
         .addSignerKey(paymentCredential.hash)
         .attachMetadata(674, {
           msg: [
-            `Burn ${tokenCount} ${secAssetLabel} from vault`,
+            `Unlock ${tokenCount} ${secAssetLabel}`,
             `Redeem ${tokenCount} ${synAssetLabel}`,
-            `User: ${userAddress.slice(0, 48)}`,
+            `To: ${userAddress.slice(0, 48)}`,
             `Ratio 1:1 | Redemption`,
           ],
         });
 
-      // Return excess BF to vault if we collected more
+      // Return excess BF to vault if we collected more than needed
       const excess = collected - BigInt(tokenCount);
       if (excess > 0n) {
         txBuilder = txBuilder.payToContract(vaultAddress, Data.void(), {
@@ -168,7 +173,7 @@ Deno.serve(async (req: Request) => {
       const signedTx = await tx.sign().complete();
       txHash = await signedTx.submit();
 
-      console.log(`[Vault] On-chain burn tx: ${txHash}`);
+      console.log(`[Vault] On-chain unlock tx: ${txHash}`);
       await lucid.awaitTx(txHash);
     } else {
       // ═════════════════════════════════════════════════════════════

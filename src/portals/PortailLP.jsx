@@ -821,6 +821,245 @@ function Souscription({ toast, fund }) {
   );
 }
 
+/* ─── DeFi Pools Embed ─── */
+const DEFI_PROTOCOLS = [
+  {
+    id: "minswap",
+    name: "Minswap",
+    tag: "DEX",
+    color: "#4F7DF3",
+    bgColor: "#EEF2FF",
+    logo: "M",
+    desc: "Swap sBF/ADA, fournir de la liquidite. Principal DEX Cardano — TVL ~$50M.",
+    url: "https://app.minswap.org/swap",
+    embedUrl: "https://app.minswap.org/swap",
+    apy: "8-15%",
+    tvl: "$52.3M",
+    actions: ["Swap", "Add Liquidity", "Farm"],
+  },
+  {
+    id: "sundaeswap",
+    name: "SundaeSwap",
+    tag: "DEX",
+    color: "#6366F1",
+    bgColor: "#EEF2FF",
+    logo: "S",
+    desc: "DEX Cardano avec pools de liquidite et yield farming pour tokens natifs.",
+    url: "https://app.sundae.fi/swap",
+    embedUrl: "https://app.sundae.fi/swap",
+    apy: "5-12%",
+    tvl: "$8.7M",
+    actions: ["Swap", "Provide LP"],
+  },
+  {
+    id: "liqwid",
+    name: "Liqwid Finance",
+    tag: "Lending",
+    color: "#4F7DF3",
+    bgColor: "#EEF2FF",
+    logo: "L",
+    desc: "Deposez sBF comme collateral, empruntez ADA ou stablecoins (iUSD, DJED).",
+    url: "https://app.liqwid.finance",
+    embedUrl: "https://app.liqwid.finance",
+    apy: "3-8%",
+    tvl: "$31.5M",
+    actions: ["Supply", "Borrow"],
+  },
+  {
+    id: "lenfi",
+    name: "Lenfi",
+    tag: "Lending",
+    color: "#059669",
+    bgColor: "#ECFDF5",
+    logo: "LF",
+    desc: "Protocole de pret/emprunt decentralise peer-to-pool sur Cardano.",
+    url: "https://app.lenfi.io",
+    embedUrl: "https://app.lenfi.io",
+    apy: "4-10%",
+    tvl: "$5.2M",
+    actions: ["Lend", "Borrow"],
+  },
+  {
+    id: "splash",
+    name: "Splash",
+    tag: "DEX",
+    color: "#EA580C",
+    bgColor: "#FFF7ED",
+    logo: "SP",
+    desc: "DEX avec concentrated liquidity et stable swap pools.",
+    url: "https://app.splash.trade",
+    embedUrl: "https://app.splash.trade",
+    apy: "6-18%",
+    tvl: "$4.1M",
+    actions: ["Swap", "Concentrated LP"],
+  },
+  {
+    id: "jpgstore",
+    name: "JPG Store",
+    tag: "OTC",
+    color: "#DB2777",
+    bgColor: "#FDF2F8",
+    logo: "JPG",
+    desc: "Marketplace OTC pour tokens natifs Cardano. Echangez sBF sur le marche secondaire.",
+    url: "https://www.jpg.store",
+    embedUrl: "https://www.jpg.store",
+    apy: "—",
+    tvl: "$15M+",
+    actions: ["Buy", "Sell"],
+  },
+];
+
+function DeFiPoolsEmbed({ syntheticTokens }) {
+  const [activeProtocol, setActiveProtocol] = useState(null);
+  const [embedLoading, setEmbedLoading] = useState(false);
+
+  const handleOpen = (protocol) => {
+    setEmbedLoading(true);
+    setActiveProtocol(protocol);
+  };
+
+  const handleClose = () => {
+    setActiveProtocol(null);
+    setEmbedLoading(false);
+  };
+
+  return (
+    <>
+      <div className="bg-white rounded-2xl overflow-hidden border border-[#E8ECF1]">
+        <div className="px-6 py-4 border-b border-[#F0F2F5] flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-[#0D0D12]">DeFi Pools</h3>
+            <p className="text-xs text-[#9AA4B2] mt-0.5">Utilisez vos sBF comme collateral ou liquidite sur les protocoles DeFi Cardano</p>
+          </div>
+          <span className="text-[11px] font-medium text-[#059669] ring-1 ring-[#059669]/10 bg-[#ECFDF5] px-3 py-1 rounded-md tabular-nums">{syntheticTokens.toLocaleString("fr-FR")} sBF disponibles</span>
+        </div>
+
+        {/* Protocol cards */}
+        <div className="p-5 space-y-3">
+          {DEFI_PROTOCOLS.map((p) => (
+            <div key={p.id} className="flex items-center gap-4 p-4 rounded-2xl border border-[#E8ECF1] hover:border-[#D1D5DB] transition-all bg-white">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: p.bgColor }}>
+                <span className="font-bold text-sm" style={{ color: p.color }}>{p.logo}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-[#0D0D12]">{p.name}</p>
+                  <span className="text-[10px] text-[#9AA4B2] bg-[#F0F2F5] px-1.5 py-0.5 rounded">{p.tag}</span>
+                </div>
+                <p className="text-xs text-[#9AA4B2] mt-0.5 truncate">{p.desc}</p>
+              </div>
+              <div className="flex items-center gap-6 flex-shrink-0">
+                <div className="text-right">
+                  <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">APY</p>
+                  <p className="text-sm font-semibold text-[#059669] tabular-nums">{p.apy}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider">TVL</p>
+                  <p className="text-sm font-semibold text-[#0D0D12] tabular-nums">{p.tvl}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleOpen(p)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors text-white"
+                    style={{ backgroundColor: p.color }}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                    Ouvrir
+                  </button>
+                  <a
+                    href={p.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-[#F7F8FA] text-[#5F6B7A] hover:bg-[#F0F2F5] transition-colors"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                  </a>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Embedded protocol modal */}
+      {activeProtocol && (
+        <div className="fixed inset-0 bg-[#0D0D12]/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={handleClose}>
+          <div className="bg-white rounded-2xl border border-[#E8ECF1] w-full max-w-6xl mx-4 h-[90vh] flex flex-col animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-3 border-b border-[#F0F2F5] flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: activeProtocol.bgColor }}>
+                  <span className="font-bold text-sm" style={{ color: activeProtocol.color }}>{activeProtocol.logo}</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-[#0D0D12]">{activeProtocol.name}</h3>
+                    <span className="text-[10px] text-[#9AA4B2] bg-[#F0F2F5] px-1.5 py-0.5 rounded">{activeProtocol.tag}</span>
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: activeProtocol.bgColor, color: activeProtocol.color }}>APY {activeProtocol.apy}</span>
+                  </div>
+                  <p className="text-xs text-[#9AA4B2]">TVL {activeProtocol.tvl} — Connectez votre wallet Cardano pour interagir</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Action buttons */}
+                {activeProtocol.actions.map((action) => (
+                  <span key={action} className="text-[10px] font-medium px-2 py-1 rounded-lg bg-[#F7F8FA] text-[#5F6B7A]">{action}</span>
+                ))}
+                <div className="w-px h-6 bg-[#E8ECF1] mx-1" />
+                <span className="text-[11px] font-medium text-[#059669] ring-1 ring-[#059669]/10 bg-[#ECFDF5] px-2 py-1 rounded-md tabular-nums">{syntheticTokens} sBF</span>
+                <a
+                  href={activeProtocol.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-[#F7F8FA] text-[#5F6B7A] hover:bg-[#F0F2F5] transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                  Plein ecran
+                </a>
+                <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-[#9AA4B2] hover:text-[#0D0D12] hover:bg-[#F7F8FA] transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Embed iframe */}
+            <div className="flex-1 bg-[#F7F8FA] relative overflow-hidden">
+              {embedLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-[#F7F8FA] z-10">
+                  <div className="text-center">
+                    <div className="w-10 h-10 border-2 border-[#E8ECF1] border-t-[#4F7DF3] rounded-full animate-spin mx-auto mb-3" />
+                    <p className="text-sm text-[#5F6B7A]">Chargement de {activeProtocol.name}...</p>
+                    <p className="text-xs text-[#9AA4B2] mt-1">Connectez votre wallet (Eternl, Nami, Lace) pour interagir</p>
+                  </div>
+                </div>
+              )}
+              <iframe
+                src={activeProtocol.embedUrl}
+                title={activeProtocol.name}
+                className="w-full h-full border-0"
+                onLoad={() => setEmbedLoading(false)}
+                sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals allow-top-navigation-by-user-activation"
+                allow="clipboard-write"
+              />
+            </div>
+
+            {/* Footer info bar */}
+            <div className="px-6 py-2.5 border-t border-[#F0F2F5] flex items-center justify-between bg-[#FAFBFC] flex-shrink-0">
+              <p className="text-[11px] text-[#9AA4B2]">
+                <svg className="w-3 h-3 inline mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                Interface externe — Bridge Fund n'est pas responsable des interactions avec les protocoles tiers
+              </p>
+              <p className="text-[11px] text-[#9AA4B2]">
+                Protocole : <span className="font-medium text-[#5F6B7A]">{activeProtocol.name}</span> · Reseau : <span className="font-medium text-[#5F6B7A]">Cardano</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 /* ─── Sub-tab: Collatéral / DeFi — Synthetic Token Vault ─── */
 function Collateral({ toast }) {
   const { orders } = useAppContext();
@@ -1041,103 +1280,9 @@ function Collateral({ toast }) {
         </div>
       )}
 
-      {/* DeFi Pools — External protocols */}
+      {/* DeFi Pools — Embedded protocols */}
       {syntheticTokens > 0 && (
-        <div className="bg-white rounded-2xl overflow-hidden border border-[#E8ECF1]">
-          <div className="px-6 py-4 border-b border-[#F0F2F5] flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-[#0D0D12]">DeFi Pools</h3>
-              <p className="text-xs text-[#9AA4B2] mt-0.5">Utilisez vos sBF comme collateral ou liquidite sur les protocoles DeFi Cardano</p>
-            </div>
-            <span className="text-[11px] font-medium text-[#059669] ring-1 ring-[#059669]/10 bg-[#ECFDF5] px-3 py-1 rounded-md tabular-nums">{syntheticTokens.toLocaleString("fr-FR")} sBF disponibles</span>
-          </div>
-          <div className="grid grid-cols-2 gap-4 p-5">
-            {/* Minswap */}
-            <a href="https://app.minswap.org/swap" target="_blank" rel="noopener noreferrer" className="group flex items-start gap-4 p-4 rounded-2xl hover:border-[#D1D5DB] transition-all bg-white border border-[#E8ECF1]">
-              <div className="w-10 h-10 bg-[#EEF2FF] rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="text-[#4F7DF3] font-bold text-sm">M</span>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-[#0D0D12] group-hover:text-[#4F7DF3]">Minswap</p>
-                  <span className="text-[10px] text-[#9AA4B2] bg-[#F0F2F5] px-1.5 py-0.5 rounded">DEX</span>
-                </div>
-                <p className="text-xs text-[#9AA4B2] mt-1">Swap sBF, fournir de la liquidite dans les pools sBF/ADA. TVL ~$50M.</p>
-                <p className="text-xs text-[#4F7DF3] mt-2 font-medium group-hover:underline">Ouvrir Minswap →</p>
-              </div>
-            </a>
-            {/* SundaeSwap */}
-            <a href="https://app.sundae.fi/swap" target="_blank" rel="noopener noreferrer" className="group flex items-start gap-4 p-4 rounded-2xl hover:border-[#D1D5DB] transition-all bg-white border border-[#E8ECF1]">
-              <div className="w-10 h-10 bg-[#F0F2F5] rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="text-[#0D0D12] font-bold text-sm">S</span>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-[#0D0D12] group-hover:text-[#0D0D12]">SundaeSwap</p>
-                  <span className="text-[10px] text-[#9AA4B2] bg-[#F0F2F5] px-1.5 py-0.5 rounded">DEX</span>
-                </div>
-                <p className="text-xs text-[#9AA4B2] mt-1">DEX Cardano avec pools de liquidite et yield farming pour tokens natifs.</p>
-                <p className="text-xs text-[#0D0D12] mt-2 font-medium group-hover:underline">Ouvrir SundaeSwap →</p>
-              </div>
-            </a>
-            {/* Liqwid */}
-            <a href="https://app.liqwid.finance" target="_blank" rel="noopener noreferrer" className="group flex items-start gap-4 p-4 rounded-2xl hover:border-[#D1D5DB] transition-all bg-white border border-[#E8ECF1]">
-              <div className="w-10 h-10 bg-[#EEF2FF] rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="text-[#4F7DF3] font-bold text-sm">L</span>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-[#0D0D12] group-hover:text-[#4F7DF3]">Liqwid Finance</p>
-                  <span className="text-[10px] text-[#9AA4B2] bg-[#F0F2F5] px-1.5 py-0.5 rounded">Lending</span>
-                </div>
-                <p className="text-xs text-[#9AA4B2] mt-1">Deposez vos sBF comme collateral et empruntez ADA ou stablecoins (iUSD, DJED).</p>
-                <p className="text-xs text-[#4F7DF3] mt-2 font-medium group-hover:underline">Ouvrir Liqwid →</p>
-              </div>
-            </a>
-            {/* Lenfi (ex-Aada) */}
-            <a href="https://app.lenfi.io" target="_blank" rel="noopener noreferrer" className="group flex items-start gap-4 p-4 rounded-2xl hover:border-[#D1D5DB] transition-all bg-white border border-[#E8ECF1]">
-              <div className="w-10 h-10 bg-[#ECFDF5] rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="text-[#059669] font-bold text-sm">LF</span>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-[#0D0D12] group-hover:text-[#059669]">Lenfi</p>
-                  <span className="text-[10px] text-[#9AA4B2] bg-[#F0F2F5] px-1.5 py-0.5 rounded">Lending</span>
-                </div>
-                <p className="text-xs text-[#9AA4B2] mt-1">Protocole de pret/emprunt decentralise. Utilisez sBF comme collateral peer-to-pool.</p>
-                <p className="text-xs text-[#059669] mt-2 font-medium group-hover:underline">Ouvrir Lenfi →</p>
-              </div>
-            </a>
-            {/* Splash */}
-            <a href="https://app.splash.trade" target="_blank" rel="noopener noreferrer" className="group flex items-start gap-4 p-4 rounded-2xl hover:border-[#D1D5DB] transition-all bg-white border border-[#E8ECF1]">
-              <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="text-orange-600 font-bold text-sm">SP</span>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-[#0D0D12] group-hover:text-orange-600">Splash</p>
-                  <span className="text-[10px] text-[#9AA4B2] bg-[#F0F2F5] px-1.5 py-0.5 rounded">DEX</span>
-                </div>
-                <p className="text-xs text-[#9AA4B2] mt-1">DEX avec concentrated liquidity et stable swap pools pour tokens Cardano.</p>
-                <p className="text-xs text-orange-600 mt-2 font-medium group-hover:underline">Ouvrir Splash →</p>
-              </div>
-            </a>
-            {/* JPG Store */}
-            <a href="https://www.jpg.store" target="_blank" rel="noopener noreferrer" className="group flex items-start gap-4 p-4 rounded-2xl hover:border-[#D1D5DB] transition-all bg-white border border-[#E8ECF1]">
-              <div className="w-10 h-10 bg-pink-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="text-pink-600 font-bold text-sm">JPG</span>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-[#0D0D12] group-hover:text-pink-600">JPG Store</p>
-                  <span className="text-[10px] text-[#9AA4B2] bg-[#F0F2F5] px-1.5 py-0.5 rounded">Marketplace</span>
-                </div>
-                <p className="text-xs text-[#9AA4B2] mt-1">Marketplace OTC pour tokens natifs Cardano. Echangez sBF sur le marche secondaire.</p>
-                <p className="text-xs text-pink-600 mt-2 font-medium group-hover:underline">Ouvrir JPG Store →</p>
-              </div>
-            </a>
-          </div>
-        </div>
+        <DeFiPoolsEmbed syntheticTokens={syntheticTokens} />
       )}
 
       {/* Transaction result */}
