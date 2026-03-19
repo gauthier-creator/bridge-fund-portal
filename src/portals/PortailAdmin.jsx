@@ -9,6 +9,7 @@ import { mintAndSendToken, burnSynthetic, transferToken, getFundTokenInfo, getEx
 import FundEditorComponent from "../components/FundEditor";
 import { fetchAuditLogs, fetchAuditStats } from "../services/auditService";
 import { listAllFunds } from "../services/fundService";
+import SalesforceIntegration from "../components/SalesforceIntegration";
 
 const ROLE_LABELS = { investor: "Investisseur", intermediary: "Intermédiaire", aifm: "AIFM", admin: "Admin" };
 
@@ -96,6 +97,7 @@ export default function PortailAdmin({ toast }) {
           { id: "compliance", label: "Compliance CIP-113" },
           { id: "defi", label: "DeFi Pools" },
           { id: "audit", label: "Audit Trail" },
+          { id: "crm", label: "CRM Salesforce" },
         ].map((tab) => (
           <button key={tab.id} onClick={() => setAdminTab(tab.id)} className={`px-5 py-3 text-sm font-medium transition-all relative ${adminTab === tab.id ? "text-[#0D0D12]" : "text-[#9AA4B2] hover:text-[#5F6B7A]"}`}>
             {tab.label}
@@ -110,6 +112,7 @@ export default function PortailAdmin({ toast }) {
       {adminTab === "compliance" && <ComplianceManager toast={toast} />}
       {adminTab === "defi" && <DefiPoolManager toast={toast} />}
       {adminTab === "audit" && <AuditTrailViewer />}
+      {adminTab === "crm" && <SalesforceIntegration toast={toast} />}
 
       {adminTab === "dashboard" && <>
       {/* Fund selector bar */}

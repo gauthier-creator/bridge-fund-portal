@@ -283,6 +283,46 @@ export const auditAddressUnfrozen = (address, fundSlug) =>
     metadata: { address, fundSlug },
   });
 
+// CRM Salesforce
+export const auditCRMConnected = (instanceUrl) =>
+  logAudit({
+    action: "crm.connected",
+    category: "crm",
+    description: `Salesforce connecté : ${instanceUrl}`,
+    entityType: "crm_integration",
+    metadata: { instanceUrl, provider: "salesforce" },
+  });
+
+export const auditCRMDisconnected = (instanceUrl) =>
+  logAudit({
+    action: "crm.disconnected",
+    category: "crm",
+    description: `Salesforce déconnecté : ${instanceUrl}`,
+    entityType: "crm_integration",
+    severity: "warning",
+    metadata: { instanceUrl, provider: "salesforce" },
+  });
+
+export const auditCRMSyncStarted = (objectType, syncType) =>
+  logAudit({
+    action: "crm.sync_started",
+    category: "crm",
+    description: `Sync ${syncType} démarrée : ${objectType}`,
+    entityType: "crm_sync",
+    metadata: { objectType, syncType },
+  });
+
+export const auditCRMSyncCompleted = (logId, stats) =>
+  logAudit({
+    action: "crm.sync_completed",
+    category: "crm",
+    description: `Sync terminée : ${stats.recordsSynced} enregistrements, ${stats.recordsFailed} erreurs`,
+    entityType: "crm_sync",
+    entityId: String(logId),
+    severity: stats.recordsFailed > 0 ? "warning" : "info",
+    metadata: stats,
+  });
+
 // ─── Lecture des logs (admin) ───
 export async function fetchAuditLogs({ limit = 100, offset = 0, category = null, severity = null, search = null } = {}) {
   if (!supabase) return [];
