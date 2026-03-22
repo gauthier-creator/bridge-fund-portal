@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { inputCls, labelCls } from "./shared";
 import {
   fetchCRMConfig, saveCRMConfig, connectCRM, disconnectCRM,
   fetchSyncLogs, fetchSyncStats,
 } from "../services/salesforceService";
 
 /* ══════════════════════════════════════════
-   Salesforce CRM — Clean integration card
-   Style n8n / Zapier : connect & forget
+   Salesforce CRM — OAuth flow integration
+   Click connect → SF login → auto-sync
    ══════════════════════════════════════════ */
 
 function timeAgo(d) {
@@ -19,15 +18,53 @@ function timeAgo(d) {
   return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
+function SfIcon({ color = "white", size = 22 }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M10 3.2c.9-.8 2-.9 3.1-.6 1.1.3 1.9 1.1 2.4 2 .7-.4 1.5-.5 2.3-.3 1.7.5 2.8 2.1 2.7 3.9 1.5.5 2.5 1.9 2.5 3.5 0 2.1-1.7 3.7-3.7 3.7h-.3c-.5 1.6-2 2.7-3.7 2.7-1 0-1.9-.4-2.6-1-.7.7-1.6 1-2.6 1-1.7 0-3.2-1.1-3.7-2.7H6c-1.1 0-2.1-.5-2.8-1.3-.7-.8-1-1.8-.9-2.8.1-1.5 1.1-2.7 2.5-3.1-.2-1.7.8-3.4 2.5-3.9.5-.2 1.1-.2 1.6-.1.5-1 1.3-1.6 2.3-1.9l-.2.1z"/></svg>;
+}
+
+// Simulate Salesforce OAuth popup flow
+function openSalesforceOAuth(onSuccess) {
+  const SF_INSTANCE = "https://swisslife.my.salesforce.com";
+
+  // Open real Salesforce login page in popup
+  const popup = window.open(
+    `https://login.salesforce.com/services/oauth2/authorize?response_type=code&client_id=bridge_fund_app&redirect_uri=${encodeURIComponent(window.location.origin + "/oauth/callback")}&scope=api%20refresh_token`,
+    "salesforce_oauth",
+    "width=600,height=700,left=300,top=100,toolbar=no,menubar=no"
+  );
+
+  // For demo: simulate successful OAuth after user interacts with popup
+  // In production: the popup redirects to callback URL with auth code
+  const checkInterval = setInterval(() => {
+    try {
+      if (!popup || popup.closed) {
+        clearInterval(checkInterval);
+        // Popup was closed → simulate successful auth
+        onSuccess({
+          instanceUrl: SF_INSTANCE,
+          accessToken: "sf_access_" + Date.now(),
+          refreshToken: "sf_refresh_" + Date.now(),
+          userEmail: "admin@swisslife.com",
+          userName: "SwissLife Admin",
+        });
+      }
+    } catch (e) {
+      // Cross-origin — popup still on Salesforce domain
+    }
+  }, 500);
+
+  // Auto-close popup after 5s for demo
+  setTimeout(() => {
+    try { popup?.close(); } catch (e) {}
+  }, 5000);
+}
+
 export default function SalesforceIntegration({ toast }) {
   const [config, setConfig] = useState(null);
   const [logs, setLogs] = useState([]);
   const [stats, setStats] = useState({ total: 0, totalRecords: 0, totalErrors: 0, lastSync: null });
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
-  const [url, setUrl] = useState("");
-  const [clientId, setClientId] = useState("");
-  const [secret, setSecret] = useState("");
   const [showLogs, setShowLogs] = useState(false);
 
   const load = useCallback(async () => {
@@ -36,11 +73,8 @@ export default function SalesforceIntegration({ toast }) {
       const cfg = await fetchCRMConfig();
       if (cfg) {
         setConfig(cfg);
-        setUrl(cfg.instanceUrl || "");
-        setClientId(cfg.clientId || "");
         const [l, s] = await Promise.all([fetchSyncLogs(cfg.id, 10), fetchSyncStats(cfg.id)]);
-        setLogs(l);
-        setStats(s);
+        setLogs(l); setStats(s);
       }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
@@ -58,24 +92,34 @@ export default function SalesforceIntegration({ toast }) {
   }, [config?.id, config?.status]);
 
   const handleConnect = async () => {
-    try {
-      setConnecting(true);
-      let cfg = config;
-      const payload = { instanceUrl: url, clientId, clientSecret: secret, id: cfg?.id };
-      cfg = await saveCRMConfig(payload);
-      await new Promise(r => setTimeout(r, 1400));
-      const connected = await connectCRM(cfg.id, url || "https://swisslife.my.salesforce.com");
-      setConfig(connected);
-      toast?.({ type: "success", message: "Salesforce connecté" });
-    } catch (e) {
-      toast?.({ type: "error", message: e.message });
-    } finally { setConnecting(false); }
+    setConnecting(true);
+    openSalesforceOAuth(async (authResult) => {
+      try {
+        // Save or update config
+        let cfg = config;
+        if (!cfg) {
+          cfg = await saveCRMConfig({
+            instanceUrl: authResult.instanceUrl,
+            clientId: "bridge_fund_connected_app",
+            clientSecret: "auto",
+          });
+        }
+        const connected = await connectCRM(cfg.id, authResult.instanceUrl);
+        setConfig(connected);
+        toast?.({ type: "success", message: `Salesforce connecté — ${authResult.userName}` });
+      } catch (e) {
+        toast?.({ type: "error", message: e.message });
+      } finally {
+        setConnecting(false);
+      }
+    });
   };
 
   const handleDisconnect = async () => {
     try {
       const u = await disconnectCRM(config.id);
       setConfig(u);
+      setLogs([]); setStats({ total: 0, totalRecords: 0, totalErrors: 0, lastSync: null });
       toast?.({ type: "success", message: "Salesforce déconnecté" });
     } catch (e) { toast?.({ type: "error", message: e.message }); }
   };
@@ -88,13 +132,12 @@ export default function SalesforceIntegration({ toast }) {
 
   return <div className="max-w-2xl mx-auto space-y-4">
 
-    {/* ── CONNECTED STATE ── */}
     {connected ? <>
+      {/* ═══ CONNECTED ═══ */}
       <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
-        {/* Header */}
         <div className="p-5 flex items-center gap-4">
           <div className="w-11 h-11 rounded-xl bg-[#00A1E0] flex items-center justify-center shrink-0">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M10 3.2c.9-.8 2-.9 3.1-.6 1.1.3 1.9 1.1 2.4 2 .7-.4 1.5-.5 2.3-.3 1.7.5 2.8 2.1 2.7 3.9 1.5.5 2.5 1.9 2.5 3.5 0 2.1-1.7 3.7-3.7 3.7h-.3c-.5 1.6-2 2.7-3.7 2.7-1 0-1.9-.4-2.6-1-.7.7-1.6 1-2.6 1-1.7 0-3.2-1.1-3.7-2.7H6c-1.1 0-2.1-.5-2.8-1.3-.7-.8-1-1.8-.9-2.8.1-1.5 1.1-2.7 2.5-3.1-.2-1.7.8-3.4 2.5-3.9.5-.2 1.1-.2 1.6-.1.5-1 1.3-1.6 2.3-1.9l-.2.1z"/></svg>
+            <SfIcon />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -111,7 +154,7 @@ export default function SalesforceIntegration({ toast }) {
           </button>
         </div>
 
-        {/* Stats row */}
+        {/* Stats */}
         <div className="border-t border-[#E8ECF1] grid grid-cols-3 divide-x divide-[#E8ECF1]">
           <div className="px-5 py-3">
             <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider font-medium">Synchronisés</p>
@@ -127,7 +170,7 @@ export default function SalesforceIntegration({ toast }) {
           </div>
         </div>
 
-        {/* Mapping preview */}
+        {/* Auto-sync mapping */}
         <div className="border-t border-[#E8ECF1] px-5 py-3 space-y-1.5">
           <p className="text-[10px] text-[#9AA4B2] uppercase tracking-wider font-medium mb-2">Sync automatique</p>
           {[
@@ -145,29 +188,31 @@ export default function SalesforceIntegration({ toast }) {
         </div>
       </div>
 
-      {/* Activity log (collapsible) */}
+      {/* Activity feed */}
       <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
         <button onClick={() => setShowLogs(!showLogs)}
           className="w-full px-5 py-3 flex items-center justify-between hover:bg-[#FAFBFC] transition-colors">
           <div className="flex items-center gap-2">
             <span className="text-[13px] font-medium text-[#0D0D12]">Activité récente</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#F0F2F5] text-[#9AA4B2] font-medium">{logs.length}</span>
+            {logs.length > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#F0F2F5] text-[#9AA4B2] font-medium">{logs.length}</span>}
           </div>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9AA4B2" strokeWidth="2"
             className={`transition-transform ${showLogs ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6"/></svg>
         </button>
-        {showLogs && logs.length > 0 && (
+        {showLogs && (
           <div className="border-t border-[#E8ECF1] divide-y divide-[#F0F2F5] max-h-[280px] overflow-y-auto">
-            {logs.map(log => {
+            {logs.length === 0 ? (
+              <div className="px-5 py-6 text-center text-[12px] text-[#9AA4B2]">
+                Créez un profil pour déclencher la première sync
+              </div>
+            ) : logs.map(log => {
               const ok = log.status === "success";
               const obj = { profiles: "👤", orders: "📋", funds: "💰" }[log.objectType] || "🔄";
+              const label = { profiles: "profil", orders: "souscription", funds: "fonds" }[log.objectType] || log.objectType;
               return (
                 <div key={log.id} className="px-5 py-2.5 flex items-center gap-3 text-[12px]">
                   <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${ok ? "bg-emerald-50" : "bg-red-50"}`}>{obj}</span>
-                  <span className="flex-1 text-[#5F6B7A]">
-                    {log.recordsSynced} {log.objectType === "profiles" ? "profil" : log.objectType === "orders" ? "souscription" : "fonds"}
-                    {log.recordsSynced > 1 ? "s" : ""} sync
-                  </span>
+                  <span className="flex-1 text-[#5F6B7A]">{log.recordsSynced} {label}{log.recordsSynced > 1 ? "s" : ""} sync</span>
                   <span className={`w-1.5 h-1.5 rounded-full ${ok ? "bg-emerald-500" : "bg-red-400"}`} />
                   <span className="text-[11px] text-[#C4C9D2]">{timeAgo(log.startedAt)}</span>
                 </div>
@@ -175,58 +220,46 @@ export default function SalesforceIntegration({ toast }) {
             })}
           </div>
         )}
-        {showLogs && logs.length === 0 && (
-          <div className="border-t border-[#E8ECF1] px-5 py-6 text-center text-[12px] text-[#9AA4B2]">
-            Aucune activité — créez un profil pour déclencher la première sync
-          </div>
-        )}
       </div>
     </> :
 
-    /* ── DISCONNECTED STATE ── */
+    /* ═══ DISCONNECTED — Single connect button ═══ */
     <div className="bg-white rounded-2xl border border-[#E8ECF1] overflow-hidden">
-      {/* Header */}
-      <div className="p-6 pb-0 flex items-center gap-4">
-        <div className="w-11 h-11 rounded-xl bg-[#F0F2F5] flex items-center justify-center">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="#9AA4B2"><path d="M10 3.2c.9-.8 2-.9 3.1-.6 1.1.3 1.9 1.1 2.4 2 .7-.4 1.5-.5 2.3-.3 1.7.5 2.8 2.1 2.7 3.9 1.5.5 2.5 1.9 2.5 3.5 0 2.1-1.7 3.7-3.7 3.7h-.3c-.5 1.6-2 2.7-3.7 2.7-1 0-1.9-.4-2.6-1-.7.7-1.6 1-2.6 1-1.7 0-3.2-1.1-3.7-2.7H6c-1.1 0-2.1-.5-2.8-1.3-.7-.8-1-1.8-.9-2.8.1-1.5 1.1-2.7 2.5-3.1-.2-1.7.8-3.4 2.5-3.9.5-.2 1.1-.2 1.6-.1.5-1 1.3-1.6 2.3-1.9l-.2.1z"/></svg>
+      <div className="px-8 pt-10 pb-6 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-[#00A1E0] flex items-center justify-center mx-auto mb-5 shadow-lg shadow-[#00A1E0]/20">
+          <SfIcon size={32} />
         </div>
-        <div>
-          <h2 className="text-[15px] font-semibold text-[#0D0D12]">Connecter Salesforce</h2>
-          <p className="text-[12px] text-[#9AA4B2]">Synchronisez automatiquement vos données vers le CRM</p>
-        </div>
+        <h2 className="text-[18px] font-semibold text-[#0D0D12] mb-1">Connecter Salesforce</h2>
+        <p className="text-[13px] text-[#9AA4B2] max-w-sm mx-auto">
+          Synchronisez automatiquement les profils investisseurs, souscriptions et fonds vers votre CRM Salesforce.
+        </p>
       </div>
 
-      {/* Form */}
-      <div className="p-6 space-y-4">
-        <div>
-          <label className={labelCls}>Instance URL</label>
-          <input className={inputCls} placeholder="https://votre-instance.my.salesforce.com"
-            value={url} onChange={e => setUrl(e.target.value)} />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={labelCls}>Client ID</label>
-            <input className={inputCls} placeholder="Connected App Client ID"
-              value={clientId} onChange={e => setClientId(e.target.value)} />
-          </div>
-          <div>
-            <label className={labelCls}>Client Secret</label>
-            <input className={inputCls} type="password" placeholder="••••••••"
-              value={secret} onChange={e => setSecret(e.target.value)} />
-          </div>
-        </div>
-
-        <button onClick={handleConnect} disabled={connecting || !url}
-          className="w-full py-2.5 bg-[#0D0D12] text-white text-[13px] font-semibold rounded-xl hover:bg-[#1a1a24] transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
-          {connecting
-            ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Connexion...</>
-            : "Connecter"}
+      <div className="px-8 pb-6">
+        <button onClick={handleConnect} disabled={connecting}
+          className="w-full py-3 bg-[#00A1E0] text-white text-[14px] font-semibold rounded-xl hover:bg-[#0081B8] transition-all disabled:opacity-60 flex items-center justify-center gap-2.5 shadow-sm hover:shadow-md">
+          {connecting ? (
+            <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Connexion en cours...</>
+          ) : (
+            <><SfIcon size={18} />Se connecter avec Salesforce</>
+          )}
         </button>
       </div>
 
-      {/* Footer info */}
-      <div className="px-6 py-3 bg-[#F7F8FA] border-t border-[#E8ECF1] text-[11px] text-[#9AA4B2]">
-        Une fois connecté, chaque profil créé sur Bridge Fund sera automatiquement synchronisé vers Salesforce.
+      <div className="px-8 pb-6 flex items-center gap-6 justify-center">
+        {[
+          { icon: "👤", text: "Profils → Accounts" },
+          { icon: "📋", text: "Ordres → Opportunities" },
+          { icon: "💰", text: "Fonds → Products" },
+        ].map(m => (
+          <span key={m.text} className="flex items-center gap-1.5 text-[11px] text-[#9AA4B2]">
+            <span>{m.icon}</span>{m.text}
+          </span>
+        ))}
+      </div>
+
+      <div className="px-8 py-3 bg-[#F7F8FA] border-t border-[#E8ECF1] text-center text-[11px] text-[#9AA4B2]">
+        Vous serez redirigé vers Salesforce pour autoriser l'accès
       </div>
     </div>}
   </div>;
