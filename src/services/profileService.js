@@ -1,6 +1,7 @@
 import { supabase } from "../lib/supabase";
 import { generateWallet } from "./cardanoService";
 import { auditUserCreated } from "./auditService";
+import { syncProfileToSalesforce } from "./salesforceService";
 
 // Wait for the profiles trigger to create the row after auth.signUp
 // Uses select for admin/aifm (who can see all profiles), or update-and-check for intermediaries
@@ -125,6 +126,12 @@ export async function createUser({ email, password, fullName, role, company, int
     }
 
     auditUserCreated(data.user.id, email, role).catch(() => {});
+
+    // Auto-sync to Salesforce CRM (fire & forget)
+    syncProfileToSalesforce({
+      id: data.user.id, email, full_name: fullName, role, company,
+      wallet_address: updates.wallet_address, created_at: new Date().toISOString(),
+    }).catch(() => {});
   }
 
   return data;
@@ -139,6 +146,10 @@ export async function updateUserProfile(userId, updates) {
     .select()
     .maybeSingle();
   if (error) throw error;
+
+  // Auto-sync updated profile to Salesforce (fire & forget)
+  if (data) syncProfileToSalesforce(data).catch(() => {});
+
   return data;
 }
 
