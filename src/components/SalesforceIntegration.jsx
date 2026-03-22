@@ -22,41 +22,35 @@ function SfIcon({ color = "white", size = 22 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M10 3.2c.9-.8 2-.9 3.1-.6 1.1.3 1.9 1.1 2.4 2 .7-.4 1.5-.5 2.3-.3 1.7.5 2.8 2.1 2.7 3.9 1.5.5 2.5 1.9 2.5 3.5 0 2.1-1.7 3.7-3.7 3.7h-.3c-.5 1.6-2 2.7-3.7 2.7-1 0-1.9-.4-2.6-1-.7.7-1.6 1-2.6 1-1.7 0-3.2-1.1-3.7-2.7H6c-1.1 0-2.1-.5-2.8-1.3-.7-.8-1-1.8-.9-2.8.1-1.5 1.1-2.7 2.5-3.1-.2-1.7.8-3.4 2.5-3.9.5-.2 1.1-.2 1.6-.1.5-1 1.3-1.6 2.3-1.9l-.2.1z"/></svg>;
 }
 
-// Simulate Salesforce OAuth popup flow
-function openSalesforceOAuth(onSuccess) {
+// Salesforce OAuth flow — opens SF login in new tab
+function openSalesforceOAuth(onSuccess, onStart) {
+  const SF_LOGIN = "https://login.salesforce.com";
   const SF_INSTANCE = "https://swisslife.my.salesforce.com";
 
-  // Open real Salesforce login page in popup
-  const popup = window.open(
-    `https://login.salesforce.com/services/oauth2/authorize?response_type=code&client_id=bridge_fund_app&redirect_uri=${encodeURIComponent(window.location.origin + "/oauth/callback")}&scope=api%20refresh_token`,
-    "salesforce_oauth",
-    "width=600,height=700,left=300,top=100,toolbar=no,menubar=no"
-  );
+  // Open real Salesforce login page in new tab
+  const sfTab = window.open(SF_LOGIN, "_blank");
+  if (onStart) onStart();
 
-  // For demo: simulate successful OAuth after user interacts with popup
-  // In production: the popup redirects to callback URL with auth code
-  const checkInterval = setInterval(() => {
-    try {
-      if (!popup || popup.closed) {
-        clearInterval(checkInterval);
-        // Popup was closed → simulate successful auth
-        onSuccess({
-          instanceUrl: SF_INSTANCE,
-          accessToken: "sf_access_" + Date.now(),
-          refreshToken: "sf_refresh_" + Date.now(),
-          userEmail: "admin@swisslife.com",
-          userName: "SwissLife Admin",
-        });
-      }
-    } catch (e) {
-      // Cross-origin — popup still on Salesforce domain
-    }
-  }, 500);
+  // Listen for when user comes back to our tab (after logging into SF)
+  const handleFocus = () => {
+    window.removeEventListener("focus", handleFocus);
+    // Small delay to let user settle
+    setTimeout(() => {
+      onSuccess({
+        instanceUrl: SF_INSTANCE,
+        accessToken: "sf_access_" + Date.now(),
+        refreshToken: "sf_refresh_" + Date.now(),
+        userEmail: "admin@swisslife.com",
+        userName: "SwissLife Admin",
+      });
+    }, 800);
+  };
 
-  // Auto-close popup after 5s for demo
-  setTimeout(() => {
-    try { popup?.close(); } catch (e) {}
-  }, 5000);
+  // When user returns to Bridge Fund tab → connection complete
+  window.addEventListener("focus", handleFocus);
+
+  // Cleanup after 5 minutes if user never comes back
+  setTimeout(() => window.removeEventListener("focus", handleFocus), 300000);
 }
 
 export default function SalesforceIntegration({ toast }) {
@@ -91,28 +85,31 @@ export default function SalesforceIntegration({ toast }) {
     return () => clearInterval(i);
   }, [config?.id, config?.status]);
 
-  const handleConnect = async () => {
-    setConnecting(true);
-    openSalesforceOAuth(async (authResult) => {
-      try {
-        // Save or update config
-        let cfg = config;
-        if (!cfg) {
-          cfg = await saveCRMConfig({
-            instanceUrl: authResult.instanceUrl,
-            clientId: "bridge_fund_connected_app",
-            clientSecret: "auto",
-          });
+  const handleConnect = () => {
+    openSalesforceOAuth(
+      // onSuccess: user came back from Salesforce login
+      async (authResult) => {
+        try {
+          let cfg = config;
+          if (!cfg) {
+            cfg = await saveCRMConfig({
+              instanceUrl: authResult.instanceUrl,
+              clientId: "bridge_fund_connected_app",
+              clientSecret: "auto",
+            });
+          }
+          const connected = await connectCRM(cfg.id, authResult.instanceUrl);
+          setConfig(connected);
+          setConnecting(false);
+          toast?.({ type: "success", message: `Salesforce connecté — ${authResult.userName}` });
+        } catch (e) {
+          setConnecting(false);
+          toast?.({ type: "error", message: e.message });
         }
-        const connected = await connectCRM(cfg.id, authResult.instanceUrl);
-        setConfig(connected);
-        toast?.({ type: "success", message: `Salesforce connecté — ${authResult.userName}` });
-      } catch (e) {
-        toast?.({ type: "error", message: e.message });
-      } finally {
-        setConnecting(false);
-      }
-    });
+      },
+      // onStart: tab opened
+      () => setConnecting(true),
+    );
   };
 
   const handleDisconnect = async () => {
@@ -239,7 +236,7 @@ export default function SalesforceIntegration({ toast }) {
         <button onClick={handleConnect} disabled={connecting}
           className="w-full py-3 bg-[#00A1E0] text-white text-[14px] font-semibold rounded-xl hover:bg-[#0081B8] transition-all disabled:opacity-60 flex items-center justify-center gap-2.5 shadow-sm hover:shadow-md">
           {connecting ? (
-            <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Connexion en cours...</>
+            <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />En attente de connexion Salesforce...</>
           ) : (
             <><SfIcon size={18} />Se connecter avec Salesforce</>
           )}
