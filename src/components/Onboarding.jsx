@@ -6,78 +6,75 @@ import { useState, useEffect } from "react";
    Full-screen, no header, centered, white bg
    ═══════════════════════════════════════════════════════════════════ */
 
-/* ── Intro: Full-screen mesh gradient blob + logo (ElevenLabs exact) ── */
+/* ── Intro: Zoom-out logo + growing mesh blob (ElevenLabs exact sequence) ── */
 function LogoIntro({ onDone }) {
-  const [phase, setPhase] = useState(0); // 0=appear, 1=logo, 2=exit
+  const [phase, setPhase] = useState(0);
+  // 0: Logo zoomed in massive (just "BF" bars filling screen)
+  // 1: Zoom out, text reveals "Bridge Fund"
+  // 2: Blob appears and grows behind text
+  // 3: Blob at full size, hold
+  // 4: Fade out → next step
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase(1), 600);
-    const t2 = setTimeout(() => setPhase(2), 2400);
-    const t3 = setTimeout(onDone, 3000);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    const timers = [
+      setTimeout(() => setPhase(1), 400),   // start zoom out
+      setTimeout(() => setPhase(2), 1000),   // blob appears
+      setTimeout(() => setPhase(3), 2000),   // blob full
+      setTimeout(() => setPhase(4), 3200),   // fade out
+      setTimeout(onDone, 3800),              // next step
+    ];
+    return () => timers.forEach(clearTimeout);
   }, [onDone]);
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center relative overflow-hidden cursor-pointer" onClick={onDone}>
-      {/* FULL-SCREEN mesh gradient blob — like ElevenLabs */}
-      <div className="absolute inset-0 pointer-events-none" style={{ opacity: phase >= 2 ? 0 : 1, transition: "opacity 0.6s ease" }}>
-        {/* Blob 1 — Cyan/Teal (top-left) */}
-        <div className="absolute" style={{
-          width: "70vw", height: "70vh", top: "-10%", left: "-10%",
-          background: "radial-gradient(ellipse, rgba(45, 212, 191, 0.4) 0%, transparent 70%)",
-          filter: "blur(80px)",
-          animation: "blobMove1 8s ease-in-out infinite",
-        }} />
-        {/* Blob 2 — Rose/Pink (top-right) */}
-        <div className="absolute" style={{
-          width: "60vw", height: "60vh", top: "-5%", right: "-10%",
-          background: "radial-gradient(ellipse, rgba(244, 114, 182, 0.35) 0%, transparent 70%)",
-          filter: "blur(80px)",
-          animation: "blobMove2 10s ease-in-out infinite",
-        }} />
-        {/* Blob 3 — Green/Lime (bottom-left) */}
-        <div className="absolute" style={{
-          width: "65vw", height: "65vh", bottom: "-15%", left: "5%",
-          background: "radial-gradient(ellipse, rgba(74, 222, 128, 0.3) 0%, transparent 70%)",
-          filter: "blur(80px)",
-          animation: "blobMove3 9s ease-in-out infinite",
-        }} />
-        {/* Blob 4 — Yellow/Amber (center-right) */}
-        <div className="absolute" style={{
-          width: "50vw", height: "50vh", top: "30%", right: "5%",
-          background: "radial-gradient(ellipse, rgba(251, 191, 36, 0.25) 0%, transparent 70%)",
-          filter: "blur(80px)",
-          animation: "blobMove1 11s ease-in-out infinite reverse",
-        }} />
-        {/* Blob 5 — Violet (center) */}
-        <div className="absolute" style={{
-          width: "55vw", height: "55vh", top: "20%", left: "20%",
-          background: "radial-gradient(ellipse, rgba(167, 139, 250, 0.2) 0%, transparent 70%)",
-          filter: "blur(90px)",
-          animation: "blobMove2 12s ease-in-out infinite reverse",
+
+      {/* Mesh gradient blob — starts small at center, grows to ~70% of screen */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div style={{
+          width: phase >= 3 ? "80vw" : phase >= 2 ? "50vw" : "0vw",
+          height: phase >= 3 ? "80vh" : phase >= 2 ? "50vh" : "0vh",
+          opacity: phase >= 4 ? 0 : phase >= 2 ? 1 : 0,
+          transition: "all 1.5s cubic-bezier(0.4, 0, 0.2, 1)",
+          background: `
+            radial-gradient(ellipse at 30% 40%, rgba(45, 212, 191, 0.45) 0%, transparent 60%),
+            radial-gradient(ellipse at 70% 30%, rgba(244, 114, 182, 0.3) 0%, transparent 60%),
+            radial-gradient(ellipse at 50% 70%, rgba(74, 222, 128, 0.35) 0%, transparent 60%),
+            radial-gradient(ellipse at 60% 50%, rgba(251, 191, 36, 0.2) 0%, transparent 60%),
+            radial-gradient(ellipse at 40% 50%, rgba(167, 139, 250, 0.2) 0%, transparent 60%)
+          `,
+          filter: "blur(60px)",
+          borderRadius: "50%",
+          animation: phase >= 2 ? "blobMorph 8s ease-in-out infinite" : "none",
         }} />
       </div>
 
-      {/* Logo — centered, appears with the blobs */}
-      <div className="relative z-10 text-center" style={{ opacity: phase >= 2 ? 0 : phase >= 1 ? 1 : 0, transform: phase >= 1 ? "scale(1)" : "scale(0.95)", transition: "all 0.6s cubic-bezier(0.4, 0, 0.2, 1)" }}>
-        <h1 className="text-[28px] font-bold text-[#0F0F10] tracking-tight">Bridge Fund</h1>
+      {/* Logo — starts massive (zoom-in on "BF"), then zooms out to normal size */}
+      <div className="relative z-10 text-center" style={{
+        opacity: phase >= 4 ? 0 : 1,
+        transform: phase === 0
+          ? "scale(8)"           // Massive zoom — like seeing the "II" bars up close
+          : phase === 1
+          ? "scale(1.5)"         // Zooming out
+          : "scale(1)",          // Normal size
+        transition: phase === 0
+          ? "none"
+          : phase === 1
+          ? "transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)"
+          : "all 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
+      }}>
+        {/* At scale(8), only "BF" letters are visible — like two bars filling the screen */}
+        <h1 className="text-[36px] font-bold text-[#0F0F10] tracking-tight whitespace-nowrap select-none">
+          {phase >= 1 ? "Bridge Fund" : "BF"}
+        </h1>
       </div>
 
       <style>{`
-        @keyframes blobMove1 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(3%, 5%) scale(1.05); }
-          66% { transform: translate(-2%, -3%) scale(0.97); }
-        }
-        @keyframes blobMove2 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(-4%, 3%) scale(1.03); }
-          66% { transform: translate(3%, -4%) scale(0.98); }
-        }
-        @keyframes blobMove3 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(5%, -3%) scale(1.04); }
-          66% { transform: translate(-3%, 5%) scale(0.96); }
+        @keyframes blobMorph {
+          0%, 100% { border-radius: 40% 60% 60% 40% / 40% 40% 60% 60%; transform: rotate(0deg); }
+          25% { border-radius: 50% 50% 40% 60% / 60% 40% 50% 50%; transform: rotate(3deg); }
+          50% { border-radius: 60% 40% 50% 50% / 50% 60% 40% 60%; transform: rotate(-2deg); }
+          75% { border-radius: 40% 60% 50% 50% / 60% 50% 60% 40%; transform: rotate(2deg); }
         }
       `}</style>
     </div>
