@@ -80,21 +80,21 @@ export function useInView(options = {}) {
   return [ref, isInView];
 }
 
-/* ── KPI Card — Clean, monochrome ── */
+/* ── KPI Card — ElevenLabs style (soft bg, warm) ── */
 export function KPICard({ label, value, sub, trend, delay = 0 }) {
   return (
-    <div className="bg-white border border-[#E5E5E5] rounded-lg p-5"
+    <div className="bg-white border border-[rgba(0,0,29,0.1)] rounded-2xl p-5"
       style={delay > 0 ? { animation: `fadeInUp 0.3s var(--ease-out) ${delay}ms both` } : undefined}>
-      <p className="text-[12px] text-[#737373] font-medium uppercase tracking-[0.04em] mb-3">{label}</p>
+      <p className="text-[13px] text-[#787881] mb-2">{label}</p>
       <div className="flex items-baseline gap-2">
-        <p className="text-[24px] font-semibold text-[#0A0A0A] tracking-[-0.02em] tabular-nums">{value}</p>
+        <p className="text-[22px] font-semibold text-[#0F0F10] tracking-[-0.02em] tabular-nums">{value}</p>
         {trend && (
-          <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded ${trend > 0 ? "bg-[#ECFDF5] text-[#00A67E]" : "bg-[#FEF2F2] text-[#EE0000]"}`}>
+          <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded-full ${trend > 0 ? "bg-[#ECFDF5] text-[#059669]" : "bg-[#FEF2F2] text-[#DC2626]"}`}>
             {trend > 0 ? "+" : ""}{trend}%
           </span>
         )}
       </div>
-      {sub && <p className="text-[12px] text-[#A3A3A3] mt-1">{sub}</p>}
+      {sub && <p className="text-[12px] text-[#787881] mt-1.5">{sub}</p>}
     </div>
   );
 }
@@ -102,21 +102,21 @@ export function KPICard({ label, value, sub, trend, delay = 0 }) {
 /* ── Badge — Dot + text, pill shape ── */
 export function Badge({ status }) {
   const config = {
-    "Validé":      { dot: "#00A67E", bg: "#ECFDF5", text: "#00A67E" },
-    "Actif":       { dot: "#00A67E", bg: "#ECFDF5", text: "#00A67E" },
-    "Reçu":        { dot: "#00A67E", bg: "#ECFDF5", text: "#00A67E" },
-    "Approuvé":    { dot: "#00A67E", bg: "#ECFDF5", text: "#00A67E" },
-    "En attente":  { dot: "#F5A623", bg: "#FFFBEB", text: "#92400E" },
-    "Pending":     { dot: "#F5A623", bg: "#FFFBEB", text: "#92400E" },
-    "Envoyé":      { dot: "#635BFF", bg: "#F0EFFF", text: "#635BFF" },
-    "En transfert":{ dot: "#635BFF", bg: "#F0EFFF", text: "#635BFF" },
-    "Rejeté":      { dot: "#EE0000", bg: "#FEF2F2", text: "#EE0000" },
-    "En retard":   { dot: "#EE0000", bg: "#FEF2F2", text: "#EE0000" },
-    "Racheté":     { dot: "#737373", bg: "#F5F5F5", text: "#525252" },
+    "Validé":      { dot: "#059669", bg: "#ECFDF5", text: "#059669" },
+    "Actif":       { dot: "#059669", bg: "#ECFDF5", text: "#059669" },
+    "Reçu":        { dot: "#059669", bg: "#ECFDF5", text: "#059669" },
+    "Approuvé":    { dot: "#059669", bg: "#ECFDF5", text: "#059669" },
+    "En attente":  { dot: "#D97706", bg: "#FFFBEB", text: "#92400E" },
+    "Pending":     { dot: "#D97706", bg: "#FFFBEB", text: "#92400E" },
+    "Envoyé":      { dot: "#635BFF", bg: "#F0EFFF", text: "#4338CA" },
+    "En transfert":{ dot: "#635BFF", bg: "#F0EFFF", text: "#4338CA" },
+    "Rejeté":      { dot: "#DC2626", bg: "#FEF2F2", text: "#DC2626" },
+    "En retard":   { dot: "#DC2626", bg: "#FEF2F2", text: "#DC2626" },
+    "Racheté":     { dot: "#787881", bg: "rgba(0,0,23,0.043)", text: "#57534E" },
   };
-  const c = config[status] || { dot: "#A3A3A3", bg: "#F5F5F5", text: "#525252" };
+  const c = config[status] || { dot: "#A8A29E", bg: "rgba(0,0,23,0.043)", text: "#57534E" };
   return (
-    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium"
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium"
       style={{ background: c.bg, color: c.text }}>
       <span className="w-1.5 h-1.5 rounded-full" style={{ background: c.dot }} />
       {status}
@@ -132,10 +132,10 @@ export function fmtFull(n) {
   return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", minimumFractionDigits: 2 }).format(n);
 }
 
-/* ── Form primitives ── */
-export const inputCls = "w-full h-10 bg-[#F7F7F7] border border-[#E5E5E5] rounded-md px-3 text-[14px] text-[#0A0A0A] placeholder-[#A3A3A3] focus:outline-none focus:border-[#635BFF] focus:ring-2 focus:ring-[#635BFF]/10 transition-[border-color,box-shadow] duration-150";
+/* ── Form primitives (ElevenLabs-style: rgba borders, 10px radius) ── */
+export const inputCls = "w-full h-10 bg-[rgba(0,0,23,0.043)] border border-[rgba(0,0,29,0.1)] rounded-[10px] px-3 text-[14px] text-[#0F0F10] placeholder-[#A8A29E] focus:outline-none focus:border-[rgba(0,0,29,0.3)] focus:ring-2 focus:ring-[rgba(0,0,29,0.05)] transition-[border-color,box-shadow] duration-75";
 export const selectCls = inputCls + " appearance-none";
-export const labelCls = "block text-[14px] text-[#0A0A0A] mb-1.5 font-medium";
+export const labelCls = "block text-[14px] text-[#0F0F10] mb-1.5 font-medium";
 
 export function Checkbox({ checked, onChange, children, required }) {
   return (

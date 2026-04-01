@@ -59,37 +59,38 @@ function AuthenticatedApp() {
 
   return (
     <AppProvider>
-      <div className="min-h-screen bg-[#FAFAFA]">
-        {/* ─── Header ─── */}
-        <header className="bg-white/80 backdrop-blur-[12px] border-b border-[#E5E5E5] sticky top-0 z-40">
-          <div className="max-w-[1280px] mx-auto px-6 h-12 flex items-center justify-between">
-            <div className="flex items-center gap-3">
+      <div className="min-h-screen bg-white">
+        {/* ─── Header (ElevenLabs-style) ─── */}
+        <header className="bg-white border-b border-[rgba(0,0,29,0.075)] sticky top-0 z-40">
+          <div className="max-w-[1200px] mx-auto px-6 h-[52px] flex items-center justify-between">
+            <div className="flex items-center gap-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 bg-[#0A0A0A] rounded-md flex items-center justify-center">
-                  <span className="text-white font-semibold text-[9px] tracking-wider">BF</span>
+                <div className="w-8 h-8 bg-[#0F0F10] rounded-xl flex items-center justify-center">
+                  <span className="text-white font-bold text-[10px] tracking-wider">BF</span>
                 </div>
-                <span className="text-[14px] font-semibold text-[#0A0A0A] tracking-[-0.01em] hidden sm:block">Bridge Fund</span>
+                <span className="text-[15px] font-semibold text-[#0F0F10] tracking-tight hidden sm:block">Bridge Fund</span>
               </div>
-              <span className="hidden md:block text-[#D4D4D4]">/</span>
-              <span className="hidden md:block text-[13px] text-[#737373]">{config.label}</span>
+              <div className="hidden md:flex items-center">
+                <span className="text-[14px] text-[#787881]">{config.label}</span>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-md border border-[#E5E5E5] text-[12px] text-[#525252] font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#00A67E] pulse-dot" />
+              <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-[9.6px] border border-[rgba(0,0,29,0.1)] text-[12px] text-[#0F0F10] font-medium hover:bg-[rgba(0,0,23,0.02)] transition-colors">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#059669] pulse-dot" />
                 Preprod
               </div>
 
-              <div className="flex items-center gap-2 pl-2.5 pr-1 py-0.5 rounded-md border border-[#E5E5E5] hover:bg-[#FAFAFA] transition-colors">
-                <span className="text-[12px] font-medium text-[#0A0A0A] hidden sm:block">{profile?.full_name || profile?.email}</span>
-                <div className="w-6 h-6 bg-[#0A0A0A] rounded-full flex items-center justify-center text-[9px] text-white font-semibold">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-[9.6px] border border-[rgba(0,0,29,0.1)] hover:bg-[rgba(0,0,23,0.02)] transition-colors cursor-default">
+                <span className="text-[13px] font-medium text-[#0F0F10] hidden sm:block">{profile?.full_name || profile?.email}</span>
+                <div className="w-7 h-7 bg-[#0F0F10] rounded-full flex items-center justify-center text-[10px] text-white font-bold">
                   {(profile?.full_name || profile?.email || "?").charAt(0).toUpperCase()}
                 </div>
               </div>
 
               <button onClick={async () => { await signOut(); navigate("/"); }}
-                className="w-7 h-7 rounded-md border border-[#E5E5E5] flex items-center justify-center text-[#A3A3A3] hover:text-[#0A0A0A] hover:bg-[#FAFAFA] transition-all duration-150" title="Deconnexion">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                className="w-8 h-8 rounded-[9.6px] border border-[rgba(0,0,29,0.1)] flex items-center justify-center text-[#787881] hover:text-[#0F0F10] hover:bg-[rgba(0,0,23,0.02)] transition-all duration-75" title="Deconnexion">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
                 </svg>
               </button>
@@ -97,14 +98,14 @@ function AuthenticatedApp() {
           </div>
         </header>
 
-        <main className="max-w-[1280px] mx-auto px-6 py-6">
+        <main className="max-w-[1200px] mx-auto px-6 py-8">
           <PortalRouter toast={toast} />
         </main>
 
-        <footer className="border-t border-[#F0F0F0]">
-          <div className="max-w-[1280px] mx-auto px-6 py-3 flex items-center justify-between text-[11px] text-[#A3A3A3]">
+        <footer className="border-t border-[rgba(0,0,29,0.05)]">
+          <div className="max-w-[1200px] mx-auto px-6 py-3 flex items-center justify-between text-[11px] text-[#A8A29E]">
             <span>Bridge Fund SCSp · CSSF regulated · Luxembourg</span>
-            <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-[#00A67E]" />Live</span>
+            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />Donnees en temps reel</span>
           </div>
         </footer>
 
@@ -129,10 +130,10 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-[#E5E5E5] border-t-[#0A0A0A] rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-[#A3A3A3] text-[13px]">Chargement...</p>
+          <div className="w-8 h-8 border-2 border-[rgba(0,0,29,0.1)] border-t-[#0F0F10] rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-[#787881] text-[13px]">Chargement...</p>
         </div>
       </div>
     );
