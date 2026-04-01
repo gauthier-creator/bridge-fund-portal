@@ -359,7 +359,7 @@ function PublicFundDetail({ fundSlug, onBack, onInvest }) {
    MAIN PUBLIC PAGE
    ═══════════════════════════════════════════════════════ */
 
-export default function FundPublicPage({ onInvest }) {
+export default function FundPublicPage({ onInvest, onSignup }) {
   const [funds, setFunds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedSlug, setSelectedSlug] = useState(null);
@@ -379,9 +379,16 @@ export default function FundPublicPage({ onInvest }) {
             </button>
             <span className="text-[15px] font-semibold text-white tracking-[-0.01em]">Bridge Fund</span>
           </div>
-          <button onClick={() => onInvest()} className="px-5 py-2.5 bg-white/10 backdrop-blur-sm border border-white/10 text-white text-sm font-medium rounded-xl hover:bg-white/20 transition-colors">
-            Se connecter
-          </button>
+          <div className="flex items-center gap-3">
+            {onSignup && (
+              <button onClick={onSignup} className="px-5 py-2.5 bg-white text-[#0D0D12] text-sm font-semibold rounded-full hover:bg-white/90 transition-colors">
+                S'inscrire
+              </button>
+            )}
+            <button onClick={() => onInvest()} className="px-5 py-2.5 bg-white/10 backdrop-blur-sm border border-white/10 text-white text-sm font-medium rounded-full hover:bg-white/20 transition-colors">
+              Se connecter
+            </button>
+          </div>
         </div>
       </header>
 

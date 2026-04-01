@@ -161,22 +161,32 @@ function AppContent() {
     );
   }
 
-  // Show onboarding for first-time visitors
-  const seenOnboarding = localStorage.getItem("bf_onboarding_seen");
-
-  if (!user && (route === "/" || route === "/onboarding") && !seenOnboarding) {
+  // Onboarding route — always accessible via #/onboarding or #/inscription
+  if (!user && (route === "/onboarding" || route === "/inscription")) {
     return <Onboarding
       onComplete={() => navigate("/")}
-      onLogin={() => navigate("/login")}
+      onLogin={() => navigate("/se-connecter")}
+    />;
+  }
+
+  // First-time visitors → auto-show onboarding
+  const seenOnboarding = localStorage.getItem("bf_onboarding_seen");
+  if (!user && route === "/" && !seenOnboarding) {
+    return <Onboarding
+      onComplete={() => navigate("/")}
+      onLogin={() => navigate("/se-connecter")}
     />;
   }
 
   if (!user && (route === "/" || route.startsWith("/fund"))) {
-    return <FundPublicPage onInvest={() => { setReturnTo(true); navigate("/login"); }} />;
+    return <FundPublicPage
+      onInvest={() => { setReturnTo(true); navigate("/se-connecter"); }}
+      onSignup={() => navigate("/inscription")}
+    />;
   }
 
   if (!user) {
-    return <LoginPage onLogin={signIn} onBack={() => navigate("/")} />;
+    return <LoginPage onLogin={signIn} onBack={() => navigate("/")} onSignup={() => navigate("/inscription")} />;
   }
 
   return <AuthenticatedApp />;
