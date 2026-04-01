@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AppProvider } from "./context/AppContext";
 import { ToastContainer, useToast } from "./components/shared";
 import LoginPage from "./components/LoginPage";
+import Onboarding from "./components/Onboarding";
 import FundPublicPage from "./components/FundPublicPage";
 import PortailLP from "./portals/PortailLP";
 import PortailSwissLife from "./portals/PortailSwissLife";
@@ -158,6 +159,16 @@ function AppContent() {
         </div>
       </div>
     );
+  }
+
+  // Show onboarding for first-time visitors
+  const seenOnboarding = localStorage.getItem("bf_onboarding_seen");
+
+  if (!user && (route === "/" || route === "/onboarding") && !seenOnboarding) {
+    return <Onboarding
+      onComplete={() => navigate("/")}
+      onLogin={() => navigate("/login")}
+    />;
   }
 
   if (!user && (route === "/" || route.startsWith("/fund"))) {

@@ -217,6 +217,20 @@ body {
   to { clip-path: inset(0 0 0 0); }
 }
 
+/* ─── Onboarding Orb Animations ─── */
+@keyframes orbFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+@keyframes orbSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes orbTilt {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(180deg); }
+}
+
 /* ─── Animation Classes ─── */
 .animate-fade-in {
   animation: fadeIn 0.5s var(--ease-out-expo) forwards;
