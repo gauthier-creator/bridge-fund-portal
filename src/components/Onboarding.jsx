@@ -7,48 +7,54 @@ import MeshGradient from "./MeshGradient";
    Full-screen, no header, centered, white bg
    ═══════════════════════════════════════════════════════════════════ */
 
-/* ── Intro: WebGL mesh gradient + logo zoom sequence ── */
+/* ── Intro: WebGL blob + cinematic text reveal ── */
 function LogoIntro({ onDone }) {
   const [phase, setPhase] = useState(0);
-  // 0: Logo zoomed in massive
-  // 1: Zoom out + blob appears
-  // 2: Blob full size, text complete
-  // 3: Fade out
+  // 0: Nothing visible (white screen)
+  // 1: Blob fades in small + "Bridge Fund" fades in with letter-spacing animation
+  // 2: Blob grows to full size, text fully revealed
+  // 3: Hold — blob continues animating
+  // 4: Fade everything out
 
   useEffect(() => {
     const timers = [
-      setTimeout(() => setPhase(1), 300),
-      setTimeout(() => setPhase(2), 1200),
-      setTimeout(() => setPhase(3), 3000),
-      setTimeout(onDone, 3600),
+      setTimeout(() => setPhase(1), 200),
+      setTimeout(() => setPhase(2), 1000),
+      setTimeout(() => setPhase(3), 2000),
+      setTimeout(() => setPhase(4), 3200),
+      setTimeout(onDone, 3800),
     ];
     return () => timers.forEach(clearTimeout);
   }, [onDone]);
 
-  // Blob scale grows: 0 → 0.6 → 1.2
-  const blobScale = phase >= 2 ? 1.2 : phase >= 1 ? 0.6 : 0;
-  const blobOpacity = phase >= 3 ? 0 : phase >= 1 ? 1 : 0;
-
   return (
     <div className="min-h-screen bg-white flex items-center justify-center relative overflow-hidden cursor-pointer" onClick={onDone}>
 
-      {/* WebGL mesh gradient blob */}
+      {/* WebGL mesh gradient blob — behind text, centered, grows */}
       <div className="absolute inset-0 pointer-events-none" style={{
-        opacity: blobOpacity,
-        transition: "opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
+        opacity: phase >= 4 ? 0 : phase >= 1 ? 1 : 0,
+        transition: phase >= 4 ? "opacity 0.5s ease" : "opacity 1s ease",
       }}>
-        <MeshGradient scale={blobScale} opacity={1} />
+        <MeshGradient
+          scale={phase >= 3 ? 1.4 : phase >= 2 ? 1.0 : phase >= 1 ? 0.4 : 0}
+          opacity={1}
+        />
       </div>
 
-      {/* Logo — zoom sequence */}
-      <div className="relative z-10 text-center select-none" style={{
-        opacity: phase >= 3 ? 0 : 1,
-        transform: phase === 0 ? "scale(6)" : phase === 1 ? "scale(1.3)" : "scale(1)",
-        transition: phase === 0 ? "none" : "all 1s cubic-bezier(0.16, 1, 0.3, 1)",
-        filter: phase === 0 ? "blur(2px)" : "blur(0px)",
+      {/* Text — fades in with expanding letter-spacing, stays crisp on white */}
+      <div className="relative z-10 select-none" style={{
+        opacity: phase >= 4 ? 0 : phase >= 1 ? 1 : 0,
+        transition: phase >= 4 ? "opacity 0.4s ease" : "opacity 0.8s ease",
       }}>
-        <h1 className="text-[36px] font-bold text-[#0F0F10] tracking-tight whitespace-nowrap">
-          {phase >= 1 ? "Bridge Fund" : "BF"}
+        <h1 style={{
+          fontSize: "32px",
+          fontWeight: 700,
+          color: "#0F0F10",
+          letterSpacing: phase >= 2 ? "-0.02em" : phase >= 1 ? "0.3em" : "0.6em",
+          transition: "letter-spacing 1.2s cubic-bezier(0.16, 1, 0.3, 1)",
+          whiteSpace: "nowrap",
+        }}>
+          Bridge Fund
         </h1>
       </div>
     </div>
