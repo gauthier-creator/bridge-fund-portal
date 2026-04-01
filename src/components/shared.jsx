@@ -1,21 +1,20 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 
-/* ─── Toast System ─── */
+/* ═══════════════════════════════════════════════════
+   BRIDGE FUND — Shared UI Primitives v2
+   Linear/Vercel/Mercury-grade components
+   ═══════════════════════════════════════════════════ */
+
+/* ── Toast ── */
 export function ToastContainer({ toasts, onDismiss }) {
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
-      {toasts.map((t, i) => (
-        <div
-          key={t.id}
-          className="flex items-center gap-3 bg-[#0D0D12] text-white pl-4 pr-5 py-3.5 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] max-w-sm text-[13px] font-medium cursor-pointer"
-          style={{
-            animation: `slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards`,
-            animationDelay: `${i * 50}ms`,
-          }}
-          onClick={() => onDismiss(t.id)}
-        >
-          <div className="w-5 h-5 rounded-full bg-[#00C48C] flex items-center justify-center flex-shrink-0 animate-badge-pop">
-            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+    <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5">
+      {toasts.map((t) => (
+        <div key={t.id} onClick={() => onDismiss(t.id)}
+          className="flex items-center gap-3 bg-[#0A0A0A] text-white pl-3 pr-4 py-3 rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.15)] max-w-sm text-[13px] font-medium cursor-pointer"
+          style={{ animation: "slideIn 0.2s var(--ease-out) forwards" }}>
+          <div className="w-4.5 h-4.5 rounded-full bg-[#00A67E] flex items-center justify-center flex-shrink-0">
+            <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
           </div>
           {t.message}
         </div>
@@ -35,8 +34,8 @@ export function useToast() {
   return { toasts, toast, dismiss };
 }
 
-/* ─── Animated Number Counter Hook ─── */
-export function useCountUp(end, duration = 1200, decimals = 0) {
+/* ── Animated Counter ── */
+export function useCountUp(end, duration = 800, decimals = 0) {
   const [value, setValue] = useState(0);
   const prevRef = useRef(0);
 
@@ -44,21 +43,14 @@ export function useCountUp(end, duration = 1200, decimals = 0) {
     const startVal = prevRef.current;
     const endVal = typeof end === "number" ? end : parseFloat(end) || 0;
     if (startVal === endVal) return;
-
     const startTime = performance.now();
     const animate = (now) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // Ease-out expo
       const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-      const current = startVal + (endVal - startVal) * eased;
-      setValue(current);
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        prevRef.current = endVal;
-      }
+      setValue(startVal + (endVal - startVal) * eased);
+      if (progress < 1) requestAnimationFrame(animate);
+      else prevRef.current = endVal;
     };
     requestAnimationFrame(animate);
   }, [end, duration]);
@@ -66,90 +58,73 @@ export function useCountUp(end, duration = 1200, decimals = 0) {
   return decimals > 0 ? value.toFixed(decimals) : Math.round(value);
 }
 
-/* ─── Intersection Observer Hook for reveal animations ─── */
+/* ── Intersection Observer ── */
 export function useInView(options = {}) {
   const ref = useRef(null);
   const [isInView, setIsInView] = useState(false);
-
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-
-    // Use rAF to wait for browser layout to settle, then check visibility
     const rafId = requestAnimationFrame(() => {
       const rect = el.getBoundingClientRect();
-      if (rect.top < window.innerHeight + 100 && rect.bottom > -100) {
-        setIsInView(true);
-        return;
-      }
+      if (rect.top < window.innerHeight + 100 && rect.bottom > -100) { setIsInView(true); return; }
       const observer = new IntersectionObserver(
         ([entry]) => { if (entry.isIntersecting) { setIsInView(true); observer.unobserve(el); } },
         { threshold: 0.01, rootMargin: "200px 0px", ...options }
       );
       observer.observe(el);
-      // Store cleanup
       el._observer = observer;
     });
-
-    return () => {
-      cancelAnimationFrame(rafId);
-      if (el._observer) { el._observer.disconnect(); delete el._observer; }
-    };
+    return () => { cancelAnimationFrame(rafId); if (el._observer) { el._observer.disconnect(); delete el._observer; } };
   }, []);
-
   return [ref, isInView];
 }
 
-/* ─── KPI Card with animated entrance + optional counter ─── */
-export function KPICard({ label, value, sub, trend, delay = 0, animate = false }) {
-  const displayValue = value;
-
+/* ── KPI Card — Clean, monochrome ── */
+export function KPICard({ label, value, sub, trend, delay = 0 }) {
   return (
-    <div
-      className="bg-white border border-[#E8ECF1] rounded-2xl p-5 group card-elevated"
-      style={delay > 0 ? { animationDelay: `${delay}ms` } : undefined}
-    >
-      <p className="text-[13px] text-[#9AA4B2] mb-2.5 font-medium">{label}</p>
-      <div className="flex items-baseline gap-2.5">
-        <p className="text-[22px] font-semibold text-[#0D0D12] tracking-[-0.02em] tabular-nums count-value">
-          {displayValue}
-        </p>
+    <div className="bg-white border border-[#E5E5E5] rounded-lg p-5"
+      style={delay > 0 ? { animation: `fadeInUp 0.3s var(--ease-out) ${delay}ms both` } : undefined}>
+      <p className="text-[12px] text-[#737373] font-medium uppercase tracking-[0.04em] mb-3">{label}</p>
+      <div className="flex items-baseline gap-2">
+        <p className="text-[24px] font-semibold text-[#0A0A0A] tracking-[-0.02em] tabular-nums">{value}</p>
         {trend && (
-          <span className={`text-xs font-medium px-1.5 py-0.5 rounded-md animate-badge-pop ${trend > 0 ? "bg-[#ECFDF5] text-[#059669]" : "bg-[#FEF2F2] text-[#DC2626]"}`}
-            style={{ animationDelay: `${delay + 300}ms` }}
-          >
+          <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded ${trend > 0 ? "bg-[#ECFDF5] text-[#00A67E]" : "bg-[#FEF2F2] text-[#EE0000]"}`}>
             {trend > 0 ? "+" : ""}{trend}%
           </span>
         )}
       </div>
-      {sub && <p className="text-[12px] text-[#9AA4B2] mt-1.5">{sub}</p>}
+      {sub && <p className="text-[12px] text-[#A3A3A3] mt-1">{sub}</p>}
     </div>
   );
 }
 
-/* ─── Badge with subtle entrance ─── */
+/* ── Badge — Dot + text, pill shape ── */
 export function Badge({ status }) {
-  const styles = {
-    "Validé": "bg-[#ECFDF5] text-[#059669]",
-    "Actif": "bg-[#ECFDF5] text-[#059669]",
-    "Reçu": "bg-[#ECFDF5] text-[#059669]",
-    "Approuvé": "bg-[#ECFDF5] text-[#059669]",
-    "En attente": "bg-[#FFF7ED] text-[#D97706]",
-    "Pending": "bg-[#FFF7ED] text-[#D97706]",
-    "Envoyé": "bg-[#EEF2FF] text-[#4F7DF3]",
-    "En transfert": "bg-[#EEF2FF] text-[#4F7DF3]",
-    "Rejeté": "bg-[#FEF2F2] text-[#DC2626]",
-    "En retard": "bg-[#FEF2F2] text-[#DC2626]",
-    "Racheté": "bg-[#F7F8FA] text-[#5F6B7A]",
+  const config = {
+    "Validé":      { dot: "#00A67E", bg: "#ECFDF5", text: "#00A67E" },
+    "Actif":       { dot: "#00A67E", bg: "#ECFDF5", text: "#00A67E" },
+    "Reçu":        { dot: "#00A67E", bg: "#ECFDF5", text: "#00A67E" },
+    "Approuvé":    { dot: "#00A67E", bg: "#ECFDF5", text: "#00A67E" },
+    "En attente":  { dot: "#F5A623", bg: "#FFFBEB", text: "#92400E" },
+    "Pending":     { dot: "#F5A623", bg: "#FFFBEB", text: "#92400E" },
+    "Envoyé":      { dot: "#635BFF", bg: "#F0EFFF", text: "#635BFF" },
+    "En transfert":{ dot: "#635BFF", bg: "#F0EFFF", text: "#635BFF" },
+    "Rejeté":      { dot: "#EE0000", bg: "#FEF2F2", text: "#EE0000" },
+    "En retard":   { dot: "#EE0000", bg: "#FEF2F2", text: "#EE0000" },
+    "Racheté":     { dot: "#737373", bg: "#F5F5F5", text: "#525252" },
   };
+  const c = config[status] || { dot: "#A3A3A3", bg: "#F5F5F5", text: "#525252" };
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold tracking-wide transition-all duration-200 ${styles[status] || "bg-[#F7F8FA] text-[#5F6B7A]"}`}>
+    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium"
+      style={{ background: c.bg, color: c.text }}>
+      <span className="w-1.5 h-1.5 rounded-full" style={{ background: c.dot }} />
       {status}
     </span>
   );
 }
 
-/* ─── Formatters ─── */
+/* ── Formatters ── */
 export function fmt(n) {
   return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
 }
@@ -157,84 +132,74 @@ export function fmtFull(n) {
   return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", minimumFractionDigits: 2 }).format(n);
 }
 
-/* ─── Form helpers ─── */
-export const inputCls = "w-full bg-white border border-[#E8ECF1] rounded-xl px-3.5 py-2.5 text-sm text-[#0D0D12] placeholder-[#C4CAD4] focus:outline-none focus:border-[#4F7DF3] focus:ring-2 focus:ring-[#4F7DF3]/10 transition-all duration-150";
+/* ── Form primitives ── */
+export const inputCls = "w-full h-10 bg-[#F7F7F7] border border-[#E5E5E5] rounded-md px-3 text-[14px] text-[#0A0A0A] placeholder-[#A3A3A3] focus:outline-none focus:border-[#635BFF] focus:ring-2 focus:ring-[#635BFF]/10 transition-[border-color,box-shadow] duration-150";
 export const selectCls = inputCls + " appearance-none";
-export const labelCls = "block text-[13px] text-[#5F6B7A] mb-1.5 font-medium";
+export const labelCls = "block text-[14px] text-[#0A0A0A] mb-1.5 font-medium";
 
 export function Checkbox({ checked, onChange, children, required }) {
   return (
     <label className="flex items-start gap-2.5 cursor-pointer group" onClick={onChange}>
-      <div className={`w-[18px] h-[18px] mt-0.5 rounded-md border-[1.5px] flex items-center justify-center flex-shrink-0 transition-all duration-200 ${checked ? "bg-[#0D0D12] border-[#0D0D12] scale-105" : "border-[#D1D5DB] group-hover:border-[#9AA4B2]"}`}>
-        {checked && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+      <div className={`w-4 h-4 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 transition-all duration-150 ${checked ? "bg-[#0A0A0A] border-[#0A0A0A]" : "border-[#D4D4D4] group-hover:border-[#A3A3A3]"}`}>
+        {checked && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
       </div>
-      <span className="text-[13px] text-[#5F6B7A] leading-relaxed select-none">{children}{required && <span className="text-red-500 ml-0.5">*</span>}</span>
+      <span className="text-[13px] text-[#525252] leading-relaxed select-none">{children}{required && <span className="text-[#EE0000] ml-0.5">*</span>}</span>
     </label>
   );
 }
 
 export function ComplianceAlert({ type, children }) {
   const styles = {
-    warning: "bg-[#FFF7ED] border-[#FED7AA] text-[#92400E]",
-    info: "bg-[#EEF2FF] border-[#C7D2FE] text-[#3730A3]",
+    warning: "bg-[#FFFBEB] border-[#FDE68A] text-[#92400E]",
+    info:    "bg-[#F0EFFF] border-[#C4B5FD] text-[#4338CA]",
     success: "bg-[#ECFDF5] border-[#A7F3D0] text-[#065F46]",
-    error: "bg-[#FEF2F2] border-[#FECACA] text-[#991B1B]",
+    error:   "bg-[#FEF2F2] border-[#FECACA] text-[#991B1B]",
   };
   const icons = { warning: "⚠", info: "ℹ", success: "✓", error: "✗" };
   return (
-    <div className={`flex items-start gap-3 p-4 rounded-xl border text-[13px] leading-relaxed animate-fade-in ${styles[type]}`}>
-      <span className="font-bold text-sm mt-[-1px] opacity-70">{icons[type]}</span>
+    <div className={`flex items-start gap-3 p-4 rounded-lg border text-[13px] leading-relaxed ${styles[type]}`}>
+      <span className="font-bold text-sm mt-[-1px] opacity-60">{icons[type]}</span>
       <div>{children}</div>
     </div>
   );
 }
 
-/* ─── Decorative Components ─── */
+/* ── Decorative ── */
 export function GeometricDecoration({ className = "" }) {
   return (
-    <svg className={`absolute pointer-events-none opacity-[0.03] ${className}`} width="400" height="400" viewBox="0 0 400 400" fill="none">
-      <circle cx="200" cy="200" r="180" stroke="currentColor" strokeWidth="1" />
-      <circle cx="200" cy="200" r="120" stroke="currentColor" strokeWidth="1" />
+    <svg className={`absolute pointer-events-none opacity-[0.02] ${className}`} width="400" height="400" viewBox="0 0 400 400" fill="none">
+      <circle cx="200" cy="200" r="180" stroke="currentColor" strokeWidth="0.5" />
+      <circle cx="200" cy="200" r="120" stroke="currentColor" strokeWidth="0.5" />
       <circle cx="200" cy="200" r="60" stroke="currentColor" strokeWidth="0.5" />
-      <line x1="20" y1="200" x2="380" y2="200" stroke="currentColor" strokeWidth="0.5" />
-      <line x1="200" y1="20" x2="200" y2="380" stroke="currentColor" strokeWidth="0.5" />
     </svg>
   );
 }
 
 export function GridPattern({ className = "" }) {
   return (
-    <svg className={`absolute pointer-events-none ${className}`} width="100%" height="100%" opacity="0.4">
-      <defs>
-        <pattern id="grid-pattern" width="32" height="32" patternUnits="userSpaceOnUse">
-          <circle cx="1" cy="1" r="0.8" fill="#E8ECF1" />
-        </pattern>
-      </defs>
+    <svg className={`absolute pointer-events-none ${className}`} width="100%" height="100%" opacity="0.3">
+      <defs><pattern id="grid-pattern" width="32" height="32" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="0.6" fill="#D4D4D4" /></pattern></defs>
       <rect width="100%" height="100%" fill="url(#grid-pattern)" />
     </svg>
   );
 }
 
-/* ─── Animated Progress Ring (for dashboards) ─── */
-export function ProgressRing({ value = 0, size = 56, stroke = 4, color = "#0D0D12" }) {
+/* ── Progress Ring ── */
+export function ProgressRing({ value = 0, size = 48, stroke = 3, color = "#0A0A0A" }) {
   const radius = (size - stroke) / 2;
   const circumference = radius * 2 * Math.PI;
   const offset = circumference - (value / 100) * circumference;
-
   return (
     <svg width={size} height={size} className="transform -rotate-90">
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#F0F2F5" strokeWidth={stroke} />
-      <circle
-        cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={stroke}
-        strokeDasharray={circumference} strokeDashoffset={offset}
-        strokeLinecap="round"
-        style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1)" }}
-      />
+      <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#F0F0F0" strokeWidth={stroke} />
+      <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke={color} strokeWidth={stroke}
+        strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
+        style={{ transition: "stroke-dashoffset 0.8s var(--ease-out)" }} />
     </svg>
   );
 }
 
-/* ─── Signature Pad ─── */
+/* ── Signature Pad ── */
 export function SignaturePad({ onSignature }) {
   const canvasRef = useRef(null);
   const [drawing, setDrawing] = useState(false);
@@ -249,8 +214,8 @@ export function SignaturePad({ onSignature }) {
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
     ctx.scale(dpr, dpr);
-    ctx.strokeStyle = "#0D0D12";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#0A0A0A";
+    ctx.lineWidth = 1.5;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
   }, []);
@@ -268,16 +233,16 @@ export function SignaturePad({ onSignature }) {
 
   return (
     <div className="text-left">
-      <label className={labelCls}>Signez dans le cadre ci-dessous <span className="text-red-500">*</span></label>
-      <div className="relative border-2 border-dashed border-[#E8ECF1] rounded-xl overflow-hidden bg-[#F7F8FA] hover:border-[#D1D5DB] transition-colors">
+      <label className={labelCls}>Signez dans le cadre ci-dessous <span className="text-[#EE0000]">*</span></label>
+      <div className="relative border border-dashed border-[#D4D4D4] rounded-lg overflow-hidden bg-[#FAFAFA] hover:border-[#A3A3A3] transition-colors">
         <canvas ref={canvasRef} className="w-full cursor-crosshair touch-none" style={{ height: 140 }}
           onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
           onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw} />
-        {!hasContent && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="text-sm text-[#C4CAD4]">Dessinez votre signature ici</span></div>}
+        {!hasContent && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="text-[13px] text-[#A3A3A3]">Dessinez votre signature ici</span></div>}
       </div>
-      <div className="flex justify-between mt-2.5">
-        <button onClick={clear} className="text-[13px] text-[#9AA4B2] hover:text-[#DC2626] transition-colors">Effacer</button>
-        <button onClick={confirm} disabled={!hasContent} className={`text-[13px] font-semibold px-4 py-1.5 rounded-xl transition-all duration-200 btn-lift ${hasContent ? "bg-[#0D0D12] text-white hover:bg-[#1A1A2E]" : "bg-[#F0F2F5] text-[#C4CAD4] cursor-not-allowed"}`}>Confirmer la signature</button>
+      <div className="flex justify-between mt-2">
+        <button onClick={clear} className="text-[13px] text-[#737373] hover:text-[#EE0000] transition-colors">Effacer</button>
+        <button onClick={confirm} disabled={!hasContent} className={`text-[13px] font-medium px-4 py-1.5 rounded-md transition-all duration-150 ${hasContent ? "bg-[#0A0A0A] text-white hover:bg-[#171717]" : "bg-[#F5F5F5] text-[#A3A3A3] cursor-not-allowed"}`}>Confirmer</button>
       </div>
     </div>
   );
