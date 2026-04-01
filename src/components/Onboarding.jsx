@@ -1,82 +1,56 @@
 import { useState, useEffect } from "react";
+import MeshGradient from "./MeshGradient";
 
 /* ═══════════════════════════════════════════════════════════════════
    Onboarding — ElevenLabs exact flow reproduction
-   Intro logo → Choose portal → Personalize → Use cases → Login
+   WebGL intro → Choose portal → Personalize → Use cases → Login
    Full-screen, no header, centered, white bg
    ═══════════════════════════════════════════════════════════════════ */
 
-/* ── Intro: Zoom-out logo + growing mesh blob (ElevenLabs exact sequence) ── */
+/* ── Intro: WebGL mesh gradient + logo zoom sequence ── */
 function LogoIntro({ onDone }) {
   const [phase, setPhase] = useState(0);
-  // 0: Logo zoomed in massive (just "BF" bars filling screen)
-  // 1: Zoom out, text reveals "Bridge Fund"
-  // 2: Blob appears and grows behind text
-  // 3: Blob at full size, hold
-  // 4: Fade out → next step
+  // 0: Logo zoomed in massive
+  // 1: Zoom out + blob appears
+  // 2: Blob full size, text complete
+  // 3: Fade out
 
   useEffect(() => {
     const timers = [
-      setTimeout(() => setPhase(1), 400),   // start zoom out
-      setTimeout(() => setPhase(2), 1000),   // blob appears
-      setTimeout(() => setPhase(3), 2000),   // blob full
-      setTimeout(() => setPhase(4), 3200),   // fade out
-      setTimeout(onDone, 3800),              // next step
+      setTimeout(() => setPhase(1), 300),
+      setTimeout(() => setPhase(2), 1200),
+      setTimeout(() => setPhase(3), 3000),
+      setTimeout(onDone, 3600),
     ];
     return () => timers.forEach(clearTimeout);
   }, [onDone]);
 
+  // Blob scale grows: 0 → 0.6 → 1.2
+  const blobScale = phase >= 2 ? 1.2 : phase >= 1 ? 0.6 : 0;
+  const blobOpacity = phase >= 3 ? 0 : phase >= 1 ? 1 : 0;
+
   return (
     <div className="min-h-screen bg-white flex items-center justify-center relative overflow-hidden cursor-pointer" onClick={onDone}>
 
-      {/* Mesh gradient blob — starts small at center, grows to ~70% of screen */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div style={{
-          width: phase >= 3 ? "80vw" : phase >= 2 ? "50vw" : "0vw",
-          height: phase >= 3 ? "80vh" : phase >= 2 ? "50vh" : "0vh",
-          opacity: phase >= 4 ? 0 : phase >= 2 ? 1 : 0,
-          transition: "all 1.5s cubic-bezier(0.4, 0, 0.2, 1)",
-          background: `
-            radial-gradient(ellipse at 30% 40%, rgba(45, 212, 191, 0.45) 0%, transparent 60%),
-            radial-gradient(ellipse at 70% 30%, rgba(244, 114, 182, 0.3) 0%, transparent 60%),
-            radial-gradient(ellipse at 50% 70%, rgba(74, 222, 128, 0.35) 0%, transparent 60%),
-            radial-gradient(ellipse at 60% 50%, rgba(251, 191, 36, 0.2) 0%, transparent 60%),
-            radial-gradient(ellipse at 40% 50%, rgba(167, 139, 250, 0.2) 0%, transparent 60%)
-          `,
-          filter: "blur(60px)",
-          borderRadius: "50%",
-          animation: phase >= 2 ? "blobMorph 8s ease-in-out infinite" : "none",
-        }} />
+      {/* WebGL mesh gradient blob */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        opacity: blobOpacity,
+        transition: "opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
+      }}>
+        <MeshGradient scale={blobScale} opacity={1} />
       </div>
 
-      {/* Logo — starts massive (zoom-in on "BF"), then zooms out to normal size */}
-      <div className="relative z-10 text-center" style={{
-        opacity: phase >= 4 ? 0 : 1,
-        transform: phase === 0
-          ? "scale(8)"           // Massive zoom — like seeing the "II" bars up close
-          : phase === 1
-          ? "scale(1.5)"         // Zooming out
-          : "scale(1)",          // Normal size
-        transition: phase === 0
-          ? "none"
-          : phase === 1
-          ? "transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)"
-          : "all 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
+      {/* Logo — zoom sequence */}
+      <div className="relative z-10 text-center select-none" style={{
+        opacity: phase >= 3 ? 0 : 1,
+        transform: phase === 0 ? "scale(6)" : phase === 1 ? "scale(1.3)" : "scale(1)",
+        transition: phase === 0 ? "none" : "all 1s cubic-bezier(0.16, 1, 0.3, 1)",
+        filter: phase === 0 ? "blur(2px)" : "blur(0px)",
       }}>
-        {/* At scale(8), only "BF" letters are visible — like two bars filling the screen */}
-        <h1 className="text-[36px] font-bold text-[#0F0F10] tracking-tight whitespace-nowrap select-none">
+        <h1 className="text-[36px] font-bold text-[#0F0F10] tracking-tight whitespace-nowrap">
           {phase >= 1 ? "Bridge Fund" : "BF"}
         </h1>
       </div>
-
-      <style>{`
-        @keyframes blobMorph {
-          0%, 100% { border-radius: 40% 60% 60% 40% / 40% 40% 60% 60%; transform: rotate(0deg); }
-          25% { border-radius: 50% 50% 40% 60% / 60% 40% 50% 50%; transform: rotate(3deg); }
-          50% { border-radius: 60% 40% 50% 50% / 50% 60% 40% 60%; transform: rotate(-2deg); }
-          75% { border-radius: 40% 60% 50% 50% / 60% 50% 60% 40%; transform: rotate(2deg); }
-        }
-      `}</style>
     </div>
   );
 }
