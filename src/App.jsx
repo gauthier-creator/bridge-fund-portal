@@ -58,45 +58,49 @@ function AuthenticatedApp() {
 
   return (
     <AppProvider>
-      <div className="min-h-screen bg-white">
-        {/* ─── Header ─── */}
-        <header className="bg-white border-b border-[#E8ECF1] sticky top-0 z-40">
-          <div className="max-w-[1360px] mx-auto px-8 h-[56px] flex items-center justify-between">
-            {/* Left: Brand */}
-            <div className="flex items-center gap-5">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-[#0D0D12] rounded-xl flex items-center justify-center">
-                  <span className="text-white font-bold text-[11px] tracking-wide">BF</span>
+      <div className="min-h-screen bg-[#FDFCFC]">
+        {/* ─── Header (ElevenLabs-inspired) ─── */}
+        <header className="bg-white/80 backdrop-blur-md border-b border-[rgba(0,0,29,0.07)] sticky top-0 z-40">
+          <div className="max-w-[1400px] mx-auto px-6 h-[52px] flex items-center justify-between">
+            {/* Left: Brand + Role */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 bg-[#0F0F10] rounded-[10px] flex items-center justify-center">
+                  <span className="text-white font-bold text-[10px] tracking-wider">BF</span>
                 </div>
-                <div className="hidden sm:block">
-                  <span className="text-[15px] font-semibold text-[#0D0D12] tracking-[-0.01em]">Bridge Fund</span>
-                </div>
+                <span className="text-[14px] font-semibold text-[#0F0F10] tracking-[-0.01em] hidden sm:block">Bridge Fund</span>
               </div>
-              <div className="hidden md:block w-px h-5 bg-[#E8ECF1]" />
-              <span className="hidden md:block text-[13px] text-[#9AA4B2] font-medium">{config.label}</span>
+              <div className="hidden md:flex items-center">
+                <div className="w-px h-4 bg-[rgba(0,0,29,0.1)] mx-1" />
+                <span className="text-[13px] text-[#787881] font-medium ml-2">{config.label}</span>
+              </div>
             </div>
 
-            {/* Right: Status + User */}
-            <div className="flex items-center gap-4">
-              <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#ECFDF5] border border-[#A7F3D0]/40">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#00C48C] pulse-dot" />
-                <span className="text-[11px] text-[#059669] font-medium">Preprod</span>
+            {/* Right: Actions + User */}
+            <div className="flex items-center gap-2.5">
+              {/* Network badge */}
+              <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] border border-[rgba(0,0,29,0.08)] bg-white hover:bg-[#F5F3F1] transition-colors cursor-default">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00C48C]" style={{ animation: "pulse-dot 2s infinite" }} />
+                <span className="text-[12px] text-[#0F0F10] font-medium">Preprod</span>
               </div>
-              <div className="w-px h-5 bg-[#E8ECF1] hidden lg:block" />
-              <div className="flex items-center gap-3">
+
+              {/* User pill */}
+              <div className="flex items-center gap-2.5 pl-3 pr-1.5 py-1 rounded-full border border-[rgba(0,0,29,0.08)] bg-white hover:bg-[#F5F3F1] transition-colors">
                 <div className="text-right hidden sm:block">
-                  <p className="text-[13px] font-medium text-[#0D0D12] leading-tight">{profile?.full_name || profile?.email}</p>
-                  <p className="text-[11px] text-[#9AA4B2]">{config.sub}</p>
+                  <p className="text-[12px] font-medium text-[#0F0F10] leading-tight">{profile?.full_name || profile?.email}</p>
                 </div>
-                <div className="w-8 h-8 bg-[#0D0D12] rounded-xl flex items-center justify-center text-[11px] text-white font-bold">
+                <div className="w-7 h-7 bg-[#0F0F10] rounded-full flex items-center justify-center text-[10px] text-white font-bold">
                   {(profile?.full_name || profile?.email || "?").charAt(0).toUpperCase()}
                 </div>
               </div>
+
+              {/* Logout */}
               <button
                 onClick={async () => { await signOut(); navigate("/"); }}
-                className="text-[13px] text-[#9AA4B2] hover:text-[#0D0D12] transition-colors duration-150"
+                className="w-8 h-8 rounded-[10px] border border-[rgba(0,0,29,0.08)] bg-white hover:bg-[#F5F3F1] flex items-center justify-center text-[#787881] hover:text-[#0F0F10] transition-all duration-150"
+                title="Deconnexion"
               >
-                <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
                 </svg>
               </button>
@@ -105,17 +109,17 @@ function AuthenticatedApp() {
         </header>
 
         {/* ─── Main ─── */}
-        <main className="max-w-[1360px] mx-auto px-8 py-8">
+        <main className="max-w-[1400px] mx-auto px-6 py-7">
           <PortalRouter toast={toast} />
         </main>
 
         {/* ─── Footer ─── */}
-        <footer className="border-t border-[#E8ECF1]">
-          <div className="max-w-[1360px] mx-auto px-8 py-4 flex items-center justify-between text-[11px] text-[#9AA4B2]">
+        <footer className="border-t border-[rgba(0,0,29,0.05)]">
+          <div className="max-w-[1400px] mx-auto px-6 py-3.5 flex items-center justify-between text-[11px] text-[#B0B0B8]">
             <span>Bridge Fund SCSp · CSSF regulated · Luxembourg</span>
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5">
-                <span className="w-1 h-1 rounded-full bg-[#0D0D12]" />
+                <span className="w-1 h-1 rounded-full bg-[#0F0F10]" />
                 Portail securise
               </span>
               <span className="flex items-center gap-1.5">
