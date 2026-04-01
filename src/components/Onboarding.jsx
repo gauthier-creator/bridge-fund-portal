@@ -60,100 +60,156 @@ function AnimatedOrb() {
   );
 }
 
-/* ── Illustration SVGs for feature cards ── */
+/* ── Premium Illustration SVGs — Fintech-grade ── */
 function IllustrationTokenize() {
   return (
-    <svg viewBox="0 0 80 80" className="w-16 h-16">
+    <svg viewBox="0 0 120 120" className="w-24 h-24">
       <defs>
-        <linearGradient id="tokGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="tokG" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#4F7DF3" />
           <stop offset="100%" stopColor="#00C48C" />
         </linearGradient>
+        <filter id="tokSh"><feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.08" /></filter>
       </defs>
-      <rect x="8" y="12" width="64" height="48" rx="8" fill="#F5F3F1" stroke="#E8ECF1" strokeWidth="1" />
-      <rect x="16" y="20" width="20" height="4" rx="2" fill="url(#tokGrad)" opacity="0.7" />
-      <rect x="16" y="28" width="32" height="3" rx="1.5" fill="#E8ECF1" />
-      <rect x="16" y="34" width="28" height="3" rx="1.5" fill="#E8ECF1" />
-      <circle cx="56" cy="40" r="14" fill="url(#tokGrad)" opacity="0.15" />
-      <circle cx="56" cy="40" r="8" fill="url(#tokGrad)" opacity="0.3" />
-      <path d="M53 40l2 2 4-4" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-      <rect x="16" y="44" width="24" height="8" rx="4" fill="url(#tokGrad)" opacity="0.9" />
-      <text x="28" y="50" fill="white" fontSize="5" fontWeight="600" textAnchor="middle">TOKEN</text>
+      {/* Card */}
+      <rect x="12" y="20" width="96" height="72" rx="14" fill="white" filter="url(#tokSh)" />
+      <rect x="12" y="20" width="96" height="72" rx="14" fill="none" stroke="#E8ECF1" strokeWidth="0.5" />
+      {/* Header bar */}
+      <rect x="12" y="20" width="96" height="20" rx="14" fill="url(#tokG)" opacity="0.06" />
+      <rect x="12" y="34" width="96" height="1" fill="#F0F2F5" />
+      <circle cx="26" cy="30" r="4" fill="url(#tokG)" opacity="0.2" />
+      <rect x="34" y="28" width="28" height="4" rx="2" fill="url(#tokG)" opacity="0.15" />
+      {/* Content rows */}
+      <rect x="24" y="44" width="40" height="3" rx="1.5" fill="#E8ECF1" />
+      <rect x="24" y="52" width="32" height="3" rx="1.5" fill="#F0F2F5" />
+      <rect x="24" y="60" width="36" height="3" rx="1.5" fill="#F0F2F5" />
+      {/* Token badge */}
+      <rect x="68" y="42" width="32" height="26" rx="8" fill="url(#tokG)" opacity="0.08" />
+      <circle cx="84" cy="52" r="9" fill="url(#tokG)" opacity="0.15" />
+      <circle cx="84" cy="52" r="6" fill="url(#tokG)" opacity="0.9" />
+      <path d="M81 52l2 2 4-4" stroke="white" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Bottom action */}
+      <rect x="24" y="72" width="44" height="10" rx="5" fill="url(#tokG)" />
+      <text x="46" y="79.5" fill="white" fontSize="5.5" fontWeight="600" textAnchor="middle" fontFamily="system-ui">Tokeniser</text>
     </svg>
   );
 }
 
 function IllustrationKYC() {
   return (
-    <svg viewBox="0 0 80 80" className="w-16 h-16">
+    <svg viewBox="0 0 120 120" className="w-24 h-24">
       <defs>
-        <linearGradient id="kycGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="kycG" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#059669" />
-          <stop offset="100%" stopColor="#00C48C" />
+          <stop offset="100%" stopColor="#34D399" />
         </linearGradient>
+        <filter id="kycSh"><feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.08" /></filter>
       </defs>
-      <rect x="10" y="14" width="60" height="44" rx="8" fill="#F5F3F1" stroke="#E8ECF1" strokeWidth="1" />
-      <circle cx="30" cy="32" r="10" fill="url(#kycGrad)" opacity="0.15" />
-      <circle cx="30" cy="30" r="4" fill="url(#kycGrad)" opacity="0.4" />
-      <path d="M22 38c0-4 3.5-6 8-6s8 2 8 6" fill="url(#kycGrad)" opacity="0.3" />
-      <rect x="46" y="26" width="18" height="3" rx="1.5" fill="#E8ECF1" />
-      <rect x="46" y="32" width="14" height="3" rx="1.5" fill="#E8ECF1" />
-      <rect x="46" y="38" width="16" height="3" rx="1.5" fill="#E8ECF1" />
-      <circle cx="58" cy="50" r="8" fill="url(#kycGrad)" />
-      <path d="M55 50l2 2 4-4" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      {/* ID Card */}
+      <rect x="12" y="24" width="96" height="64" rx="14" fill="white" filter="url(#kycSh)" />
+      <rect x="12" y="24" width="96" height="64" rx="14" fill="none" stroke="#E8ECF1" strokeWidth="0.5" />
+      {/* Photo area */}
+      <rect x="22" y="34" width="30" height="36" rx="8" fill="#F5F3F1" />
+      <circle cx="37" cy="46" r="7" fill="url(#kycG)" opacity="0.12" />
+      <circle cx="37" cy="44" r="4.5" fill="url(#kycG)" opacity="0.25" />
+      <path d="M28 58c0-5 4-8 9-8s9 3 9 8" fill="url(#kycG)" opacity="0.15" />
+      {/* Info lines */}
+      <rect x="60" y="36" width="38" height="3.5" rx="1.75" fill="#E0E4E9" />
+      <rect x="60" y="44" width="30" height="3.5" rx="1.75" fill="#F0F2F5" />
+      <rect x="60" y="52" width="34" height="3.5" rx="1.75" fill="#F0F2F5" />
+      <rect x="60" y="60" width="26" height="3.5" rx="1.75" fill="#F0F2F5" />
+      {/* Verified badge */}
+      <circle cx="92" cy="78" r="11" fill="url(#kycG)" opacity="0.1" />
+      <circle cx="92" cy="78" r="7.5" fill="url(#kycG)" />
+      <path d="M88.5 78l2.5 2.5 5-5" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Scan line animation hint */}
+      <rect x="22" y="72" width="30" height="1" rx="0.5" fill="url(#kycG)" opacity="0.3" />
     </svg>
   );
 }
 
 function IllustrationDashboard() {
   return (
-    <svg viewBox="0 0 80 80" className="w-16 h-16">
+    <svg viewBox="0 0 120 120" className="w-24 h-24">
       <defs>
-        <linearGradient id="dashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="dshG" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#4F7DF3" />
-          <stop offset="100%" stopColor="#7C3AED" />
+          <stop offset="100%" stopColor="#818CF8" />
         </linearGradient>
+        <filter id="dshSh"><feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.08" /></filter>
       </defs>
-      <rect x="8" y="12" width="64" height="48" rx="8" fill="#F5F3F1" stroke="#E8ECF1" strokeWidth="1" />
-      {/* Mini chart bars */}
-      <rect x="16" y="42" width="8" height="12" rx="2" fill="url(#dashGrad)" opacity="0.3" />
-      <rect x="28" y="36" width="8" height="18" rx="2" fill="url(#dashGrad)" opacity="0.5" />
-      <rect x="40" y="30" width="8" height="24" rx="2" fill="url(#dashGrad)" opacity="0.7" />
-      <rect x="52" y="24" width="8" height="30" rx="2" fill="url(#dashGrad)" opacity="0.9" />
-      {/* Top KPI */}
-      <rect x="16" y="18" width="16" height="8" rx="3" fill="url(#dashGrad)" opacity="0.15" />
-      <text x="24" y="24" fill="#4F7DF3" fontSize="5" fontWeight="700" textAnchor="middle">VNI</text>
-      <rect x="36" y="18" width="12" height="8" rx="3" fill="#E8ECF1" />
-      <rect x="52" y="18" width="12" height="8" rx="3" fill="#E8ECF1" />
+      {/* Main card */}
+      <rect x="12" y="16" width="96" height="80" rx="14" fill="white" filter="url(#dshSh)" />
+      <rect x="12" y="16" width="96" height="80" rx="14" fill="none" stroke="#E8ECF1" strokeWidth="0.5" />
+      {/* KPI row */}
+      <rect x="22" y="26" width="26" height="18" rx="6" fill="url(#dshG)" opacity="0.06" />
+      <text x="35" y="34" fill="#4F7DF3" fontSize="4" fontWeight="600" textAnchor="middle" fontFamily="system-ui" opacity="0.6">VNI</text>
+      <text x="35" y="40.5" fill="#0F0F10" fontSize="5.5" fontWeight="700" textAnchor="middle" fontFamily="system-ui">1,247€</text>
+      <rect x="52" y="26" width="26" height="18" rx="6" fill="#F7F8FA" />
+      <text x="65" y="34" fill="#787881" fontSize="4" fontWeight="500" textAnchor="middle" fontFamily="system-ui">AUM</text>
+      <text x="65" y="40.5" fill="#0F0F10" fontSize="5.5" fontWeight="700" textAnchor="middle" fontFamily="system-ui">42M€</text>
+      <rect x="82" y="26" width="18" height="18" rx="6" fill="#ECFDF5" />
+      <text x="91" y="37" fill="#059669" fontSize="6" fontWeight="700" textAnchor="middle">↑</text>
+      {/* Chart area */}
+      <rect x="22" y="50" width="78" height="36" rx="8" fill="#FAFBFC" />
+      {/* Smooth line chart */}
+      <path d="M28 78 L38 72 L48 74 L58 65 L68 60 L78 56 L88 50 L94 48" fill="none" stroke="url(#dshG)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M28 78 L38 72 L48 74 L58 65 L68 60 L78 56 L88 50 L94 48 L94 82 L28 82 Z" fill="url(#dshG)" opacity="0.06" />
+      {/* Chart dots */}
+      <circle cx="58" cy="65" r="2.5" fill="url(#dshG)" />
+      <circle cx="58" cy="65" r="5" fill="url(#dshG)" opacity="0.1" />
+      <circle cx="88" cy="50" r="2" fill="url(#dshG)" />
     </svg>
   );
 }
 
 function IllustrationBlockchain() {
   return (
-    <svg viewBox="0 0 80 80" className="w-16 h-16">
+    <svg viewBox="0 0 120 120" className="w-24 h-24">
       <defs>
-        <linearGradient id="chainGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="chG" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#0077B6" />
           <stop offset="100%" stopColor="#00B4D8" />
         </linearGradient>
+        <filter id="chSh"><feDropShadow dx="0" dy="1.5" stdDeviation="2" floodOpacity="0.06" /></filter>
       </defs>
-      {/* Chain blocks */}
-      <rect x="8" y="30" width="18" height="18" rx="4" fill="url(#chainGrad)" opacity="0.2" stroke="url(#chainGrad)" strokeWidth="0.5" />
-      <rect x="31" y="30" width="18" height="18" rx="4" fill="url(#chainGrad)" opacity="0.5" stroke="url(#chainGrad)" strokeWidth="0.5" />
-      <rect x="54" y="30" width="18" height="18" rx="4" fill="url(#chainGrad)" opacity="0.8" stroke="url(#chainGrad)" strokeWidth="0.5" />
-      {/* Links */}
-      <line x1="26" y1="39" x2="31" y2="39" stroke="url(#chainGrad)" strokeWidth="1.5" strokeDasharray="2 1" />
-      <line x1="49" y1="39" x2="54" y2="39" stroke="url(#chainGrad)" strokeWidth="1.5" strokeDasharray="2 1" />
-      {/* Block content */}
-      <text x="17" y="41" fill="#0077B6" fontSize="6" fontWeight="600" textAnchor="middle">#1</text>
-      <text x="40" y="41" fill="#0077B6" fontSize="6" fontWeight="600" textAnchor="middle">#2</text>
-      <text x="63" y="41" fill="white" fontSize="6" fontWeight="600" textAnchor="middle">#3</text>
+      {/* Block 1 */}
+      <rect x="8" y="38" width="28" height="28" rx="8" fill="white" filter="url(#chSh)" />
+      <rect x="8" y="38" width="28" height="28" rx="8" fill="none" stroke="url(#chG)" strokeWidth="0.8" opacity="0.3" />
+      <rect x="14" y="44" width="16" height="2" rx="1" fill="url(#chG)" opacity="0.15" />
+      <rect x="14" y="48" width="12" height="2" rx="1" fill="#F0F2F5" />
+      <rect x="14" y="52" width="14" height="2" rx="1" fill="#F0F2F5" />
+      <circle cx="22" cy="60" r="3" fill="url(#chG)" opacity="0.12" />
+      {/* Connector 1-2 */}
+      <line x1="36" y1="52" x2="44" y2="52" stroke="url(#chG)" strokeWidth="1.5" opacity="0.4" />
+      <circle cx="40" cy="52" r="1.5" fill="url(#chG)" opacity="0.3" />
+      {/* Block 2 — main */}
+      <rect x="44" y="32" width="32" height="36" rx="10" fill="white" filter="url(#chSh)" />
+      <rect x="44" y="32" width="32" height="36" rx="10" fill="none" stroke="url(#chG)" strokeWidth="1" opacity="0.5" />
+      <rect x="44" y="32" width="32" height="12" rx="10" fill="url(#chG)" opacity="0.06" />
+      <rect x="44" y="42" width="32" height="1" fill="#F0F2F5" />
+      <circle cx="55" cy="38" r="3" fill="url(#chG)" opacity="0.3" />
+      <rect x="61" y="36" width="10" height="3" rx="1.5" fill="url(#chG)" opacity="0.12" />
+      <rect x="50" y="48" width="20" height="2" rx="1" fill="#E8ECF1" />
+      <rect x="50" y="53" width="16" height="2" rx="1" fill="#F0F2F5" />
+      <rect x="50" y="58" width="18" height="2" rx="1" fill="#F0F2F5" />
+      {/* Connector 2-3 */}
+      <line x1="76" y1="52" x2="84" y2="52" stroke="url(#chG)" strokeWidth="1.5" opacity="0.4" />
+      <circle cx="80" cy="52" r="1.5" fill="url(#chG)" opacity="0.3" />
+      {/* Block 3 */}
+      <rect x="84" y="38" width="28" height="28" rx="8" fill="white" filter="url(#chSh)" />
+      <rect x="84" y="38" width="28" height="28" rx="8" fill="url(#chG)" opacity="0.04" />
+      <rect x="84" y="38" width="28" height="28" rx="8" fill="none" stroke="url(#chG)" strokeWidth="0.8" opacity="0.3" />
+      <rect x="90" y="44" width="16" height="2" rx="1" fill="url(#chG)" opacity="0.15" />
+      <rect x="90" y="48" width="12" height="2" rx="1" fill="#F0F2F5" />
+      <rect x="90" y="52" width="14" height="2" rx="1" fill="#F0F2F5" />
+      <circle cx="98" cy="60" r="3" fill="url(#chG)" opacity="0.12" />
       {/* Top label */}
-      <text x="40" y="22" fill="#787881" fontSize="5" fontWeight="500" textAnchor="middle">CARDANO</text>
+      <rect x="36" y="18" width="48" height="8" rx="4" fill="#F5F3F1" />
+      <text x="60" y="24" fill="#787881" fontSize="5" fontWeight="600" textAnchor="middle" fontFamily="system-ui">Cardano Blockchain</text>
       {/* Bottom hash */}
-      <rect x="18" y="54" width="44" height="6" rx="3" fill="#F5F3F1" />
-      <text x="40" y="59" fill="#B0B0B8" fontSize="4" fontWeight="500" textAnchor="middle" fontFamily="monospace">0x58244b...df1</text>
+      <rect x="28" y="78" width="64" height="10" rx="5" fill="#F7F8FA" stroke="#E8ECF1" strokeWidth="0.5" />
+      <text x="60" y="85" fill="#B0B0B8" fontSize="5" fontWeight="500" textAnchor="middle" fontFamily="monospace">policy_58244b...ddf1</text>
     </svg>
   );
 }
