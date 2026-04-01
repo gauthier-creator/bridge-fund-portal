@@ -6,63 +6,78 @@ import { useState, useEffect } from "react";
    Full-screen, no header, centered, white bg
    ═══════════════════════════════════════════════════════════════════ */
 
-/* ── Intro: Logo with chromatic aberration + mesh gradient ── */
+/* ── Intro: Full-screen mesh gradient blob + logo (ElevenLabs exact) ── */
 function LogoIntro({ onDone }) {
-  const [phase, setPhase] = useState(0); // 0=glitch, 1=reveal, 2=done
+  const [phase, setPhase] = useState(0); // 0=appear, 1=logo, 2=exit
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase(1), 800);
-    const t2 = setTimeout(() => setPhase(2), 2200);
-    const t3 = setTimeout(onDone, 2800);
+    const t1 = setTimeout(() => setPhase(1), 600);
+    const t2 = setTimeout(() => setPhase(2), 2400);
+    const t3 = setTimeout(onDone, 3000);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [onDone]);
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center relative overflow-hidden">
-      {/* Mesh gradient halo behind logo */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-[400px] h-[400px] rounded-full opacity-60"
-          style={{
-            background: "radial-gradient(circle at 30% 40%, rgba(52, 211, 153, 0.3), transparent 50%), radial-gradient(circle at 70% 60%, rgba(96, 165, 250, 0.25), transparent 50%), radial-gradient(circle at 50% 30%, rgba(167, 139, 250, 0.2), transparent 50%), radial-gradient(circle at 40% 70%, rgba(251, 191, 36, 0.15), transparent 50%)",
-            filter: "blur(60px)",
-            animation: phase >= 1 ? "meshPulse 4s ease-in-out infinite" : "none",
-            opacity: phase >= 1 ? 0.7 : 0,
-            transition: "opacity 0.8s ease",
-          }}
-        />
+    <div className="min-h-screen bg-white flex items-center justify-center relative overflow-hidden cursor-pointer" onClick={onDone}>
+      {/* FULL-SCREEN mesh gradient blob — like ElevenLabs */}
+      <div className="absolute inset-0 pointer-events-none" style={{ opacity: phase >= 2 ? 0 : 1, transition: "opacity 0.6s ease" }}>
+        {/* Blob 1 — Cyan/Teal (top-left) */}
+        <div className="absolute" style={{
+          width: "70vw", height: "70vh", top: "-10%", left: "-10%",
+          background: "radial-gradient(ellipse, rgba(45, 212, 191, 0.4) 0%, transparent 70%)",
+          filter: "blur(80px)",
+          animation: "blobMove1 8s ease-in-out infinite",
+        }} />
+        {/* Blob 2 — Rose/Pink (top-right) */}
+        <div className="absolute" style={{
+          width: "60vw", height: "60vh", top: "-5%", right: "-10%",
+          background: "radial-gradient(ellipse, rgba(244, 114, 182, 0.35) 0%, transparent 70%)",
+          filter: "blur(80px)",
+          animation: "blobMove2 10s ease-in-out infinite",
+        }} />
+        {/* Blob 3 — Green/Lime (bottom-left) */}
+        <div className="absolute" style={{
+          width: "65vw", height: "65vh", bottom: "-15%", left: "5%",
+          background: "radial-gradient(ellipse, rgba(74, 222, 128, 0.3) 0%, transparent 70%)",
+          filter: "blur(80px)",
+          animation: "blobMove3 9s ease-in-out infinite",
+        }} />
+        {/* Blob 4 — Yellow/Amber (center-right) */}
+        <div className="absolute" style={{
+          width: "50vw", height: "50vh", top: "30%", right: "5%",
+          background: "radial-gradient(ellipse, rgba(251, 191, 36, 0.25) 0%, transparent 70%)",
+          filter: "blur(80px)",
+          animation: "blobMove1 11s ease-in-out infinite reverse",
+        }} />
+        {/* Blob 5 — Violet (center) */}
+        <div className="absolute" style={{
+          width: "55vw", height: "55vh", top: "20%", left: "20%",
+          background: "radial-gradient(ellipse, rgba(167, 139, 250, 0.2) 0%, transparent 70%)",
+          filter: "blur(90px)",
+          animation: "blobMove2 12s ease-in-out infinite reverse",
+        }} />
       </div>
 
-      {/* Logo */}
-      <div className="relative z-10 text-center">
-        {/* Chromatic aberration effect on "BF" */}
-        <div className="relative inline-block" style={{ opacity: phase >= 2 ? 0 : 1, transition: "opacity 0.5s ease" }}>
-          {/* Cyan offset */}
-          <span className="absolute text-[72px] font-bold tracking-[0.15em] text-transparent"
-            style={{ WebkitTextStroke: "1px rgba(0, 180, 216, 0.6)", transform: "translate(-3px, -1px)", filter: "blur(1px)", opacity: phase === 0 ? 1 : 0, transition: "opacity 0.3s" }}>
-            BF
-          </span>
-          {/* Magenta offset */}
-          <span className="absolute text-[72px] font-bold tracking-[0.15em] text-transparent"
-            style={{ WebkitTextStroke: "1px rgba(168, 85, 247, 0.5)", transform: "translate(3px, 1px)", filter: "blur(1px)", opacity: phase === 0 ? 1 : 0, transition: "opacity 0.3s" }}>
-            BF
-          </span>
-          {/* Main text */}
-          <span className="text-[72px] font-bold tracking-[0.15em] text-[#0F0F10] relative"
-            style={{ opacity: phase >= 1 ? 1 : 0.8, transition: "opacity 0.3s" }}>
-            BF
-          </span>
-        </div>
-
-        {/* Full name reveal */}
-        <div style={{ opacity: phase >= 1 ? 1 : 0, transform: phase >= 1 ? "translateY(0)" : "translateY(8px)", transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.2s" }}>
-          <p className="text-[18px] text-[#787881] font-medium tracking-[0.08em] mt-4">BRIDGE FUND</p>
-        </div>
+      {/* Logo — centered, appears with the blobs */}
+      <div className="relative z-10 text-center" style={{ opacity: phase >= 2 ? 0 : phase >= 1 ? 1 : 0, transform: phase >= 1 ? "scale(1)" : "scale(0.95)", transition: "all 0.6s cubic-bezier(0.4, 0, 0.2, 1)" }}>
+        <h1 className="text-[28px] font-bold text-[#0F0F10] tracking-tight">Bridge Fund</h1>
       </div>
 
       <style>{`
-        @keyframes meshPulse {
-          0%, 100% { transform: scale(1) rotate(0deg); }
-          50% { transform: scale(1.05) rotate(3deg); }
+        @keyframes blobMove1 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(3%, 5%) scale(1.05); }
+          66% { transform: translate(-2%, -3%) scale(0.97); }
+        }
+        @keyframes blobMove2 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(-4%, 3%) scale(1.03); }
+          66% { transform: translate(3%, -4%) scale(0.98); }
+        }
+        @keyframes blobMove3 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(5%, -3%) scale(1.04); }
+          66% { transform: translate(-3%, 5%) scale(0.96); }
         }
       `}</style>
     </div>
@@ -98,21 +113,37 @@ function SelectChip({ selected, onClick, icon, label }) {
   );
 }
 
-/* ── Navigation footer ── */
-function NavFooter({ onBack, onSkip, onNext, nextLabel = "Continuer", nextDisabled = false }) {
+/* ── Step dots (pagination like ElevenLabs bottom dots) ── */
+function StepDots({ current, total }) {
   return (
-    <div className="flex items-center justify-between mt-10">
-      <div className="flex gap-4">
-        {onBack && <button onClick={onBack} className="text-[14px] text-[#787881] hover:text-[#0F0F10] transition-colors">Retour</button>}
-        {onSkip && <button onClick={onSkip} className="text-[14px] text-[#787881] hover:text-[#0F0F10] transition-colors">Passer</button>}
-      </div>
-      {onNext && (
-        <button onClick={onNext} disabled={nextDisabled}
-          className="px-6 py-2.5 bg-[#0F0F10] text-white text-[14px] font-medium rounded-[9999px] hover:bg-[#292524] active:scale-[0.98] transition-all duration-75 disabled:opacity-30 disabled:cursor-not-allowed">
-          {nextLabel}
-        </button>
-      )}
+    <div className="flex items-center justify-center gap-1.5 py-6">
+      {Array.from({ length: total }, (_, i) => (
+        <div key={i} className={`rounded-full transition-all duration-200 ${
+          i === current ? "w-6 h-1.5 bg-[#0F0F10]" : "w-1.5 h-1.5 bg-[#D6D3D1]"
+        }`} />
+      ))}
     </div>
+  );
+}
+
+/* ── Navigation footer ── */
+function NavFooter({ onBack, onSkip, onNext, nextLabel = "Continuer", nextDisabled = false, step = 0, totalSteps = 5 }) {
+  return (
+    <>
+      <div className="flex items-center justify-between mt-8">
+        <div className="flex gap-4">
+          {onBack && <button onClick={onBack} className="text-[14px] text-[#787881] hover:text-[#0F0F10] transition-colors">Retour</button>}
+          {onSkip && <button onClick={onSkip} className="text-[14px] text-[#787881] hover:text-[#0F0F10] transition-colors">Passer</button>}
+        </div>
+        {onNext && (
+          <button onClick={onNext} disabled={nextDisabled}
+            className="px-6 py-2.5 bg-[#0F0F10] text-white text-[14px] font-medium rounded-[9999px] hover:bg-[#292524] active:scale-[0.98] transition-all duration-75 disabled:opacity-30 disabled:cursor-not-allowed">
+            {nextLabel}
+          </button>
+        )}
+      </div>
+      <StepDots current={step} total={totalSteps} />
+    </>
   );
 }
 
@@ -250,7 +281,7 @@ export default function Onboarding({ onComplete, onLogin }) {
             </SelectCard>
           </div>
 
-          <NavFooter onSkip={skip} onNext={() => setStep("personalize")} nextLabel="Continuer" nextDisabled={!portal} />
+          <NavFooter onSkip={skip} onNext={() => setStep("personalize")} nextLabel="Continuer" nextDisabled={!portal} step={0} totalSteps={4} />
         </div>
       </div>
     );
@@ -291,7 +322,7 @@ export default function Onboarding({ onComplete, onLogin }) {
             </label>
           </div>
 
-          <NavFooter onBack={() => setStep("portal")} onSkip={skip} onNext={() => setStep("usecases")} nextLabel="Suivant" />
+          <NavFooter onBack={() => setStep("portal")} onSkip={skip} onNext={() => setStep("usecases")} nextLabel="Suivant" step={1} totalSteps={4} />
         </div>
       </div>
     );
@@ -333,7 +364,7 @@ export default function Onboarding({ onComplete, onLogin }) {
             ))}
           </div>
 
-          <NavFooter onBack={() => setStep("personalize")} onSkip={skip} onNext={finish} nextLabel="Commencer" />
+          <NavFooter onBack={() => setStep("personalize")} onSkip={skip} onNext={finish} nextLabel="Commencer" step={2} totalSteps={4} />
         </div>
       </div>
     );
