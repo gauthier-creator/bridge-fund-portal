@@ -3,7 +3,6 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AppProvider } from "./context/AppContext";
 import { ToastContainer, useToast } from "./components/shared";
 import LoginPage from "./components/LoginPage";
-import SignupPage from "./components/SignupPage";
 import Onboarding from "./components/Onboarding";
 import FundPublicPage from "./components/FundPublicPage";
 import PortailLP from "./portals/PortailLP";
@@ -139,12 +138,11 @@ function AppContent() {
     );
   }
 
-  // Onboarding route — always accessible via #/onboarding or #/inscription
-  if (!user && (route === "/onboarding" || route === "/inscription")) {
+  // Onboarding + signup (unified tunnel)
+  if (!user && (route === "/onboarding" || route === "/inscription" || route === "/creer-compte")) {
     return <Onboarding
       onComplete={() => navigate("/")}
       onLogin={() => navigate("/se-connecter")}
-      onSignup={() => navigate("/creer-compte")}
     />;
   }
 
@@ -154,24 +152,6 @@ function AppContent() {
     return <Onboarding
       onComplete={() => navigate("/")}
       onLogin={() => navigate("/se-connecter")}
-      onSignup={() => navigate("/creer-compte")}
-    />;
-  }
-
-  // Signup page — real account creation
-  if (!user && route === "/creer-compte") {
-    const prefillRaw = localStorage.getItem("bf_signup_prefill");
-    const prefill = prefillRaw ? JSON.parse(prefillRaw) : {};
-    return <SignupPage
-      prefill={prefill}
-      onBack={() => navigate("/inscription")}
-      onLogin={() => navigate("/se-connecter")}
-      onSuccess={() => {
-        localStorage.removeItem("bf_signup_prefill");
-        const r = role || "investor";
-        const config = ROLE_CONFIG[r];
-        navigate(config ? config.path : "/investisseur");
-      }}
     />;
   }
 

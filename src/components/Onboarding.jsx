@@ -1,20 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabase";
+import { generateWallet } from "../services/cardanoService";
 import MeshGradient from "./MeshGradient";
 
 /* ═══════════════════════════════════════════════════════════════════
-   Onboarding — ElevenLabs exact flow (from /ressources screenshots)
-   Step 0: Intro animation (bars || → blob + text)
-   Step 1: Choose your portal (2 selectable cards)
-   Step 2: Personalize (name, investor type, checkboxes)
-   Step 3: How did you hear about us (grid of tag buttons)
-   Step 4: What do you want to do (illustrated tiles)
-   → then route to signup
+   Onboarding — Single unified tunnel (ElevenLabs-style)
+   No separate signup page — everything flows step by step.
+   intro → portal → personalize → hearabout → usecases → account → creating → done
    ═══════════════════════════════════════════════════════════════════ */
 
-/* ── Input style (bordered, like ElevenLabs ref8) ── */
 const iCls = "w-full h-10 bg-white border border-[rgba(0,0,29,0.12)] rounded-lg px-3 text-[14px] text-[#0F0F10] placeholder-[#C4C0BB] focus:outline-none focus:border-[#0F0F10] focus:ring-1 focus:ring-[#0F0F10] transition-all duration-150";
 
-/* ── Intro animation (ref5 → ref6) ── */
+/* ── Intro animation ── */
 function LogoIntro({ onDone }) {
   const [phase, setPhase] = useState(0);
   const done = useCallback(onDone, [onDone]);
@@ -32,7 +30,6 @@ function LogoIntro({ onDone }) {
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center relative overflow-hidden cursor-pointer select-none" onClick={done}>
-      {/* Blob — appears with text */}
       <div className="absolute inset-0 pointer-events-none" style={{
         opacity: phase >= 4 ? 0 : phase >= 2 ? 0.9 : 0,
         transition: phase >= 4 ? "opacity 0.5s ease" : "opacity 2s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -40,7 +37,6 @@ function LogoIntro({ onDone }) {
         <MeshGradient scale={phase >= 3 ? 1.4 : phase >= 2 ? 0.7 : 0.15} />
       </div>
 
-      {/* Bars || — chromatic aberration (ref5) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{
         opacity: phase >= 2 ? 0 : phase >= 1 ? 1 : 0,
         transition: phase >= 2 ? "opacity 0.6s ease" : "opacity 0.4s ease",
@@ -61,7 +57,6 @@ function LogoIntro({ onDone }) {
         </div>
       </div>
 
-      {/* Text — letter-spacing contracts (ref6: "| v e n L |" → "ElevenLabs") */}
       <div className="relative z-10" style={{
         opacity: phase >= 4 ? 0 : phase >= 2 ? 1 : 0,
         transition: phase >= 4 ? "opacity 0.4s ease" : "opacity 0.8s ease 0.1s",
@@ -113,7 +108,7 @@ function StepView({ children }) {
   );
 }
 
-/* ── Illustrated tile for use-cases (ref10) ── */
+/* ── Illustrated tile icons ── */
 function UseCaseIcon({ type }) {
   const icons = {
     tokenize:   { bg: "from-indigo-100 to-indigo-50", el: <><circle cx="16" cy="16" r="8" fill="#6366F1" opacity="0.15"/><circle cx="16" cy="16" r="5" fill="#6366F1"/><path d="M14 16l1.2 1.2 2.6-2.6" stroke="white" strokeWidth="1.3" fill="none" strokeLinecap="round" strokeLinejoin="round"/></> },
@@ -135,10 +130,13 @@ function UseCaseIcon({ type }) {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   MAIN ONBOARDING
+   MAIN ONBOARDING — unified tunnel with account creation
    ══════════════════════════════════════════════════════════════════ */
-export default function Onboarding({ onComplete, onLogin, onSignup }) {
+export default function Onboarding({ onComplete, onLogin }) {
+  const { signIn } = useAuth();
   const [step, setStep] = useState("intro");
+
+  // Collected data across all steps
   const [portal, setPortal] = useState(null);
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
@@ -148,26 +146,109 @@ export default function Onboarding({ onComplete, onLogin, onSignup }) {
   const [hearAbout, setHearAbout] = useState([]);
   const [useCases, setUseCases] = useState([]);
 
-  const finish = () => {
-    localStorage.setItem("bf_onboarding_seen", "1");
-    localStorage.setItem("bf_signup_prefill", JSON.stringify({
-      name, company, investorType,
-      portal: portal || "investor",
-      useCases,
-    }));
-    onSignup?.();
-  };
-  const skip = () => { localStorage.setItem("bf_onboarding_seen", "1"); onComplete?.(); };
+  // Account step
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Creating step
+  const [statusMsg, setStatusMsg] = useState("");
+  const [completedSteps, setCompletedSteps] = useState([]);
+
+  const markDone = (key) => setCompletedSteps(prev => [...prev, key]);
 
   const toggleList = (list, setList, id) =>
     setList(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+  const skip = () => { localStorage.setItem("bf_onboarding_seen", "1"); onComplete?.(); };
+
+  /* ── Account creation ── */
+  const handleCreateAccount = async () => {
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Email invalide"); return;
+    }
+    if (password.length < 6) {
+      setError("6 caracteres minimum"); return;
+    }
+    if (!acceptTerms) {
+      setError("Veuillez accepter les conditions"); return;
+    }
+
+    setError(null);
+    setStep("creating");
+
+    try {
+      setStatusMsg("Creation du compte...");
+      if (!supabase) throw new Error("Supabase non configure");
+
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: name, role: "investor" } },
+      });
+      if (authError) throw authError;
+
+      const userId = authData.user?.id;
+      if (!userId) throw new Error("Erreur lors de la creation du compte");
+      markDone("compte");
+
+      setStatusMsg("Configuration du profil...");
+      let profileReady = false;
+      for (let i = 0; i < 15; i++) {
+        const { data } = await supabase.from("profiles").select("id").eq("id", userId).maybeSingle();
+        if (data) { profileReady = true; break; }
+        await new Promise((r) => setTimeout(r, 500));
+      }
+
+      if (profileReady) {
+        await supabase.from("profiles").update({
+          full_name: name || null,
+          company: company || null,
+          investor_type: investorType,
+          role: portal === "manager" ? "intermediary" : "investor",
+          updated_at: new Date().toISOString(),
+        }).eq("id", userId);
+      }
+      markDone("profil");
+
+      setStatusMsg("Generation du wallet Cardano...");
+      try {
+        const wallet = await generateWallet();
+        if (wallet?.address) {
+          await supabase.from("profiles").update({ wallet_address: wallet.address }).eq("id", userId);
+        }
+      } catch (e) {
+        console.warn("Wallet generation failed (non-blocking):", e);
+      }
+      markDone("wallet");
+
+      setStatusMsg("Connexion automatique...");
+      await signIn(email, password);
+      markDone("connexion");
+
+      localStorage.setItem("bf_onboarding_seen", "1");
+      setStep("done");
+      setStatusMsg("Bienvenue sur Bridge Fund !");
+
+    } catch (err) {
+      console.error("Signup error:", err);
+      let msg = err.message;
+      if (msg.includes("already registered")) msg = "Un compte existe deja avec cet email";
+      if (msg.includes("rate limit")) msg = "Trop de tentatives, veuillez patienter";
+      setError(msg);
+      setStep("account");
+      setStatusMsg("");
+      setCompletedSteps([]);
+    }
+  };
 
   /* ── Step 0: INTRO ── */
   if (step === "intro") {
     return <LogoIntro onDone={() => setStep("portal")} />;
   }
 
-  /* ── Step 1: Choose your portal (ref7 — 2 selectable cards side by side) ── */
+  /* ── Step 1: Choose portal ── */
   if (step === "portal") {
     const portals = [
       {
@@ -187,7 +268,7 @@ export default function Onboarding({ onComplete, onLogin, onSignup }) {
     ];
 
     return (
-      <StepView>
+      <StepView key="portal">
         <div className="w-full max-w-[600px]">
           <h1 className="text-[22px] font-bold text-[#0F0F10] text-center tracking-tight">Choisissez votre portail</h1>
           <p className="text-[14px] text-[#787881] text-center mt-1 mb-8">Basculez entre les portails a tout moment</p>
@@ -207,7 +288,6 @@ export default function Onboarding({ onComplete, onLogin, onSignup }) {
                   }`}>{p.icon}</div>
                   <p className="text-[15px] font-semibold text-[#0F0F10]">{p.label}</p>
                   <p className="text-[12px] text-[#787881] mb-4">{p.desc}</p>
-
                   <p className="text-[10px] font-medium text-[#A8A29E] uppercase tracking-wider mb-2">Fonctionnalites</p>
                   <div className="grid grid-cols-2 gap-x-2 gap-y-1">
                     {p.features.map(f => (
@@ -233,10 +313,10 @@ export default function Onboarding({ onComplete, onLogin, onSignup }) {
     );
   }
 
-  /* ── Step 2: Personalize (ref8 — name input, select, checkboxes) ── */
+  /* ── Step 2: Personalize ── */
   if (step === "personalize") {
     return (
-      <StepView>
+      <StepView key="personalize">
         <div className="w-full max-w-[400px]">
           <h1 className="text-[22px] font-bold text-[#0F0F10] tracking-tight mb-6">Personnalisez votre experience</h1>
 
@@ -287,7 +367,7 @@ export default function Onboarding({ onComplete, onLogin, onSignup }) {
     );
   }
 
-  /* ── Step 3: How did you hear about us (ref9 — grid of tag buttons) ── */
+  /* ── Step 3: How did you hear ── */
   if (step === "hearabout") {
     const sources = [
       { id: "chatgpt", icon: "💬", label: "ChatGPT, Claude, etc." },
@@ -305,7 +385,7 @@ export default function Onboarding({ onComplete, onLogin, onSignup }) {
     ];
 
     return (
-      <StepView>
+      <StepView key="hearabout">
         <div className="w-full max-w-[520px]">
           <h1 className="text-[22px] font-bold text-[#0F0F10] tracking-tight mb-8">Comment avez-vous entendu parler de Bridge Fund ?</h1>
 
@@ -335,7 +415,7 @@ export default function Onboarding({ onComplete, onLogin, onSignup }) {
     );
   }
 
-  /* ── Step 4: What do you want to do (ref10 — illustrated tiles) ── */
+  /* ── Step 4: Use cases ── */
   if (step === "usecases") {
     const cases = [
       { id: "tokenize", label: "Tokeniser des fonds" },
@@ -349,7 +429,7 @@ export default function Onboarding({ onComplete, onLogin, onSignup }) {
     ];
 
     return (
-      <StepView>
+      <StepView key="usecases">
         <div className="w-full max-w-[540px]">
           <h1 className="text-[22px] font-bold text-[#0F0F10] tracking-tight">Que souhaitez-vous faire avec Bridge Fund ?</h1>
           <p className="text-[13px] text-[#787881] mt-1 mb-8">Selectionnez tout ce qui s'applique</p>
@@ -375,15 +455,127 @@ export default function Onboarding({ onComplete, onLogin, onSignup }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-5">
               <button onClick={() => setStep("hearabout")} className="text-[13px] text-[#787881] hover:text-[#0F0F10] transition-colors">Retour</button>
-              <button onClick={skip} className="text-[13px] text-[#787881] hover:text-[#0F0F10] transition-colors">Passer</button>
+              <button onClick={() => setStep("account")} className="text-[13px] text-[#787881] hover:text-[#0F0F10] transition-colors">Passer</button>
             </div>
-            <button onClick={finish}
+            <button onClick={() => setStep("account")}
               className="px-8 py-2.5 bg-[#0F0F10] text-white text-[14px] font-medium rounded-full hover:bg-[#292524] active:scale-[0.97] transition-all duration-100">
               Creer mon compte
             </button>
           </div>
         </div>
       </StepView>
+    );
+  }
+
+  /* ── Step 5: Account — email + password only (no repetition) ── */
+  if (step === "account") {
+    return (
+      <StepView key="account">
+        <div className="w-full max-w-[380px]">
+          <h1 className="text-[22px] font-bold text-[#0F0F10] tracking-tight mb-1">Creez votre compte</h1>
+          <p className="text-[14px] text-[#787881] mb-8">Plus qu'une etape pour acceder a Bridge Fund</p>
+
+          <div className="space-y-5">
+            <div>
+              <label className="block text-[13px] font-medium text-[#0F0F10] mb-1.5">Email professionnel</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                className={iCls} placeholder="nom@entreprise.com" autoFocus />
+            </div>
+            <div>
+              <label className="block text-[13px] font-medium text-[#0F0F10] mb-1.5">Mot de passe</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                className={iCls} placeholder="6 caracteres minimum"
+                onKeyDown={e => { if (e.key === "Enter" && acceptTerms) handleCreateAccount(); }} />
+            </div>
+
+            <label className="flex items-start gap-2.5 cursor-pointer pt-1">
+              <input type="checkbox" checked={acceptTerms} onChange={e => setAcceptTerms(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-[#D6D3D1] accent-[#0F0F10]" />
+              <span className="text-[12px] text-[#A8A29E] leading-relaxed">
+                J'accepte les <span className="text-[#0F0F10] font-medium">conditions generales</span> et
+                la <span className="text-[#0F0F10] font-medium">politique de confidentialite</span> de Bridge Fund.
+              </span>
+            </label>
+
+            {error && (
+              <div className="flex items-center gap-2 text-[13px] text-[#DC2626]">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <circle cx="12" cy="12" r="10" /><path d="M12 8v4m0 4h.01" strokeLinecap="round" />
+                </svg>
+                {error}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-4 mt-8">
+            <button onClick={() => setStep("usecases")} className="text-[13px] text-[#787881] hover:text-[#0F0F10] transition-colors">Retour</button>
+            <button onClick={handleCreateAccount}
+              disabled={!email || !password || !acceptTerms}
+              className="px-8 py-2.5 bg-[#0F0F10] text-white text-[14px] font-medium rounded-full hover:bg-[#292524] active:scale-[0.97] transition-all duration-100 disabled:opacity-25 disabled:cursor-not-allowed">
+              Creer mon compte
+            </button>
+          </div>
+
+          <p className="text-[13px] text-[#A8A29E] mt-6">
+            Deja un compte ?{" "}
+            <button onClick={onLogin} className="text-[#0F0F10] font-medium hover:underline">Se connecter</button>
+          </p>
+        </div>
+      </StepView>
+    );
+  }
+
+  /* ── Step 6: Creating / Done ── */
+  if (step === "creating" || step === "done") {
+    const progressSteps = [
+      { key: "compte", label: "Creation du compte" },
+      { key: "profil", label: "Configuration du profil" },
+      { key: "wallet", label: "Generation du wallet" },
+      { key: "connexion", label: "Connexion automatique" },
+    ];
+
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center px-6">
+        <div className="max-w-[360px] w-full text-center" style={{
+          animation: "fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both",
+        }}>
+          {step === "done" ? (
+            <>
+              <div className="w-12 h-12 rounded-full bg-[#059669] flex items-center justify-center mx-auto mb-5">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-[20px] font-bold text-[#0F0F10] tracking-tight mb-1.5">Bienvenue sur Bridge Fund</h2>
+              <p className="text-[14px] text-[#787881]">Votre compte a ete cree. Redirection...</p>
+            </>
+          ) : (
+            <>
+              <div className="w-8 h-8 border-[1.5px] border-[rgba(0,0,29,0.1)] border-t-[#0F0F10] rounded-full animate-spin mx-auto mb-6" />
+              <h2 className="text-[18px] font-semibold text-[#0F0F10] tracking-tight mb-1">Creation en cours</h2>
+              <p className="text-[13px] text-[#787881] mb-8">{statusMsg}</p>
+              <div className="space-y-3 text-left max-w-[220px] mx-auto">
+                {progressSteps.map((s) => {
+                  const done = completedSteps.includes(s.key);
+                  const active = !done && statusMsg.toLowerCase().includes(s.label.toLowerCase().slice(0, 8));
+                  return (
+                    <div key={s.key} className={`flex items-center gap-3 text-[13px] transition-colors duration-200 ${done ? "text-[#059669]" : active ? "text-[#0F0F10] font-medium" : "text-[#D6D3D1]"}`}>
+                      {done ? (
+                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                      ) : active ? (
+                        <div className="w-4 h-4 border-[1.5px] border-[rgba(0,0,29,0.1)] border-t-[#0F0F10] rounded-full animate-spin flex-shrink-0" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full border border-[#E5E5E5] flex-shrink-0" />
+                      )}
+                      {s.label}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     );
   }
 
