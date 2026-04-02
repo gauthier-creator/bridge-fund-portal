@@ -11,15 +11,14 @@ import { shortenHash, getExplorerUrl } from "../services/cardanoService";
    Greeting → Quick action tiles → KPIs → Portfolio → Activity
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── Quick action tiles (like ElevenLabs home: "Discours instantané", etc.) ── */
+/* ── Quick action tiles — simplified to 3 core actions ── */
 function QuickActions({ onNavigate }) {
   const actions = [
     {
       id: "invest",
-      label: "Souscrire",
-      sub: "Investir dans un fonds",
+      label: "Investir",
+      sub: "Parcourir les fonds et souscrire",
       gradient: "from-indigo-100 to-indigo-50",
-      glow: "#6366F1",
       icon: (
         <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="#6366F1" strokeWidth="1.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -28,65 +27,24 @@ function QuickActions({ onNavigate }) {
       action: () => onNavigate?.("funds"),
     },
     {
-      id: "portfolio",
-      label: "Portfolio",
-      sub: "Vos investissements",
-      gradient: "from-emerald-100 to-green-50",
-      glow: "#059669",
-      icon: (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="#059669" strokeWidth="1.5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-        </svg>
-      ),
-      action: () => {},
-    },
-    {
       id: "vault",
-      label: "Collateral",
-      sub: "Tokens synthetiques",
+      label: "Tokens & DeFi",
+      sub: "Synthetic tokens et pools",
       gradient: "from-violet-100 to-purple-50",
-      glow: "#8B5CF6",
       icon: (
         <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="#8B5CF6" strokeWidth="1.5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
         </svg>
       ),
       action: () => onNavigate?.("collateral"),
-    },
-    {
-      id: "defi",
-      label: "DeFi",
-      sub: "Pools & liquidite",
-      gradient: "from-sky-100 to-cyan-50",
-      glow: "#0EA5E9",
-      icon: (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="#0EA5E9" strokeWidth="1.5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
-        </svg>
-      ),
-      action: () => onNavigate?.("collateral"),
-    },
-    {
-      id: "kyc",
-      label: "Mon profil",
-      sub: "KYC & documents",
-      gradient: "from-amber-100 to-orange-50",
-      glow: "#D97706",
-      icon: (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="#D97706" strokeWidth="1.5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
-        </svg>
-      ),
-      action: () => onNavigate?.("profile"),
     },
     {
       id: "blockchain",
-      label: "On-chain",
-      sub: "Cardano explorer",
-      gradient: "from-pink-100 to-rose-50",
-      glow: "#EC4899",
+      label: "Explorer on-chain",
+      sub: "Verifier sur Cardano",
+      gradient: "from-emerald-100 to-green-50",
       icon: (
-        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="#EC4899" strokeWidth="1.5">
+        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="#059669" strokeWidth="1.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
         </svg>
       ),
@@ -95,11 +53,10 @@ function QuickActions({ onNavigate }) {
   ];
 
   return (
-    <div className="grid grid-cols-6 gap-2 stagger-children">
+    <div className="grid grid-cols-3 gap-3 stagger-children">
       {actions.map((a) => (
         <button key={a.id} onClick={a.action} className="action-tile group">
-          <div className={`action-tile-icon bg-gradient-to-br ${a.gradient}`}
-            style={{ boxShadow: `0 0 0 0 transparent` }}>
+          <div className={`action-tile-icon bg-gradient-to-br ${a.gradient}`}>
             {a.icon}
           </div>
           <div>
@@ -112,12 +69,12 @@ function QuickActions({ onNavigate }) {
   );
 }
 
-/* ── Feature highlight cards (like ElevenLabs "Sélectionné pour votre cas d'utilisation") ── */
+/* ── Feature highlight cards — 2 focused cards ── */
 function FeatureCards({ onNavigate }) {
   const features = [
     {
       title: "Souscription directe",
-      sub: "Investissez en quelques clics avec KYC integre, e-signature et paiement SEPA ou crypto",
+      sub: "KYC integre, e-signature et paiement SEPA ou crypto — en quelques clics",
       gradient: "linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 50%, #C7D2FE 100%)",
       icon: (
         <svg viewBox="0 0 48 48" className="w-12 h-12">
@@ -132,8 +89,8 @@ function FeatureCards({ onNavigate }) {
       action: () => onNavigate?.("funds"),
     },
     {
-      title: "Tokens on-chain",
-      sub: "Verrouillez vos security tokens et obtenez des synthetiques (sBF) pour la DeFi",
+      title: "Tokens & DeFi",
+      sub: "Mintez des synthetic tokens (sBF) et accedez aux pools de liquidite Cardano",
       gradient: "linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 50%, #DDD6FE 100%)",
       icon: (
         <svg viewBox="0 0 48 48" className="w-12 h-12">
@@ -149,25 +106,10 @@ function FeatureCards({ onNavigate }) {
       ),
       action: () => onNavigate?.("collateral"),
     },
-    {
-      title: "Pools DeFi",
-      sub: "Accedez aux pools de liquidite Minswap et SundaeSwap directement depuis votre portail",
-      gradient: "linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 50%, #A7F3D0 100%)",
-      icon: (
-        <svg viewBox="0 0 48 48" className="w-12 h-12">
-          <rect x="4" y="18" width="12" height="18" rx="3" fill="#059669" opacity="0.15"/>
-          <rect x="18" y="12" width="12" height="24" rx="3" fill="#059669" opacity="0.25"/>
-          <rect x="32" y="8" width="12" height="28" rx="3" fill="#059669" opacity="0.4"/>
-          <path d="M6 30l8-6 8 4 8-8 8 2" stroke="#059669" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-          <circle cx="38" cy="22" r="3" fill="#059669"/>
-        </svg>
-      ),
-      action: () => onNavigate?.("collateral"),
-    },
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-4 stagger-children">
+    <div className="grid grid-cols-2 gap-4 stagger-children">
       {features.map((f) => (
         <button key={f.title} onClick={f.action} className="feature-card text-left">
           <div className="feature-card-illustration" style={{ background: f.gradient }}>

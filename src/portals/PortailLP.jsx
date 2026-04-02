@@ -1297,8 +1297,8 @@ function Collateral({ toast }) {
     <div className="page-slide-in space-y-6">
       <div className="stagger-hero">
         <div>
-          <h2 className="text-[22px] font-bold text-[#0F0F10] tracking-tight">Collateral & DeFi</h2>
-          <p className="text-[14px] text-[#787881] mt-1">Tokenisez vos parts en synthetic tokens librement transferables</p>
+          <h2 className="text-[22px] font-bold text-[#0F0F10] tracking-tight">Tokens & DeFi</h2>
+          <p className="text-[14px] text-[#787881] mt-1">Verrouillez vos parts, mintez des synthetic tokens et accedez aux pools DeFi</p>
         </div>
       </div>
 
@@ -1520,13 +1520,38 @@ function Collateral({ toast }) {
   );
 }
 
+/* ─── Profile Slide-over Panel ─── */
+function ProfilePanel({ open, onClose, toast }) {
+  if (!open) return null;
+  return (
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 bg-black/20 z-40 backdrop-blur-[2px]" onClick={onClose} style={{ animation: "fadeIn 0.15s ease" }} />
+      {/* Panel */}
+      <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-white z-50 shadow-[-8px_0_32px_rgba(0,0,0,0.08)] overflow-y-auto" style={{ animation: "slideInRight 0.2s var(--ease-out) forwards" }}>
+        <div className="sticky top-0 bg-white/80 backdrop-blur-lg z-10 px-6 py-4 border-b border-[rgba(0,0,29,0.06)] flex items-center justify-between">
+          <h2 className="text-[16px] font-semibold text-[#0F0F10]">Mon profil</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-[#A8A29E] hover:text-[#0F0F10] hover:bg-[rgba(0,0,23,0.04)] transition-all">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div className="p-6">
+          <InvestorProfile toast={toast} compact />
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ─── Main LP Portal ─── */
 export default function PortailLP({ toast }) {
-  // Main section: "dashboard" | "funds" | "profile"
+  const { profile } = useAuth();
+  // Main section: "dashboard" | "funds" | "collateral" | "profile"
   const [section, setSection] = useState("dashboard");
   // Fund sub-view: "catalog" | "detail:slug" | "subscribe"
   const [fundView, setFundView] = useState("catalog");
   const [selectedFund, setSelectedFund] = useState(null);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const handleSelectFund = (slug) => setFundView("detail:" + slug);
   const handleInvest = (fund) => { setSelectedFund(fund); setFundView("subscribe"); };
@@ -1535,70 +1560,100 @@ export default function PortailLP({ toast }) {
   // Extract slug from fund view
   const fundSlug = fundView.startsWith("detail:") ? fundView.slice(7) : null;
 
-  // Main navigation tabs
+  // Simplified navigation — 3 core sections + profile avatar
   const mainTabs = [
-    { id: "dashboard", label: "Tableau de bord", icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 12a1 1 0 011-1h4a1 1 0 011 1v7a1 1 0 01-1 1h-4a1 1 0 01-1-1v-7z" /></svg>
+    { id: "dashboard", label: "Accueil", icon: (
+      <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" /></svg>
     )},
-    { id: "funds", label: "Fonds", icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+    { id: "funds", label: "Investir", icon: (
+      <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
     )},
-    { id: "collateral", label: "Collatéral & DeFi", icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-    )},
-    { id: "profile", label: "Mon profil", icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+    { id: "collateral", label: "Tokens & DeFi", icon: (
+      <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
     )},
   ];
 
+  // Breadcrumb for fund sub-views
+  const fundBreadcrumb = fundView === "subscribe"
+    ? [{ label: "Investir", action: handleBackToFunds }, { label: selectedFund?.fundName || "Souscription" }]
+    : fundSlug
+    ? [{ label: "Investir", action: handleBackToFunds }, { label: "Détails du fonds" }]
+    : null;
+
   return (
     <div>
-      {/* Main navigation — ElevenLabs tab style */}
-      <div className="flex gap-1 border-b border-[rgba(0,0,29,0.06)] mb-6">
-        {mainTabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => { setSection(tab.id); if (tab.id === "funds") { setFundView("catalog"); setSelectedFund(null); } }}
-            className={`flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium transition-all duration-100 relative rounded-t-lg ${section === tab.id ? "text-[#0F0F10] bg-[rgba(0,0,23,0.03)]" : "text-[#A8A29E] hover:text-[#787881] hover:bg-[rgba(0,0,23,0.015)]"}`}
-          >
-            {tab.icon}
-            {tab.label}
-            {section === tab.id && <div className="nav-tab-indicator" />}
-          </button>
-        ))}
+      {/* ── Unified top navigation bar ── */}
+      <div className="flex items-center justify-between mb-6">
+        {/* Left: tabs */}
+        <div className="flex items-center gap-0.5 bg-[rgba(0,0,23,0.03)] rounded-xl p-1">
+          {mainTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => { setSection(tab.id); if (tab.id === "funds") { setFundView("catalog"); setSelectedFund(null); } }}
+              className={`flex items-center gap-2 px-4 py-2 text-[13px] font-medium transition-all duration-150 rounded-lg ${section === tab.id ? "bg-white text-[#0F0F10] shadow-[0_1px_3px_rgba(0,0,0,0.06)]" : "text-[#787881] hover:text-[#0F0F10]"}`}
+            >
+              {tab.icon}
+              <span className="hidden sm:inline">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Right: profile avatar button */}
+        <button
+          onClick={() => setProfileOpen(true)}
+          className="flex items-center gap-2.5 pl-3 pr-3 py-1.5 rounded-xl hover:bg-[rgba(0,0,23,0.03)] transition-all group"
+        >
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center text-[12px] font-bold text-[#6366F1] ring-2 ring-white shadow-sm">
+            {(profile?.full_name || "U")[0].toUpperCase()}
+          </div>
+          <div className="hidden sm:block text-left">
+            <p className="text-[12px] font-medium text-[#0F0F10] leading-tight">{profile?.full_name?.split(" ")[0] || "Profil"}</p>
+            <p className="text-[10px] text-[#A8A29E] leading-tight">
+              {profile?.kyc_status === "validated" ? "KYC validé" : "Voir profil"}
+            </p>
+          </div>
+          <svg className="w-3.5 h-3.5 text-[#A8A29E] group-hover:text-[#787881] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+        </button>
       </div>
 
-      {/* Dashboard */}
-      {section === "dashboard" && (
-        <InvestorDashboard onViewFund={(slug) => { setSection("funds"); setFundView("detail:" + slug); }} onNavigate={(s) => { setSection(s); if (s === "funds") { setFundView("catalog"); setSelectedFund(null); } }} />
+      {/* ── Breadcrumb for fund sub-views ── */}
+      {section === "funds" && fundBreadcrumb && (
+        <div className="flex items-center gap-2 mb-5 text-[13px]" style={{ animation: "fadeIn 0.15s ease" }}>
+          {fundBreadcrumb.map((crumb, i) => (
+            <span key={i} className="flex items-center gap-2">
+              {i > 0 && <svg className="w-3 h-3 text-[#D6D3D1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>}
+              {crumb.action ? (
+                <button onClick={crumb.action} className="text-[#787881] hover:text-[#0F0F10] transition-colors font-medium">{crumb.label}</button>
+              ) : (
+                <span className="text-[#0F0F10] font-medium">{crumb.label}</span>
+              )}
+            </span>
+          ))}
+        </div>
       )}
 
-      {/* Funds section */}
-      {section === "funds" && (
-        <>
-          {fundView === "subscribe" && (
-            <div className="flex gap-1 border-b border-[rgba(0,0,29,0.06)] mb-6">
-              <button onClick={handleBackToFunds} className="px-4 py-2.5 text-[13px] text-[#A8A29E] hover:text-[#0F0F10] transition-all font-medium rounded-t-lg hover:bg-[rgba(0,0,23,0.015)]">
-                ← Fonds
-              </button>
-              <button className="px-4 py-2.5 text-[13px] font-medium text-[#0F0F10] relative bg-[rgba(0,0,23,0.03)] rounded-t-lg">
-                Souscription directe
-                <div className="nav-tab-indicator" />
-              </button>
-            </div>
-          )}
+      {/* ── Content ── */}
+      <div className="animate-fade-in">
+        {/* Dashboard */}
+        {section === "dashboard" && (
+          <InvestorDashboard onViewFund={(slug) => { setSection("funds"); setFundView("detail:" + slug); }} onNavigate={(s) => { setSection(s); if (s === "funds") { setFundView("catalog"); setSelectedFund(null); } }} />
+        )}
 
-          {fundView === "catalog" && <FundCatalog onSelectFund={handleSelectFund} />}
-          {fundSlug && <FundDetail fundSlug={fundSlug} onBack={handleBackToFunds} onInvest={handleInvest} />}
-          {fundView === "subscribe" && <Souscription toast={toast} fund={selectedFund} />}
-        </>
-      )}
+        {/* Funds section */}
+        {section === "funds" && (
+          <>
+            {fundView === "catalog" && <FundCatalog onSelectFund={handleSelectFund} />}
+            {fundSlug && <FundDetail fundSlug={fundSlug} onBack={handleBackToFunds} onInvest={handleInvest} />}
+            {fundView === "subscribe" && <Souscription toast={toast} fund={selectedFund} />}
+          </>
+        )}
 
-      {/* Collateral & DeFi */}
-      {section === "collateral" && <Collateral toast={toast} />}
+        {/* Collateral & DeFi */}
+        {section === "collateral" && <Collateral toast={toast} />}
+      </div>
 
-      {/* Profile */}
-      {section === "profile" && <InvestorProfile toast={toast} />}
+      {/* ── Profile slide-over ── */}
+      <ProfilePanel open={profileOpen} onClose={() => setProfileOpen(false)} toast={toast} />
     </div>
   );
 }

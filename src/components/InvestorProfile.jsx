@@ -6,7 +6,7 @@ import { shortenHash, getExplorerUrl } from "../services/cardanoService";
 const COUNTRIES = ["France", "Luxembourg", "Suisse", "Belgique", "Monaco", "Allemagne", "Italie", "Espagne", "Royaume-Uni", "États-Unis", "Autre"];
 const INVESTOR_TYPES = ["Professionnel", "Averti", "Institutionnel"];
 
-export default function InvestorProfile({ toast }) {
+export default function InvestorProfile({ toast, compact = false }) {
   const { profile, refreshProfile } = useAuth();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -76,12 +76,12 @@ export default function InvestorProfile({ toast }) {
   const lCls = "block text-[12px] font-medium text-[#A8A29E] mb-1.5";
 
   return (
-    <div className="page-slide-in space-y-6 max-w-4xl">
+    <div className={`${compact ? "" : "page-slide-in"} space-y-6 ${compact ? "" : "max-w-4xl"}`}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-[22px] font-bold text-[#0F0F10] tracking-tight">Mon profil</h2>
-          <p className="text-[14px] text-[#787881] mt-1">Gerez vos informations personnelles et votre statut KYC</p>
+          {!compact && <h2 className="text-[22px] font-bold text-[#0F0F10] tracking-tight">Mon profil</h2>}
+          <p className="text-[14px] text-[#787881] mt-1">{compact ? "Informations personnelles et statut KYC" : "Gerez vos informations personnelles et votre statut KYC"}</p>
         </div>
         {!editing ? (
           <button onClick={() => setEditing(true)} className="px-4 py-2 bg-[#0F0F10] text-white text-[13px] font-medium rounded-[9.6px] hover:bg-[#292524] transition-colors active:scale-[0.98]">
