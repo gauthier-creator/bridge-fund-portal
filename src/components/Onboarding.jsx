@@ -3,26 +3,26 @@ import MeshGradient from "./MeshGradient";
 
 /* ═══════════════════════════════════════════════════════════════════
    Onboarding — ElevenLabs exact flow reproduction
-   WebGL intro → Choose portal → Personalize → Use cases → Login
+   CSS blob intro → Choose portal → Personalize → Use cases → Login
    Full-screen, no header, centered, white bg
    ═══════════════════════════════════════════════════════════════════ */
 
-/* ── Intro: WebGL blob + cinematic text reveal ── */
+/* ── Intro: CSS blob + cinematic text reveal ── */
 function LogoIntro({ onDone }) {
   const [phase, setPhase] = useState(0);
-  // 0: Nothing visible (white screen)
-  // 1: Blob fades in small + "Bridge Fund" fades in with letter-spacing animation
-  // 2: Blob grows to full size, text fully revealed
-  // 3: Hold — blob continues animating
-  // 4: Fade everything out
+  // 0: White screen
+  // 1: Logo bars appear (chromatic aberration style)
+  // 2: Text deploys with letter-spacing, blob grows
+  // 3: Hold
+  // 4: Fade out
 
   useEffect(() => {
     const timers = [
-      setTimeout(() => setPhase(1), 200),
-      setTimeout(() => setPhase(2), 1000),
-      setTimeout(() => setPhase(3), 2000),
-      setTimeout(() => setPhase(4), 3200),
-      setTimeout(onDone, 3800),
+      setTimeout(() => setPhase(1), 300),
+      setTimeout(() => setPhase(2), 1200),
+      setTimeout(() => setPhase(3), 2400),
+      setTimeout(() => setPhase(4), 3600),
+      setTimeout(onDone, 4200),
     ];
     return () => timers.forEach(clearTimeout);
   }, [onDone]);
@@ -30,32 +30,67 @@ function LogoIntro({ onDone }) {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center relative overflow-hidden cursor-pointer" onClick={onDone}>
 
-      {/* WebGL mesh gradient blob — behind text, centered, grows */}
+      {/* CSS mesh gradient blob — behind text, centered, grows */}
       <div className="absolute inset-0 pointer-events-none" style={{
-        opacity: phase >= 4 ? 0 : phase >= 1 ? 1 : 0,
-        transition: phase >= 4 ? "opacity 0.5s ease" : "opacity 1s ease",
+        opacity: phase >= 4 ? 0 : phase >= 2 ? 1 : 0,
+        transition: phase >= 4 ? "opacity 0.6s ease" : "opacity 1.5s ease",
       }}>
         <MeshGradient
-          scale={phase >= 3 ? 1.4 : phase >= 2 ? 1.0 : phase >= 1 ? 0.4 : 0}
-          opacity={1}
+          scale={phase >= 3 ? 1.3 : phase >= 2 ? 0.8 : 0.2}
         />
       </div>
 
-      {/* Text — fades in with expanding letter-spacing, stays crisp on white */}
+      {/* Logo bars — chromatic aberration (like ElevenLabs || icon) */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{
+        opacity: phase >= 2 ? 0 : phase >= 1 ? 1 : 0,
+        transition: phase >= 2 ? "opacity 0.8s ease" : "opacity 0.6s ease",
+      }}>
+        <div className="flex gap-[6px]">
+          <div style={{
+            width: "8px",
+            height: phase >= 1 ? "52px" : "0px",
+            background: "#0F0F10",
+            borderRadius: "2px",
+            transition: "height 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
+            boxShadow: phase >= 1 ? "-3px 0 12px rgba(74, 230, 217, 0.5), 3px 0 12px rgba(242, 173, 209, 0.4)" : "none",
+          }} />
+          <div style={{
+            width: "8px",
+            height: phase >= 1 ? "52px" : "0px",
+            background: "#0F0F10",
+            borderRadius: "2px",
+            transition: "height 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.1s",
+            boxShadow: phase >= 1 ? "-3px 0 12px rgba(115, 235, 140, 0.4), 3px 0 12px rgba(242, 224, 128, 0.5)" : "none",
+          }} />
+        </div>
+      </div>
+
+      {/* Text — fades in with expanding letter-spacing, stays crisp */}
       <div className="relative z-10 select-none" style={{
-        opacity: phase >= 4 ? 0 : phase >= 1 ? 1 : 0,
-        transition: phase >= 4 ? "opacity 0.4s ease" : "opacity 0.8s ease",
+        opacity: phase >= 4 ? 0 : phase >= 2 ? 1 : 0,
+        transition: phase >= 4 ? "opacity 0.4s ease" : "opacity 1s ease",
       }}>
         <h1 style={{
-          fontSize: "32px",
+          fontSize: "36px",
           fontWeight: 700,
           color: "#0F0F10",
-          letterSpacing: phase >= 2 ? "-0.02em" : phase >= 1 ? "0.3em" : "0.6em",
-          transition: "letter-spacing 1.2s cubic-bezier(0.16, 1, 0.3, 1)",
+          letterSpacing: phase >= 3 ? "-0.02em" : phase >= 2 ? "0.25em" : "0.5em",
+          transition: "letter-spacing 1.4s cubic-bezier(0.16, 1, 0.3, 1)",
           whiteSpace: "nowrap",
         }}>
           Bridge Fund
         </h1>
+        <p style={{
+          textAlign: "center",
+          fontSize: "14px",
+          color: "#787881",
+          marginTop: "8px",
+          opacity: phase >= 3 ? 1 : 0,
+          transform: phase >= 3 ? "translateY(0)" : "translateY(6px)",
+          transition: "all 0.6s ease 0.2s",
+        }}>
+          Tokenized fund infrastructure
+        </p>
       </div>
     </div>
   );
@@ -75,21 +110,6 @@ function SelectCard({ selected, onClick, children, className = "" }) {
   );
 }
 
-/* ── Selectable chip ── */
-function SelectChip({ selected, onClick, icon, label }) {
-  return (
-    <button onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-[13px] font-medium transition-all duration-75 ${
-        selected
-          ? "border-[#0F0F10] bg-[rgba(0,0,23,0.04)] text-[#0F0F10]"
-          : "border-[rgba(0,0,29,0.1)] text-[#787881] hover:border-[rgba(0,0,29,0.2)] hover:text-[#0F0F10]"
-      }`}>
-      {icon && <span className="text-[14px]">{icon}</span>}
-      {label}
-    </button>
-  );
-}
-
 /* ── Step dots (pagination like ElevenLabs bottom dots) ── */
 function StepDots({ current, total }) {
   return (
@@ -104,7 +124,7 @@ function StepDots({ current, total }) {
 }
 
 /* ── Navigation footer ── */
-function NavFooter({ onBack, onSkip, onNext, nextLabel = "Continuer", nextDisabled = false, step = 0, totalSteps = 5 }) {
+function NavFooter({ onBack, onSkip, onNext, nextLabel = "Continuer", nextDisabled = false, step = 0, totalSteps = 4 }) {
   return (
     <>
       <div className="flex items-center justify-between mt-8">
@@ -124,67 +144,78 @@ function NavFooter({ onBack, onSkip, onNext, nextLabel = "Continuer", nextDisabl
   );
 }
 
-/* ── Feature illustrations for use-case cards ── */
-function MiniIllust({ type }) {
-  const styles = {
+/* ── Rich illustrated icons for use-case cards (like ElevenLabs ref10) ── */
+function UseCaseIllust({ type }) {
+  const map = {
     tokenize: (
-      <svg viewBox="0 0 48 48" className="w-12 h-12">
-        <circle cx="24" cy="24" r="20" fill="#EEF2FF"/>
-        <circle cx="24" cy="24" r="12" fill="#818CF8" opacity="0.2"/>
-        <circle cx="24" cy="24" r="7" fill="#6366F1"/>
-        <path d="M21 24l2 2 4-4" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-      </svg>
-    ),
-    kyc: (
-      <svg viewBox="0 0 48 48" className="w-12 h-12">
-        <circle cx="24" cy="24" r="20" fill="#ECFDF5"/>
-        <rect x="14" y="16" width="20" height="14" rx="3" fill="#34D399" opacity="0.3"/>
-        <circle cx="21" cy="22" r="3" fill="#059669" opacity="0.5"/>
-        <rect x="26" y="20" width="6" height="2" rx="1" fill="#059669" opacity="0.3"/>
-        <rect x="26" y="24" width="5" height="2" rx="1" fill="#059669" opacity="0.2"/>
-        <circle cx="34" cy="32" r="6" fill="#059669"/>
-        <path d="M31.5 32l1.5 1.5 3-3" stroke="white" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
-      </svg>
-    ),
-    dashboard: (
-      <svg viewBox="0 0 48 48" className="w-12 h-12">
-        <circle cx="24" cy="24" r="20" fill="#FDF2F8"/>
-        <rect x="12" y="30" width="5" height="6" rx="1.5" fill="#EC4899" opacity="0.3"/>
-        <rect x="19" y="26" width="5" height="10" rx="1.5" fill="#EC4899" opacity="0.5"/>
-        <rect x="26" y="22" width="5" height="14" rx="1.5" fill="#EC4899" opacity="0.7"/>
-        <rect x="33" y="16" width="5" height="20" rx="1.5" fill="#EC4899"/>
-      </svg>
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 opacity-30" style={{ background: "radial-gradient(circle at 70% 30%, #818CF8, transparent 60%)" }} />
+        <svg viewBox="0 0 32 32" className="w-8 h-8 relative z-10">
+          <circle cx="16" cy="16" r="11" fill="#6366F1" opacity="0.15"/>
+          <circle cx="16" cy="16" r="7" fill="#6366F1"/>
+          <path d="M13.5 16l1.5 1.5 3.5-3.5" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
     ),
     subscribe: (
-      <svg viewBox="0 0 48 48" className="w-12 h-12">
-        <circle cx="24" cy="24" r="20" fill="#FEF3C7"/>
-        <rect x="14" y="15" width="20" height="18" rx="3" fill="#F59E0B" opacity="0.2"/>
-        <rect x="17" y="19" width="14" height="2" rx="1" fill="#F59E0B" opacity="0.4"/>
-        <rect x="17" y="23" width="10" height="2" rx="1" fill="#F59E0B" opacity="0.3"/>
-        <rect x="17" y="27" width="8" height="4" rx="2" fill="#F59E0B"/>
-        <text x="21" y="30.5" fill="white" fontSize="4" fontWeight="600" textAnchor="middle">OK</text>
-      </svg>
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-50 flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 opacity-30" style={{ background: "radial-gradient(circle at 30% 70%, #F59E0B, transparent 60%)" }} />
+        <svg viewBox="0 0 32 32" className="w-8 h-8 relative z-10">
+          <rect x="7" y="8" width="18" height="16" rx="3" fill="#F59E0B" opacity="0.2"/>
+          <rect x="10" y="12" width="12" height="2" rx="1" fill="#F59E0B" opacity="0.5"/>
+          <rect x="10" y="16" width="8" height="2" rx="1" fill="#F59E0B" opacity="0.4"/>
+          <rect x="10" y="20" width="6" height="3" rx="1.5" fill="#F59E0B"/>
+        </svg>
+      </div>
+    ),
+    kyc: (
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-100 to-green-50 flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 opacity-30" style={{ background: "radial-gradient(circle at 60% 40%, #059669, transparent 60%)" }} />
+        <svg viewBox="0 0 32 32" className="w-8 h-8 relative z-10">
+          <rect x="6" y="9" width="20" height="14" rx="3" fill="#059669" opacity="0.2"/>
+          <circle cx="14" cy="15" r="3" fill="#059669" opacity="0.4"/>
+          <rect x="19" y="13" width="5" height="1.5" rx="0.75" fill="#059669" opacity="0.3"/>
+          <rect x="19" y="16" width="4" height="1.5" rx="0.75" fill="#059669" opacity="0.2"/>
+          <circle cx="24" cy="22" r="5" fill="#059669"/>
+          <path d="M22 22l1.2 1.2 2.6-2.6" stroke="white" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+    ),
+    dashboard: (
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-100 to-rose-50 flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 opacity-30" style={{ background: "radial-gradient(circle at 40% 60%, #EC4899, transparent 60%)" }} />
+        <svg viewBox="0 0 32 32" className="w-8 h-8 relative z-10">
+          <rect x="5" y="20" width="5" height="6" rx="1.5" fill="#EC4899" opacity="0.3"/>
+          <rect x="12" y="16" width="5" height="10" rx="1.5" fill="#EC4899" opacity="0.5"/>
+          <rect x="19" y="12" width="5" height="14" rx="1.5" fill="#EC4899" opacity="0.7"/>
+          <rect x="26" y="7" width="5" height="19" rx="1.5" fill="#EC4899"/>
+        </svg>
+      </div>
     ),
     blockchain: (
-      <svg viewBox="0 0 48 48" className="w-12 h-12">
-        <circle cx="24" cy="24" r="20" fill="#F0F9FF"/>
-        <rect x="8" y="20" width="10" height="10" rx="3" fill="#0EA5E9" opacity="0.25"/>
-        <rect x="20" y="18" width="10" height="12" rx="3" fill="#0EA5E9" opacity="0.5"/>
-        <rect x="32" y="20" width="10" height="10" rx="3" fill="#0EA5E9"/>
-        <line x1="18" y1="25" x2="20" y2="25" stroke="#0EA5E9" strokeWidth="1.5" opacity="0.4"/>
-        <line x1="30" y1="25" x2="32" y2="25" stroke="#0EA5E9" strokeWidth="1.5" opacity="0.4"/>
-      </svg>
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-sky-100 to-cyan-50 flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 opacity-30" style={{ background: "radial-gradient(circle at 50% 50%, #0EA5E9, transparent 60%)" }} />
+        <svg viewBox="0 0 32 32" className="w-8 h-8 relative z-10">
+          <rect x="3" y="13" width="8" height="8" rx="2" fill="#0EA5E9" opacity="0.25"/>
+          <rect x="13" y="11" width="8" height="10" rx="2" fill="#0EA5E9" opacity="0.5"/>
+          <rect x="23" y="13" width="8" height="8" rx="2" fill="#0EA5E9"/>
+          <line x1="11" y1="17" x2="13" y2="17" stroke="#0EA5E9" strokeWidth="1.5" opacity="0.5"/>
+          <line x1="21" y1="17" x2="23" y2="17" stroke="#0EA5E9" strokeWidth="1.5" opacity="0.5"/>
+        </svg>
+      </div>
     ),
     defi: (
-      <svg viewBox="0 0 48 48" className="w-12 h-12">
-        <circle cx="24" cy="24" r="20" fill="#F5F3FF"/>
-        <circle cx="24" cy="24" r="10" fill="#8B5CF6" opacity="0.15"/>
-        <circle cx="24" cy="24" r="6" fill="#8B5CF6" opacity="0.3"/>
-        <path d="M20 24h8M24 20v8" stroke="#7C3AED" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-100 to-purple-50 flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 opacity-30" style={{ background: "radial-gradient(circle at 50% 50%, #8B5CF6, transparent 60%)" }} />
+        <svg viewBox="0 0 32 32" className="w-8 h-8 relative z-10">
+          <circle cx="16" cy="16" r="10" fill="#8B5CF6" opacity="0.15"/>
+          <circle cx="16" cy="16" r="6" fill="#8B5CF6" opacity="0.3"/>
+          <path d="M13 16h6M16 13v6" stroke="#7C3AED" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      </div>
     ),
   };
-  return styles[type] || null;
+  return map[type] || null;
 }
 
 /* ══════════════════════════════════════════
@@ -210,7 +241,8 @@ export default function Onboarding({ onComplete, onLogin }) {
   if (step === "portal") {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center px-6">
-        <div className="max-w-[640px] w-full" style={{ animation: "fadeInUp 0.4s var(--ease-out) both" }}>
+        <div className="max-w-[640px] w-full page-slide-in">
+
           <div className="text-center mb-8">
             <h1 className="text-[24px] font-bold text-[#0F0F10]">Choisissez votre portail</h1>
             <p className="text-[14px] text-[#787881] mt-1.5">Vous pourrez changer a tout moment</p>
@@ -264,11 +296,11 @@ export default function Onboarding({ onComplete, onLogin }) {
     );
   }
 
-  /* ── STEP 2: Personalize (like "Help us personalize your experience") ── */
+  /* ── STEP 2: Personalize ── */
   if (step === "personalize") {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center px-6">
-        <div className="max-w-[420px] w-full" style={{ animation: "fadeInUp 0.3s var(--ease-out) both" }}>
+        <div className="max-w-[420px] w-full page-slide-in">
           <h1 className="text-[24px] font-bold text-[#0F0F10] mb-6">Personnalisez votre experience</h1>
 
           <div className="space-y-5">
@@ -305,20 +337,20 @@ export default function Onboarding({ onComplete, onLogin }) {
     );
   }
 
-  /* ── STEP 3: Use cases (like "Que souhaitez-vous faire avec ElevenLabs ?") ── */
+  /* ── STEP 3: Use cases (illustrated cards like ElevenLabs ref10) ── */
   if (step === "usecases") {
     const cases = [
-      { id: "tokenize", icon: "tokenize", label: "Tokeniser des fonds" },
-      { id: "subscribe", icon: "subscribe", label: "Souscrire a des fonds" },
-      { id: "kyc", icon: "kyc", label: "KYC & Compliance" },
-      { id: "dashboard", icon: "dashboard", label: "Suivi portfolio" },
-      { id: "blockchain", icon: "blockchain", label: "Verification on-chain" },
-      { id: "defi", icon: "defi", label: "DeFi & Collateral" },
+      { id: "tokenize", label: "Tokeniser des fonds" },
+      { id: "subscribe", label: "Souscrire a des fonds" },
+      { id: "kyc", label: "KYC & Compliance" },
+      { id: "dashboard", label: "Suivi portfolio" },
+      { id: "blockchain", label: "Verification on-chain" },
+      { id: "defi", label: "DeFi & Collateral" },
     ];
 
     return (
       <div className="min-h-screen bg-white flex items-center justify-center px-6">
-        <div className="max-w-[560px] w-full" style={{ animation: "fadeInUp 0.3s var(--ease-out) both" }}>
+        <div className="max-w-[560px] w-full page-slide-in">
           <div className="text-center mb-8">
             <h1 className="text-[24px] font-bold text-[#0F0F10]">Que souhaitez-vous faire ?</h1>
             <p className="text-[14px] text-[#787881] mt-1.5">Selectionnez tout ce qui s'applique</p>
@@ -333,8 +365,8 @@ export default function Onboarding({ onComplete, onLogin }) {
                     : "border-[rgba(0,0,29,0.06)] hover:border-[rgba(0,0,29,0.15)]"
                 }`}
                 style={{ animation: `fadeInUp 0.3s var(--ease-out) ${i * 50}ms both` }}>
-                <div className="flex justify-center mb-2">
-                  <MiniIllust type={c.icon} />
+                <div className="flex justify-center mb-3">
+                  <UseCaseIllust type={c.id} />
                 </div>
                 <p className="text-[13px] font-medium text-[#0F0F10]">{c.label}</p>
               </div>

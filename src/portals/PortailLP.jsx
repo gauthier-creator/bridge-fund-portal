@@ -1644,7 +1644,7 @@ export default function PortailLP({ toast }) {
 
       {/* Dashboard */}
       {section === "dashboard" && (
-        <InvestorDashboard onViewFund={(slug) => { setSection("funds"); setFundView("detail:" + slug); }} />
+        <InvestorDashboard onViewFund={(slug) => { setSection("funds"); setFundView("detail:" + slug); }} onNavigate={(s) => { setSection(s); if (s === "funds") { setFundView("catalog"); setSelectedFund(null); } }} />
       )}
 
       {/* Funds section */}
