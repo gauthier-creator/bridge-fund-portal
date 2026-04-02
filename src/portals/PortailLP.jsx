@@ -13,6 +13,7 @@ import {
 import FundCatalog from "../components/FundCatalog";
 import FundDetail from "../components/FundDetail";
 import InvestorDashboard from "../components/InvestorDashboard";
+import KYCFlow from "../components/KYCFlow";
 import InvestorProfile from "../components/InvestorProfile";
 import CryptoCheckout from "../components/CryptoCheckout";
 
@@ -226,8 +227,8 @@ function Souscription({ toast, fund }) {
               </div>
             ) : (
             <>
-            <div className="flex border-b border-[#E8ECF1] mb-6">
-              {[{ i: 0, label: "Identité" }, { i: 1, label: "Compliance AML" }, { i: 2, label: "Éligibilité investisseur" }].map(({ i, label }) => (
+            <div className="flex border-b border-[rgba(0,0,29,0.08)] mb-6">
+              {[{ i: 0, label: "Identite" }, { i: 1, label: "Documents KYC" }, { i: 2, label: "Compliance AML" }, { i: 3, label: "Eligibilite" }].map(({ i, label }) => (
                 <button key={i} onClick={() => setKycSubStep(i)} className={`px-4 py-2 text-xs font-medium transition-all relative ${kycSubStep === i ? "text-[#0F0F10]" : "text-[#A8A29E] hover:text-[#787881]"}`}>
                   {label}
                   {kycSubStep === i && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0F0F10] rounded-full" />}
@@ -319,106 +320,32 @@ function Souscription({ toast, fund }) {
                     </select>
                   </div>
 
-                  <div className="col-span-2 space-y-3">
-                    <label className={labelCls}>Documents justificatifs <span className="text-[#DC2626]">*</span></label>
-
-                    {/* Pièce d'identité */}
-                    {documents.find((d) => d.type === "Pièce d'identité") ? (
-                      <div className="flex items-center gap-2 ring-1 ring-[#059669]/10 bg-[#ECFDF5] rounded-xl p-3 text-sm">
-                        <svg className="w-4 h-4 text-[#059669] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                        <span className="text-[#059669] font-medium flex-1">{documents.find((d) => d.type === "Pièce d'identité").name}</span>
-                        <span className="text-xs text-[#059669]">{documents.find((d) => d.type === "Pièce d'identité").size}</span>
-                        <button onClick={() => window.open(documents.find((d) => d.type === "Pièce d'identité").url, "_blank")} className="text-xs font-medium text-[#6366F1] hover:text-[#1A1A2E] transition-colors">Consulter</button>
-                      </div>
-                    ) : (
-                      <>
-                        <input type="file" ref={fileRefs.id} onChange={handleFileSelect("Pièce d'identité")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
-                        <div className="border-2 border-dashed border-[#E8ECF1] rounded-xl p-3 text-center hover:border-[#4F7DF3]/30 transition-colors cursor-pointer"
-                          onClick={() => fileRefs.id.current?.click()}>
-                          <p className="text-sm text-[#A8A29E]">{personType === "physique" ? "Passeport ou carte d'identité" : "Extrait K-bis / Registre de commerce"}</p>
-                          <p className="text-xs text-[#A8A29E] mt-0.5">Cliquez pour sélectionner · PDF, JPG, PNG — max 10 Mo</p>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Justificatif de domicile */}
-                    {documents.find((d) => d.type === "Justificatif de domicile") ? (
-                      <div className="flex items-center gap-2 ring-1 ring-[#059669]/10 bg-[#ECFDF5] rounded-xl p-3 text-sm">
-                        <svg className="w-4 h-4 text-[#059669] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                        <span className="text-[#059669] font-medium flex-1">{documents.find((d) => d.type === "Justificatif de domicile").name}</span>
-                        <span className="text-xs text-[#059669]">{documents.find((d) => d.type === "Justificatif de domicile").size}</span>
-                        <button onClick={() => window.open(documents.find((d) => d.type === "Justificatif de domicile").url, "_blank")} className="text-xs font-medium text-[#6366F1] hover:text-[#1A1A2E] transition-colors">Consulter</button>
-                      </div>
-                    ) : (
-                      <>
-                        <input type="file" ref={fileRefs.domicile} onChange={handleFileSelect("Justificatif de domicile")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
-                        <div className="border-2 border-dashed border-[#E8ECF1] rounded-xl p-3 text-center hover:border-[#4F7DF3]/30 transition-colors cursor-pointer"
-                          onClick={() => fileRefs.domicile.current?.click()}>
-                          <p className="text-sm text-[#A8A29E]">Justificatif de domicile (moins de 3 mois)</p>
-                          <p className="text-xs text-[#A8A29E] mt-0.5">Facture énergie, téléphone, avis d'imposition</p>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Justificatif origine des fonds */}
-                    {documents.find((d) => d.type === "Justificatif origine des fonds") ? (
-                      <div className="flex items-center gap-2 ring-1 ring-[#059669]/10 bg-[#ECFDF5] rounded-xl p-3 text-sm">
-                        <svg className="w-4 h-4 text-[#059669] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                        <span className="text-[#059669] font-medium flex-1">{documents.find((d) => d.type === "Justificatif origine des fonds").name}</span>
-                        <span className="text-xs text-[#059669]">{documents.find((d) => d.type === "Justificatif origine des fonds").size}</span>
-                        <button onClick={() => window.open(documents.find((d) => d.type === "Justificatif origine des fonds").url, "_blank")} className="text-xs font-medium text-[#6366F1] hover:text-[#1A1A2E] transition-colors">Consulter</button>
-                      </div>
-                    ) : (
-                      <>
-                        <input type="file" ref={fileRefs.fonds} onChange={handleFileSelect("Justificatif origine des fonds")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
-                        <div className="border-2 border-dashed border-[#E8ECF1] rounded-xl p-3 text-center hover:border-[#4F7DF3]/30 transition-colors cursor-pointer"
-                          onClick={() => fileRefs.fonds.current?.click()}>
-                          <p className="text-sm text-[#A8A29E]">Justificatif d'origine des fonds</p>
-                          <p className="text-xs text-[#A8A29E] mt-0.5">Relevé bancaire, acte de cession, attestation employeur</p>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Statuts (personne morale) */}
-                    {personType === "morale" && (
-                      documents.find((d) => d.type === "Statuts société") ? (
-                        <div className="flex items-center gap-2 ring-1 ring-[#059669]/10 bg-[#ECFDF5] rounded-xl p-3 text-sm">
-                          <svg className="w-4 h-4 text-[#059669] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                          <span className="text-[#059669] font-medium flex-1">{documents.find((d) => d.type === "Statuts société").name}</span>
-                          <span className="text-xs text-[#059669]">{documents.find((d) => d.type === "Statuts société").size}</span>
-                          <button onClick={() => window.open(documents.find((d) => d.type === "Statuts société").url, "_blank")} className="text-xs font-medium text-[#6366F1] hover:text-[#1A1A2E] transition-colors">Consulter</button>
-                        </div>
-                      ) : (
-                        <>
-                          <input type="file" ref={fileRefs.statuts} onChange={handleFileSelect("Statuts société")} accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
-                          <div className="border-2 border-dashed border-[#E8ECF1] rounded-xl p-3 text-center hover:border-[#4F7DF3]/30 transition-colors cursor-pointer"
-                            onClick={() => fileRefs.statuts.current?.click()}>
-                            <p className="text-sm text-[#A8A29E]">Statuts à jour + liste des bénéficiaires effectifs</p>
-                            <p className="text-xs text-[#A8A29E] mt-0.5">PDF — max 10 Mo</p>
-                          </div>
-                        </>
-                      )
-                    )}
-
-                    {documents.length > 0 && (
-                      <div className="flex items-center gap-2 text-xs text-[#059669] font-medium">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                        {documents.length} document{documents.length > 1 ? "s" : ""} déposé{documents.length > 1 ? "s" : ""}
-                      </div>
-                    )}
-                  </div>
                 </div>
 
                 <div className="mt-6 flex justify-end">
                   <button onClick={() => setKycSubStep(1)} className="bg-[#0F0F10] hover:bg-[#292524] text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors">
-                    Suivant : Compliance →
+                    Suivant : Documents KYC →
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Sub-step 1: Compliance AML */}
+            {/* Sub-step 1: Document Upload + ComplyCube Verification */}
             {kycSubStep === 1 && (
+              <div className="animate-fade-in">
+                <KYCFlow
+                  personType={personType}
+                  profile={profile}
+                  formData={formData}
+                  toast={toast}
+                  onKycStatus={(s) => { setKycStatus(s); if (s === "Validé") setAmlStatus("clear"); }}
+                  onComplete={() => setKycSubStep(2)}
+                />
+              </div>
+            )}
+
+            {/* Sub-step 2: Compliance AML */}
+            {kycSubStep === 2 && (
               <div className="animate-fade-in text-left space-y-5">
                 <ComplianceAlert type="info">
                   <strong>Obligations réglementaires</strong> — En application de la loi luxembourgeoise du 12 novembre 2004 relative à la lutte contre le blanchiment et le financement du terrorisme, nous devons collecter les informations suivantes.
@@ -486,17 +413,14 @@ function Souscription({ toast, fund }) {
                 )}
 
                 <div className="flex justify-between pt-2">
-                  <button onClick={() => setKycSubStep(0)} className="text-sm text-[#787881] hover:text-[#0F0F10] transition-colors">← Identité</button>
-                  <div className="flex gap-3">
-                    {!kycStatus && <button onClick={handleKycSubmit} className="bg-[#0F0F10] hover:bg-[#292524] text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors">Lancer la vérification KYC / AML</button>}
-                    {amlStatus === "clear" && <button onClick={() => setKycSubStep(2)} className="bg-[#0F0F10] hover:bg-[#292524] text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors">Suivant : Éligibilité →</button>}
-                  </div>
+                  <button onClick={() => setKycSubStep(1)} className="text-sm text-[#787881] hover:text-[#0F0F10] transition-colors">← Documents KYC</button>
+                  <button onClick={() => setKycSubStep(3)} className="bg-[#0F0F10] hover:bg-[#292524] text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors">Suivant : Eligibilite →</button>
                 </div>
               </div>
             )}
 
-            {/* Sub-step 2: Éligibilité */}
-            {kycSubStep === 2 && (
+            {/* Sub-step 3: Éligibilité */}
+            {kycSubStep === 3 && (
               <div className="animate-fade-in text-left space-y-5">
                 <ComplianceAlert type="info">
                   <strong>Test d'adéquation — MiFID II / Loi du 5 avril 1993</strong> — Ce questionnaire détermine si l'investissement dans le Bridge Fund est adapté à votre profil.
@@ -556,7 +480,7 @@ function Souscription({ toast, fund }) {
                 )}
 
                 <div className="flex justify-between pt-2">
-                  <button onClick={() => setKycSubStep(1)} className="text-sm text-[#787881] hover:text-[#0F0F10] transition-colors">← Compliance</button>
+                  <button onClick={() => setKycSubStep(2)} className="text-sm text-[#787881] hover:text-[#0F0F10] transition-colors">← Compliance</button>
                   <div className="flex gap-3">
                     {!eligibilityDone && <button onClick={handleEligibility} className="bg-[#0F0F10] hover:bg-[#292524] text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors">Valider l'éligibilité</button>}
                     {eligibilityDone && <button onClick={() => setStep(1)} className="bg-[#0F0F10] hover:bg-[#292524] text-white px-6 py-2.5 rounded-xl text-sm font-medium transition-colors">Continuer vers le virement →</button>}
