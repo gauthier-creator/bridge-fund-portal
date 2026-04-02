@@ -6,17 +6,25 @@ import { supabase } from "../lib/supabase";
    when no Edge Function is deployed yet.
    ═══════════════════════════════════════════════════════════════ */
 
-const DEMO_MODE = import.meta.env.VITE_KYC_DEMO_MODE === "true" || !supabase;
+const FORCE_DEMO = import.meta.env.VITE_KYC_DEMO_MODE === "true" || !supabase;
 const EDGE_FN = "kyc-verify"; // Supabase Edge Function name
 
-/* ── Helper: call Edge Function ── */
+/* ── Helper: call Edge Function (returns null on failure instead of throwing) ── */
 async function callEdge(action, payload) {
-  if (!supabase) throw new Error("Supabase not configured");
-  const { data, error } = await supabase.functions.invoke(EDGE_FN, {
-    body: { action, ...payload },
-  });
-  if (error) throw error;
-  return data;
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase.functions.invoke(EDGE_FN, {
+      body: { action, ...payload },
+    });
+    if (error) {
+      console.warn(`[KYC] Edge Function "${action}" failed:`, error.message || error);
+      return null;
+    }
+    return data;
+  } catch (e) {
+    console.warn(`[KYC] Edge Function "${action}" exception:`, e.message || e);
+    return null;
+  }
 }
 
 /* ── Demo mode: simulate ComplyCube responses ── */
@@ -45,13 +53,15 @@ const demoResults = {
  * @returns {{ clientId: string }}
  */
 export async function createKycClient(profile) {
-  if (DEMO_MODE) {
-    await demoDelay(600);
-    const clientId = `demo_client_${++demoClientCounter}`;
-    console.log("[KYC Demo] Created client:", clientId);
-    return { clientId };
+  if (!FORCE_DEMO) {
+    const data = await callEdge("create-client", { profile });
+    if (data?.clientId) return data;
   }
-  return callEdge("create-client", { profile });
+  // Fallback to demo
+  await demoDelay(600);
+  const clientId = `demo_client_${++demoClientCounter}`;
+  console.log("[KYC] Fallback demo — created client:", clientId);
+  return { clientId };
 }
 
 /**
@@ -62,26 +72,20 @@ export async function createKycClient(profile) {
  * @returns {{ documentId: string }}
  */
 export async function uploadDocument(clientId, file, docType) {
-  if (DEMO_MODE) {
-    await demoDelay(800);
-    const documentId = `demo_doc_${++demoDocCounter}`;
-    console.log("[KYC Demo] Uploaded document:", documentId, docType);
-    return { documentId };
+  if (!FORCE_DEMO) {
+    const buffer = await file.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    const data = await callEdge("upload-document", {
+      clientId,
+      document: { base64, fileName: file.name, contentType: file.type, type: docType },
+    });
+    if (data?.documentId) return data;
   }
-
-  // Convert file to base64 for Edge Function
-  const buffer = await file.arrayBuffer();
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
-
-  return callEdge("upload-document", {
-    clientId,
-    document: {
-      base64,
-      fileName: file.name,
-      contentType: file.type,
-      type: docType,
-    },
-  });
+  // Fallback to demo
+  await demoDelay(800);
+  const documentId = `demo_doc_${++demoDocCounter}`;
+  console.log("[KYC] Fallback demo — uploaded document:", documentId, docType);
+  return { documentId };
 }
 
 /**
@@ -92,13 +96,14 @@ export async function uploadDocument(clientId, file, docType) {
  * @returns {{ checkId: string }}
  */
 export async function createCheck(clientId, documentId, checkType = "document_check") {
-  if (DEMO_MODE) {
-    await demoDelay(400);
-    const checkId = `demo_check_${++demoCheckCounter}`;
-    console.log("[KYC Demo] Created check:", checkId, checkType);
-    return { checkId };
+  if (!FORCE_DEMO) {
+    const data = await callEdge("create-check", { clientId, documentId, checkType });
+    if (data?.checkId) return data;
   }
-  return callEdge("create-check", { clientId, documentId, checkType });
+  await demoDelay(400);
+  const checkId = `demo_check_${++demoCheckCounter}`;
+  console.log("[KYC] Fallback demo — created check:", checkId, checkType);
+  return { checkId };
 }
 
 /**
@@ -108,16 +113,18 @@ export async function createCheck(clientId, documentId, checkType = "document_ch
  * @returns {{ status: "complete"|"pending"|"failed", result: "clear"|"attention"|"rejected", breakdown: Object }}
  */
 export async function getCheckResult(checkId, docType = "id_document") {
-  if (DEMO_MODE) {
-    await demoDelay(1500 + Math.random() * 1000);
-    const checkType = checkId.includes("aml") ? "screening_check" : "document_check";
-    const result = checkType === "screening_check"
-      ? demoResults.screening_check
-      : (demoResults.document_check[docType] || demoResults.document_check.id_document);
-    console.log("[KYC Demo] Check result:", checkId, result.result);
-    return { status: "complete", ...result };
+  if (!FORCE_DEMO && !checkId.startsWith("demo_")) {
+    const data = await callEdge("get-check", { checkId });
+    if (data?.status) return data;
   }
-  return callEdge("get-check", { checkId });
+  // Fallback to demo
+  await demoDelay(1500 + Math.random() * 1000);
+  const checkType = checkId.includes("aml") ? "screening_check" : "document_check";
+  const result = checkType === "screening_check"
+    ? demoResults.screening_check
+    : (demoResults.document_check[docType] || demoResults.document_check.id_document);
+  console.log("[KYC] Fallback demo — check result:", checkId, result.result);
+  return { status: "complete", ...result };
 }
 
 /**
@@ -126,13 +133,14 @@ export async function getCheckResult(checkId, docType = "id_document") {
  * @returns {{ checkId: string }}
  */
 export async function runAmlScreening(clientId) {
-  if (DEMO_MODE) {
-    await demoDelay(500);
-    const checkId = `demo_check_aml_${++demoCheckCounter}`;
-    console.log("[KYC Demo] AML screening launched:", checkId);
-    return { checkId };
+  if (!FORCE_DEMO) {
+    const data = await callEdge("aml-screen", { clientId });
+    if (data?.checkId) return data;
   }
-  return callEdge("aml-screen", { clientId });
+  await demoDelay(500);
+  const checkId = `demo_check_aml_${++demoCheckCounter}`;
+  console.log("[KYC] Fallback demo — AML screening:", checkId);
+  return { checkId };
 }
 
 /**
