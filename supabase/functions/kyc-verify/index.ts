@@ -6,6 +6,35 @@
    ═══════════════════════════════════════════════════════════════ */
 
 const COMPLYCUBE_API = "https://api.complycube.com/v1";
+
+/* ── Country name → ISO 3166-1 alpha-2 mapping ── */
+const COUNTRY_TO_ISO: Record<string, string> = {
+  "france": "FR", "française": "FR", "francaise": "FR", "french": "FR",
+  "luxembourg": "LU", "luxembourgeoise": "LU",
+  "belgique": "BE", "belgium": "BE", "belge": "BE",
+  "suisse": "CH", "switzerland": "CH", "swiss": "CH",
+  "pays-bas": "NL", "netherlands": "NL", "néerlandaise": "NL",
+  "allemagne": "DE", "germany": "DE", "allemande": "DE",
+  "italie": "IT", "italy": "IT", "italienne": "IT",
+  "espagne": "ES", "spain": "ES", "espagnole": "ES",
+  "portugal": "PT", "portugaise": "PT",
+  "royaume-uni": "GB", "united kingdom": "GB", "britannique": "GB",
+  "états-unis": "US", "etats-unis": "US", "united states": "US", "américaine": "US",
+  "canada": "CA", "canadienne": "CA",
+  "autriche": "AT", "austria": "AT",
+  "irlande": "IE", "ireland": "IE",
+  "monaco": "MC", "liechtenstein": "LI",
+};
+
+function toIsoNationality(val: string | undefined | null): string | null {
+  if (!val) return null;
+  const v = val.trim();
+  // Already a 2-letter ISO code
+  if (/^[A-Z]{2}$/.test(v)) return v;
+  if (/^[a-z]{2}$/i.test(v)) return v.toUpperCase();
+  // Try mapping
+  return COUNTRY_TO_ISO[v.toLowerCase()] || null;
+}
 const COMPLYCUBE_KEY = Deno.env.get("COMPLYCUBE_API_KEY") ||
   "test_eU1tRVhqeTIySlBiZFlRS2U6MTA5MDQ0OGNlNWIzZTEzZjM4NWIwNTMyYmNhMjFkMjZjZTA5YjAxYzM0MmQ1MDI4NWU2N2UzYmVjODA0MjU4Nw==";
 
@@ -80,7 +109,7 @@ Deno.serve(async (req: Request) => {
             firstName,
             lastName,
             ...(profile.date_of_birth ? { dob: profile.date_of_birth } : {}),
-            ...(profile.nationality ? { nationality: profile.nationality } : {}),
+            ...(toIsoNationality(profile.nationality) ? { nationality: toIsoNationality(profile.nationality) } : {}),
           };
         } else {
           clientBody.companyDetails = {
