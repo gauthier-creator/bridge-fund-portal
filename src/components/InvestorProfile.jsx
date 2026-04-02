@@ -6,12 +6,6 @@ import { shortenHash, getExplorerUrl } from "../services/cardanoService";
 const COUNTRIES = ["France", "Luxembourg", "Suisse", "Belgique", "Monaco", "Allemagne", "Italie", "Espagne", "Royaume-Uni", "États-Unis", "Autre"];
 const INVESTOR_TYPES = ["Professionnel", "Averti", "Institutionnel"];
 
-const kycStyles = {
-  green: { bg: "bg-[#ECFDF5]", border: "border-[#A7F3D0]", iconBg: "bg-[#D1FAE5]", title: "text-[#059669]", sub: "text-[#059669]/80" },
-  warm: { bg: "bg-[#FFFBEB]", border: "border-[#FDE68A]", iconBg: "bg-[#FEF3C7]", title: "text-[#D97706]", sub: "text-[#D97706]/80" },
-  red: { bg: "bg-[#FEF2F2]", border: "border-[#FECACA]", iconBg: "bg-[#FEE2E2]", title: "text-[#DC2626]", sub: "text-[#DC2626]/80" },
-};
-
 export default function InvestorProfile({ toast }) {
   const { profile, refreshProfile } = useAuth();
   const [editing, setEditing] = useState(false);
@@ -32,7 +26,6 @@ export default function InvestorProfile({ toast }) {
     investor_type: profile?.investor_type || "Professionnel",
   });
 
-  // Load whitelist & freeze status
   useEffect(() => {
     if (!supabase || !profile?.wallet_address) return;
     supabase.from("token_whitelist")
@@ -77,31 +70,29 @@ export default function InvestorProfile({ toast }) {
   };
 
   const kycStatus = profile?.kyc_status || "pending";
-  const kycColor = kycStatus === "approved" ? "green" : kycStatus === "rejected" ? "red" : "warm";
-  const kycLabel = kycStatus === "approved" ? "Vérifié" : kycStatus === "rejected" ? "Rejeté" : "En attente";
-  const kc = kycStyles[kycColor];
+  const kycLabel = kycStatus === "approved" ? "Verifie" : kycStatus === "rejected" ? "Rejete" : "En attente";
 
-  const inputCls = "w-full bg-white border border-[#E8ECF1] rounded-xl px-3.5 py-2.5 text-sm text-[#0D0D12] placeholder-[#9AA4B2] focus:outline-none focus:border-[#4F7DF3] focus:ring-2 focus:ring-[#4F7DF3]/10 transition-all";
-  const labelCls = "block text-[13px] font-medium text-[#9AA4B2] mb-1.5";
+  const iCls = "w-full bg-[rgba(0,0,23,0.043)] border border-[rgba(0,0,29,0.1)] rounded-[10px] px-3 py-2.5 text-[14px] text-[#0F0F10] placeholder-[#A8A29E] focus:outline-none focus:border-[rgba(0,0,29,0.3)] focus:ring-2 focus:ring-[rgba(0,0,29,0.05)] transition-all duration-75";
+  const lCls = "block text-[12px] font-medium text-[#A8A29E] mb-1.5";
 
   return (
-    <div className="animate-fade-in space-y-6 max-w-4xl">
+    <div className="page-slide-in space-y-6 max-w-4xl">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-[#0D0D12]">Mon profil</h2>
-          <p className="text-sm text-[#9AA4B2] mt-1">Gérez vos informations personnelles et votre statut KYC</p>
+          <h2 className="text-[22px] font-bold text-[#0F0F10] tracking-tight">Mon profil</h2>
+          <p className="text-[14px] text-[#787881] mt-1">Gerez vos informations personnelles et votre statut KYC</p>
         </div>
         {!editing ? (
-          <button onClick={() => setEditing(true)} className="px-4 py-2 bg-[#0D0D12] text-white text-xs font-medium rounded-xl hover:bg-[#1A1A2E] transition-colors">
+          <button onClick={() => setEditing(true)} className="px-4 py-2 bg-[#0F0F10] text-white text-[13px] font-medium rounded-[9.6px] hover:bg-[#292524] transition-colors active:scale-[0.98]">
             Modifier
           </button>
         ) : (
           <div className="flex gap-2">
-            <button onClick={() => setEditing(false)} className="px-4 py-2 bg-white border border-[#E8ECF1] text-[#5F6B7A] text-xs font-medium rounded-xl hover:bg-[#F7F8FA] transition-colors">
+            <button onClick={() => setEditing(false)} className="px-4 py-2 bg-white border border-[rgba(0,0,29,0.1)] text-[#787881] text-[13px] font-medium rounded-[9.6px] hover:bg-[rgba(0,0,23,0.03)] transition-colors">
               Annuler
             </button>
-            <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-[#0D0D12] text-white text-xs font-medium rounded-xl hover:bg-[#1A1A2E] transition-colors disabled:opacity-50">
+            <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-[#0F0F10] text-white text-[13px] font-medium rounded-[9.6px] hover:bg-[#292524] transition-colors disabled:opacity-50">
               {saving ? "Enregistrement..." : "Enregistrer"}
             </button>
           </div>
@@ -109,271 +100,271 @@ export default function InvestorProfile({ toast }) {
       </div>
 
       {/* KYC Status banner */}
-      <div className={`${kc.bg} border ${kc.border} rounded-2xl p-4 flex items-center gap-3`}>
-        <div className={`w-10 h-10 ${kc.iconBg} rounded-xl flex items-center justify-center`}>
+      <div className={`rounded-2xl p-4 flex items-center gap-3 border ${
+        kycStatus === "approved" ? "bg-[#ECFDF5] border-[rgba(5,150,105,0.15)]" :
+        kycStatus === "rejected" ? "bg-[#FEF2F2] border-[rgba(220,38,38,0.15)]" :
+        "bg-[#FFFBEB] border-[rgba(217,119,6,0.15)]"
+      }`}>
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+          kycStatus === "approved" ? "bg-[#D1FAE5]" : kycStatus === "rejected" ? "bg-[#FEE2E2]" : "bg-[#FEF3C7]"
+        }`}>
           {kycStatus === "approved" ? (
-            <svg className="w-5 h-5 text-[#059669]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+            <svg className="w-4.5 h-4.5 text-[#059669]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
           ) : (
-            <svg className="w-5 h-5 text-[#D97706]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <svg className="w-4.5 h-4.5 text-[#D97706]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           )}
         </div>
         <div>
-          <p className={`text-sm font-semibold ${kc.title}`}>Statut KYC : {kycLabel}</p>
-          <p className={`text-xs ${kc.sub} mt-0.5`}>
-            {kycStatus === "approved" ? "Votre identité a été vérifiée. Vous pouvez souscrire à tous les fonds." :
-              "Complétez votre profil et soumettez vos documents pour la vérification KYC."}
+          <p className={`text-[14px] font-semibold ${kycStatus === "approved" ? "text-[#059669]" : kycStatus === "rejected" ? "text-[#DC2626]" : "text-[#D97706]"}`}>Statut KYC : {kycLabel}</p>
+          <p className={`text-[12px] mt-0.5 ${kycStatus === "approved" ? "text-[#059669]/80" : kycStatus === "rejected" ? "text-[#DC2626]/80" : "text-[#D97706]/80"}`}>
+            {kycStatus === "approved" ? "Votre identite a ete verifiee. Vous pouvez souscrire a tous les fonds." :
+              "Completez votre profil et soumettez vos documents pour la verification KYC."}
           </p>
         </div>
       </div>
 
       {/* Freeze alert */}
       {frozenFunds.length > 0 && (
-        <div className="bg-[#FEF2F2] border border-[#FECACA] rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#FEE2E2] rounded-xl flex items-center justify-center">
-            <svg className="w-5 h-5 text-[#DC2626]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+        <div className="bg-[#FEF2F2] border border-[rgba(220,38,38,0.15)] rounded-2xl p-4 flex items-center gap-3">
+          <div className="w-9 h-9 bg-[#FEE2E2] rounded-xl flex items-center justify-center">
+            <svg className="w-4.5 h-4.5 text-[#DC2626]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
           </div>
           <div>
-            <p className="text-sm font-semibold text-[#DC2626]">Adresse gelée sur {frozenFunds.length} fonds</p>
-            <p className="text-xs text-[#DC2626]/80 mt-0.5">Votre adresse est temporairement gelée pour certains fonds. Contactez votre administrateur.</p>
+            <p className="text-[14px] font-semibold text-[#DC2626]">Adresse gelee sur {frozenFunds.length} fonds</p>
+            <p className="text-[12px] text-[#DC2626]/80 mt-0.5">Votre adresse est temporairement gelee. Contactez votre administrateur.</p>
           </div>
         </div>
       )}
 
       {/* Personal information */}
-      <div className="bg-white border border-[#E8ECF1] rounded-2xl p-6">
-        <h3 className="text-sm font-semibold text-[#0D0D12] mb-5">Informations personnelles</h3>
+      <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
+        <h3 className="text-[14px] font-semibold text-[#0F0F10] mb-5">Informations personnelles</h3>
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
           <div>
-            <label className={labelCls}>Nom complet</label>
+            <label className={lCls}>Nom complet</label>
             {editing ? (
-              <input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} className={inputCls} />
+              <input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} className={iCls} />
             ) : (
-              <p className="text-sm text-[#0D0D12] font-medium py-2.5">{profile?.full_name || "—"}</p>
+              <p className="text-[14px] text-[#0F0F10] font-medium py-2.5">{profile?.full_name || "—"}</p>
             )}
           </div>
           <div>
-            <label className={labelCls}>Email</label>
-            <p className="text-sm text-[#5F6B7A] py-2.5">{profile?.email || "—"}</p>
+            <label className={lCls}>Email</label>
+            <p className="text-[14px] text-[#787881] py-2.5">{profile?.email || "—"}</p>
           </div>
           <div>
-            <label className={labelCls}>Téléphone</label>
+            <label className={lCls}>Telephone</label>
             {editing ? (
-              <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} placeholder="+33 6 00 00 00 00" />
+              <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={iCls} placeholder="+33 6 00 00 00 00" />
             ) : (
-              <p className="text-sm text-[#0D0D12] py-2.5">{profile?.phone || "—"}</p>
+              <p className="text-[14px] text-[#0F0F10] py-2.5">{profile?.phone || "—"}</p>
             )}
           </div>
           <div>
-            <label className={labelCls}>Date de naissance</label>
+            <label className={lCls}>Date de naissance</label>
             {editing ? (
-              <input type="date" value={form.date_of_birth} onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })} className={inputCls} />
+              <input type="date" value={form.date_of_birth} onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })} className={iCls} />
             ) : (
-              <p className="text-sm text-[#0D0D12] py-2.5">{profile?.date_of_birth || "—"}</p>
+              <p className="text-[14px] text-[#0F0F10] py-2.5">{profile?.date_of_birth || "—"}</p>
             )}
           </div>
           <div>
-            <label className={labelCls}>Nationalité</label>
+            <label className={lCls}>Nationalite</label>
             {editing ? (
-              <input value={form.nationality} onChange={(e) => setForm({ ...form, nationality: e.target.value })} className={inputCls} placeholder="Française" />
+              <input value={form.nationality} onChange={(e) => setForm({ ...form, nationality: e.target.value })} className={iCls} placeholder="Francaise" />
             ) : (
-              <p className="text-sm text-[#0D0D12] py-2.5">{profile?.nationality || "—"}</p>
+              <p className="text-[14px] text-[#0F0F10] py-2.5">{profile?.nationality || "—"}</p>
             )}
           </div>
           <div>
-            <label className={labelCls}>Société</label>
+            <label className={lCls}>Societe</label>
             {editing ? (
-              <input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className={inputCls} placeholder="Nom de la société" />
+              <input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className={iCls} placeholder="Nom de la societe" />
             ) : (
-              <p className="text-sm text-[#0D0D12] py-2.5">{profile?.company || "—"}</p>
+              <p className="text-[14px] text-[#0F0F10] py-2.5">{profile?.company || "—"}</p>
             )}
           </div>
         </div>
       </div>
 
       {/* Address */}
-      <div className="bg-white border border-[#E8ECF1] rounded-2xl p-6">
-        <h3 className="text-sm font-semibold text-[#0D0D12] mb-5">Adresse</h3>
+      <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
+        <h3 className="text-[14px] font-semibold text-[#0F0F10] mb-5">Adresse</h3>
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
           <div className="col-span-2">
-            <label className={labelCls}>Adresse</label>
+            <label className={lCls}>Adresse</label>
             {editing ? (
-              <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className={inputCls} placeholder="12 rue de la Paix" />
+              <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className={iCls} placeholder="12 rue de la Paix" />
             ) : (
-              <p className="text-sm text-[#0D0D12] py-2.5">{profile?.address || "—"}</p>
+              <p className="text-[14px] text-[#0F0F10] py-2.5">{profile?.address || "—"}</p>
             )}
           </div>
           <div>
-            <label className={labelCls}>Code postal</label>
+            <label className={lCls}>Code postal</label>
             {editing ? (
-              <input value={form.postal_code} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} className={inputCls} placeholder="75002" />
+              <input value={form.postal_code} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} className={iCls} placeholder="75002" />
             ) : (
-              <p className="text-sm text-[#0D0D12] py-2.5">{profile?.postal_code || "—"}</p>
+              <p className="text-[14px] text-[#0F0F10] py-2.5">{profile?.postal_code || "—"}</p>
             )}
           </div>
           <div>
-            <label className={labelCls}>Ville</label>
+            <label className={lCls}>Ville</label>
             {editing ? (
-              <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className={inputCls} placeholder="Paris" />
+              <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className={iCls} placeholder="Paris" />
             ) : (
-              <p className="text-sm text-[#0D0D12] py-2.5">{profile?.city || "—"}</p>
+              <p className="text-[14px] text-[#0F0F10] py-2.5">{profile?.city || "—"}</p>
             )}
           </div>
           <div>
-            <label className={labelCls}>Pays</label>
+            <label className={lCls}>Pays</label>
             {editing ? (
-              <select value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} className={inputCls + " bg-white"}>
+              <select value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} className={iCls}>
                 {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             ) : (
-              <p className="text-sm text-[#0D0D12] py-2.5">{profile?.country || "—"}</p>
+              <p className="text-[14px] text-[#0F0F10] py-2.5">{profile?.country || "—"}</p>
             )}
           </div>
         </div>
       </div>
 
       {/* Investor profile */}
-      <div className="bg-white border border-[#E8ECF1] rounded-2xl p-6">
-        <h3 className="text-sm font-semibold text-[#0D0D12] mb-5">Profil investisseur</h3>
+      <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
+        <h3 className="text-[14px] font-semibold text-[#0F0F10] mb-5">Profil investisseur</h3>
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
           <div>
-            <label className={labelCls}>Type d'investisseur</label>
+            <label className={lCls}>Type d'investisseur</label>
             {editing ? (
-              <select value={form.investor_type} onChange={(e) => setForm({ ...form, investor_type: e.target.value })} className={inputCls + " bg-white"}>
+              <select value={form.investor_type} onChange={(e) => setForm({ ...form, investor_type: e.target.value })} className={iCls}>
                 {INVESTOR_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             ) : (
-              <p className="text-sm text-[#0D0D12] py-2.5">{profile?.investor_type || "Professionnel"}</p>
+              <p className="text-[14px] text-[#0F0F10] py-2.5">{profile?.investor_type || "Professionnel"}</p>
             )}
           </div>
           <div>
-            <label className={labelCls}>Rôle</label>
-            <p className="text-sm text-[#0D0D12] py-2.5">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-medium bg-[#EEF2FF] text-[#4F7DF3] border border-[#4F7DF3]/15">
+            <label className={lCls}>Role</label>
+            <p className="text-[14px] py-2.5">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-[11px] font-medium bg-[#EEF2FF] text-[#6366F1] border border-[rgba(99,102,241,0.1)]">
                 Investisseur
               </span>
             </p>
           </div>
           <div>
-            <label className={labelCls}>Membre depuis</label>
-            <p className="text-sm text-[#0D0D12] py-2.5">{profile?.created_at?.split("T")[0] || "—"}</p>
+            <label className={lCls}>Membre depuis</label>
+            <p className="text-[14px] text-[#0F0F10] py-2.5">{profile?.created_at?.split("T")[0] || "—"}</p>
           </div>
           {profile?.intermediary_id && (
             <div>
-              <label className={labelCls}>Intermédiaire</label>
-              <p className="text-sm text-[#0D0D12] py-2.5">Rattaché à un intermédiaire</p>
+              <label className={lCls}>Intermediaire</label>
+              <p className="text-[14px] text-[#0F0F10] py-2.5">Rattache a un intermediaire</p>
             </div>
           )}
         </div>
       </div>
 
       {/* Wallet & Blockchain */}
-      <div className="bg-white border border-[#E8ECF1] rounded-2xl p-6">
-        <h3 className="text-sm font-semibold text-[#0D0D12] mb-5">Portefeuille Cardano</h3>
-        <div className="space-y-3 text-sm">
-          <div className="flex items-center justify-between py-2 border-b border-[#F0F2F5]">
-            <span className="text-[#5F6B7A]">Adresse publique</span>
+      <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
+        <h3 className="text-[14px] font-semibold text-[#0F0F10] mb-5">Portefeuille Cardano</h3>
+        <div className="space-y-0 text-[14px]">
+          <div className="flex items-center justify-between py-3 border-b border-[rgba(0,0,29,0.05)]">
+            <span className="text-[#787881]">Adresse publique</span>
             {profile?.wallet_address ? (
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs text-[#0D0D12] bg-[#F7F8FA] px-2 py-1 rounded-lg border border-[#E8ECF1]">
+                <span className="font-mono text-[11px] text-[#0F0F10] bg-[rgba(0,0,23,0.03)] px-2 py-1 rounded-lg border border-[rgba(0,0,29,0.06)]">
                   {profile.wallet_address.slice(0, 16)}...{profile.wallet_address.slice(-8)}
                 </span>
-                <button
-                  onClick={() => { navigator.clipboard.writeText(profile.wallet_address); toast("Adresse copiée"); }}
-                  className="text-xs text-[#4F7DF3] hover:text-[#3B6DE0] transition-colors font-medium"
-                >
+                <button onClick={() => { navigator.clipboard.writeText(profile.wallet_address); toast("Adresse copiee"); }}
+                  className="text-[12px] text-[#6366F1] hover:text-[#0F0F10] transition-colors font-medium">
                   Copier
                 </button>
               </div>
             ) : (
-              <span className="text-xs text-[#9AA4B2]">Non généré</span>
+              <span className="text-[12px] text-[#A8A29E]">Non genere</span>
             )}
           </div>
-          <div className="flex items-center justify-between py-2 border-b border-[#F0F2F5]">
-            <span className="text-[#5F6B7A]">Réseau</span>
-            <span className="text-xs text-[#9AA4B2]">Cardano Preprod Testnet</span>
+          <div className="flex items-center justify-between py-3 border-b border-[rgba(0,0,29,0.05)]">
+            <span className="text-[#787881]">Reseau</span>
+            <span className="text-[12px] text-[#A8A29E]">Cardano Preprod Testnet</span>
           </div>
-          <div className="flex items-center justify-between py-2 border-b border-[#F0F2F5]">
-            <span className="text-[#5F6B7A]">Email vérifié</span>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium bg-[#ECFDF5] text-[#059669] border border-[#059669]/15">Oui</span>
+          <div className="flex items-center justify-between py-3 border-b border-[rgba(0,0,29,0.05)]">
+            <span className="text-[#787881]">Email verifie</span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-medium bg-[#ECFDF5] text-[#059669] border border-[rgba(5,150,105,0.1)]">Oui</span>
           </div>
-          <div className="flex items-center justify-between py-2">
-            <span className="text-[#5F6B7A]">Identifiant</span>
-            <span className="font-mono text-xs text-[#9AA4B2]">{profile?.id?.slice(0, 8)}...{profile?.id?.slice(-4)}</span>
+          <div className="flex items-center justify-between py-3">
+            <span className="text-[#787881]">Identifiant</span>
+            <span className="font-mono text-[11px] text-[#A8A29E]">{profile?.id?.slice(0, 8)}...{profile?.id?.slice(-4)}</span>
           </div>
         </div>
         {profile?.wallet_address && (
-          <div className="mt-4 bg-[#F7F8FA] border border-[#E8ECF1] rounded-xl p-3">
-            <p className="text-[10px] uppercase tracking-wider text-[#9AA4B2] font-semibold mb-1">Adresse complète</p>
-            <p className="font-mono text-xs text-[#0D0D12] break-all leading-relaxed">{profile.wallet_address}</p>
+          <div className="mt-4 bg-[rgba(0,0,23,0.025)] border border-[rgba(0,0,29,0.06)] rounded-xl p-3">
+            <p className="text-[10px] uppercase tracking-wider text-[#A8A29E] font-semibold mb-1">Adresse complete</p>
+            <p className="font-mono text-[12px] text-[#0F0F10] break-all leading-relaxed">{profile.wallet_address}</p>
           </div>
         )}
       </div>
 
       {/* CIP-113 Compliance Status */}
-      <div className="bg-white border border-[#E8ECF1] rounded-2xl p-6">
-        <h3 className="text-sm font-semibold text-[#0D0D12] mb-5">Statut compliance (CIP-113)</h3>
-        <div className="space-y-3">
-          {/* Whitelist status */}
-          <div className="flex items-center justify-between py-3 border-b border-[#F0F2F5]">
+      <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
+        <h3 className="text-[14px] font-semibold text-[#0F0F10] mb-5">Statut compliance (CIP-113)</h3>
+        <div className="space-y-0">
+          <div className="flex items-center justify-between py-3 border-b border-[rgba(0,0,29,0.05)]">
             <div>
-              <p className="text-sm text-[#0D0D12] font-medium">Whitelist on-chain</p>
-              <p className="text-xs text-[#9AA4B2] mt-0.5">Fonds autorisés pour votre adresse</p>
+              <p className="text-[14px] text-[#0F0F10] font-medium">Whitelist on-chain</p>
+              <p className="text-[12px] text-[#A8A29E] mt-0.5">Fonds autorises pour votre adresse</p>
             </div>
             {whitelistStatus.length > 0 ? (
-              <span className="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-medium bg-[#ECFDF5] text-[#059669] border border-[#059669]/15">
-                {whitelistStatus.length} fonds autorisé{whitelistStatus.length > 1 ? "s" : ""}
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[#ECFDF5] text-[#059669] border border-[rgba(5,150,105,0.1)]">
+                {whitelistStatus.length} fonds autorise{whitelistStatus.length > 1 ? "s" : ""}
               </span>
             ) : (
-              <span className="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-medium bg-[#F7F8FA] text-[#5F6B7A] border border-[#E8ECF1]">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[rgba(0,0,23,0.03)] text-[#787881] border border-[rgba(0,0,29,0.06)]">
                 Aucun
               </span>
             )}
           </div>
 
-          {/* Freeze status */}
-          <div className="flex items-center justify-between py-3 border-b border-[#F0F2F5]">
+          <div className="flex items-center justify-between py-3 border-b border-[rgba(0,0,29,0.05)]">
             <div>
-              <p className="text-sm text-[#0D0D12] font-medium">Statut Freeze</p>
-              <p className="text-xs text-[#9AA4B2] mt-0.5">Restrictions de transfert actives</p>
+              <p className="text-[14px] text-[#0F0F10] font-medium">Statut Freeze</p>
+              <p className="text-[12px] text-[#A8A29E] mt-0.5">Restrictions de transfert actives</p>
             </div>
             {frozenFunds.length > 0 ? (
-              <span className="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-medium bg-[#FEF2F2] text-[#DC2626] border border-[#DC2626]/15">
-                {frozenFunds.length} fonds gelé{frozenFunds.length > 1 ? "s" : ""}
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[#FEF2F2] text-[#DC2626] border border-[rgba(220,38,38,0.1)]">
+                {frozenFunds.length} fonds gele{frozenFunds.length > 1 ? "s" : ""}
               </span>
             ) : (
-              <span className="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-medium bg-[#ECFDF5] text-[#059669] border border-[#059669]/15">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[#ECFDF5] text-[#059669] border border-[rgba(5,150,105,0.1)]">
                 Aucune restriction
               </span>
             )}
           </div>
 
-          {/* Standard */}
           <div className="flex items-center justify-between py-3">
             <div>
-              <p className="text-sm text-[#0D0D12] font-medium">Standard</p>
-              <p className="text-xs text-[#9AA4B2] mt-0.5">Framework de compliance utilisé</p>
+              <p className="text-[14px] text-[#0F0F10] font-medium">Standard</p>
+              <p className="text-[12px] text-[#A8A29E] mt-0.5">Framework de compliance utilise</p>
             </div>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-medium bg-[#EEF2FF] text-[#4F7DF3] border border-[#4F7DF3]/15">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[#EEF2FF] text-[#6366F1] border border-[rgba(99,102,241,0.1)]">
               CIP-113 / AMLD5 / MiFID2
             </span>
           </div>
         </div>
 
-        {/* Whitelist details */}
         {whitelistStatus.length > 0 && (
-          <div className="mt-4 bg-[#F7F8FA] border border-[#E8ECF1] rounded-xl p-4">
-            <p className="text-[10px] uppercase tracking-wider text-[#9AA4B2] font-semibold mb-3">Détail des autorisations</p>
+          <div className="mt-4 bg-[rgba(0,0,23,0.025)] border border-[rgba(0,0,29,0.06)] rounded-xl p-4">
+            <p className="text-[10px] uppercase tracking-wider text-[#A8A29E] font-semibold mb-3">Detail des autorisations</p>
             <div className="space-y-2">
               {whitelistStatus.map((w, i) => (
-                <div key={i} className="flex items-center justify-between text-xs">
-                  <span className="font-mono text-[#5F6B7A]">{shortenHash(w.fund_id, 6)}</span>
+                <div key={i} className="flex items-center justify-between text-[12px]">
+                  <span className="font-mono text-[#787881]">{shortenHash(w.fund_id, 6)}</span>
                   <div className="flex items-center gap-2">
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded-lg text-[10px] font-medium ${
-                      w.kyc_status === "validated" ? "bg-[#ECFDF5] text-[#059669] border border-[#059669]/15" : "bg-[#FFFBEB] text-[#D97706] border border-[#D97706]/15"
+                      w.kyc_status === "validated" ? "bg-[#ECFDF5] text-[#059669] border border-[rgba(5,150,105,0.1)]" : "bg-[#FFFBEB] text-[#D97706] border border-[rgba(217,119,6,0.1)]"
                     }`}>
                       {w.kyc_status === "validated" ? "KYC OK" : w.kyc_status}
                     </span>
-                    <span className="text-[#9AA4B2]">{w.created_at ? new Date(w.created_at).toLocaleDateString("fr-FR") : ""}</span>
+                    <span className="text-[#A8A29E]">{w.created_at ? new Date(w.created_at).toLocaleDateString("fr-FR") : ""}</span>
                   </div>
                 </div>
               ))}
