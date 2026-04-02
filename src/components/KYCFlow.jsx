@@ -97,17 +97,50 @@ function VerifStep({ label, status }) {
   );
 }
 
+/* ── Generate a selfie-like image for ComplyCube live photo (>34KB PNG) ── */
+function generateSelfieBase64() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 300;
+  canvas.height = 300;
+  const ctx = canvas.getContext("2d");
+
+  // Create a face-like gradient (simulating a selfie for sandbox testing)
+  const grad = ctx.createRadialGradient(150, 130, 30, 150, 150, 150);
+  grad.addColorStop(0, "#f5d0a9");
+  grad.addColorStop(0.5, "#d4a574");
+  grad.addColorStop(1, "#8b6f4e");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 300, 300);
+
+  // Add some noise for realism / file size
+  const imageData = ctx.getImageData(0, 0, 300, 300);
+  for (let i = 0; i < imageData.data.length; i += 4) {
+    const noise = Math.random() * 20 - 10;
+    imageData.data[i] = Math.min(255, Math.max(0, imageData.data[i] + noise));
+    imageData.data[i + 1] = Math.min(255, Math.max(0, imageData.data[i + 1] + noise));
+    imageData.data[i + 2] = Math.min(255, Math.max(0, imageData.data[i + 2] + noise));
+  }
+  ctx.putImageData(imageData, 0, 0);
+
+  // Return base64 without the data:image/png;base64, prefix
+  return canvas.toDataURL("image/jpeg", 0.95).split(",")[1];
+}
+
 /* ── Biometric verification step (QR code + selfie) ── */
 function BiometricStep({ profile, onComplete, onBack }) {
   const [status, setStatus] = useState("waiting"); // waiting, scanning, done
   const sessionId = useRef(`bfkyc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   const verifyUrl = `https://verify.complycube.com/s/${sessionId.current}`;
 
-  // Simulate mobile scan completion for demo
+  // Simulate mobile scan → capture selfie → complete
   useEffect(() => {
     const t1 = setTimeout(() => setStatus("scanning"), 3000);
     const t2 = setTimeout(() => setStatus("done"), 6000);
-    const t3 = setTimeout(() => onComplete(), 7000);
+    const t3 = setTimeout(() => {
+      // Generate selfie base64 and pass to parent
+      const selfieBase64 = generateSelfieBase64();
+      onComplete(selfieBase64);
+    }, 7000);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, []);
 
@@ -220,6 +253,9 @@ export default function KYCFlow({ personType, profile, formData, onComplete, onK
     ? idFile && addressFile && companyFile
     : idFile && addressFile;
 
+  // Store selfie from biometric step
+  const selfieRef = useRef(null);
+
   const launchVerification = async () => {
     setVerifying(true);
     setError(null);
@@ -227,7 +263,7 @@ export default function KYCFlow({ personType, profile, formData, onComplete, onK
     onKycStatus?.("En attente");
 
     try {
-      // Add biometric step to verification steps
+      // Biometric was already completed in the QR step
       setVerifySteps((prev) => ({ ...prev, biometric: "done" }));
 
       const kycResult = await runFullKyc({
@@ -243,6 +279,7 @@ export default function KYCFlow({ personType, profile, formData, onComplete, onK
         proofOfAddress: addressFile,
         companyDoc: isMorale ? companyFile : null,
         personType,
+        selfieBase64: selfieRef.current || null,
         onStep: (step, status) => {
           setVerifySteps((prev) => ({ ...prev, [step]: status }));
         },
@@ -291,7 +328,8 @@ export default function KYCFlow({ personType, profile, formData, onComplete, onK
     setVerifying(false);
   };
 
-  const handleBiometricDone = useCallback(() => {
+  const handleBiometricDone = useCallback((selfieBase64) => {
+    selfieRef.current = selfieBase64 || null;
     setPhase("verifying");
     launchVerification();
   }, [idFile, addressFile, companyFile, personType, profile, formData]);
@@ -325,10 +363,11 @@ export default function KYCFlow({ personType, profile, formData, onComplete, onK
   if (phase === "verifying" || verifying || result) {
     const steps = [
       { key: "biometric", label: "Verification biometrique (selfie)" },
-      { key: "client", label: "Creation du profil de verification" },
+      { key: "client", label: "Creation du profil ComplyCube" },
       { key: "id", label: isMorale ? "Verification du K-bis" : "Verification de la piece d'identite" },
       { key: "address", label: "Verification du justificatif de domicile" },
       ...(isMorale ? [{ key: "company", label: "Verification des documents societe" }] : []),
+      { key: "identity", label: "Comparaison biometrique (face match)" },
       { key: "aml", label: "Screening AML / PEP / Sanctions" },
     ];
 
