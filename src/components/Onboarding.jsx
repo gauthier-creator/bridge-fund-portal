@@ -221,13 +221,26 @@ function UseCaseIllust({ type }) {
 /* ══════════════════════════════════════════
    MAIN ONBOARDING
    ══════════════════════════════════════════ */
-export default function Onboarding({ onComplete, onLogin }) {
+export default function Onboarding({ onComplete, onLogin, onSignup }) {
   const [step, setStep] = useState("intro"); // intro → portal → personalize → usecases → done
   const [portal, setPortal] = useState(null);
   const [name, setName] = useState("");
+  const [company, setCompany] = useState("");
+  const [investorType, setInvestorType] = useState("Professionnel");
   const [useCases, setUseCases] = useState([]);
 
-  const finish = () => { localStorage.setItem("bf_onboarding_seen", "1"); onLogin?.(); };
+  const finish = () => {
+    localStorage.setItem("bf_onboarding_seen", "1");
+    // Pass prefill data to signup via localStorage
+    localStorage.setItem("bf_signup_prefill", JSON.stringify({
+      name: name || "",
+      company: company || "",
+      investorType,
+      portal: portal || "investor",
+      useCases,
+    }));
+    onSignup?.();
+  };
   const skip = () => { localStorage.setItem("bf_onboarding_seen", "1"); onComplete?.(); };
 
   const toggleUseCase = (id) => setUseCases(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -312,23 +325,21 @@ export default function Onboarding({ onComplete, onLogin }) {
             </div>
 
             <div>
-              <label className="block text-[14px] font-medium text-[#0F0F10] mb-1.5">Votre type d'organisation</label>
-              <select className="w-full h-10 bg-[rgba(0,0,23,0.043)] border border-[rgba(0,0,29,0.1)] rounded-[10px] px-3 text-[14px] text-[#0F0F10] focus:outline-none focus:border-[rgba(0,0,29,0.3)] transition-[border-color] duration-75 appearance-none">
-                <option>Asset Manager / AIFM</option>
-                <option>Banque privee</option>
-                <option>Family Office</option>
-                <option>Assureur</option>
-                <option>Investisseur particulier</option>
-                <option>Autre</option>
-              </select>
+              <label className="block text-[14px] font-medium text-[#0F0F10] mb-1.5">Societe <span className="text-[#A8A29E] font-normal">(optionnel)</span></label>
+              <input type="text" value={company} onChange={e => setCompany(e.target.value)}
+                className="w-full h-10 bg-[rgba(0,0,23,0.043)] border border-[rgba(0,0,29,0.1)] rounded-[10px] px-3 text-[14px] text-[#0F0F10] placeholder-[#A8A29E] focus:outline-none focus:border-[rgba(0,0,29,0.3)] transition-[border-color] duration-75"
+                placeholder="Nom de votre societe" />
             </div>
 
-            <label className="flex items-start gap-2.5 cursor-pointer">
-              <input type="checkbox" className="mt-1 w-4 h-4 rounded border-[rgba(0,0,29,0.2)] accent-[#0F0F10]" />
-              <span className="text-[13px] text-[#787881] leading-relaxed">
-                En cochant cette case, vous confirmez avoir l'age legal et acceptez de recevoir des informations sur Bridge Fund.
-              </span>
-            </label>
+            <div>
+              <label className="block text-[14px] font-medium text-[#0F0F10] mb-1.5">Type d'investisseur</label>
+              <select value={investorType} onChange={e => setInvestorType(e.target.value)}
+                className="w-full h-10 bg-[rgba(0,0,23,0.043)] border border-[rgba(0,0,29,0.1)] rounded-[10px] px-3 text-[14px] text-[#0F0F10] focus:outline-none focus:border-[rgba(0,0,29,0.3)] transition-[border-color] duration-75 appearance-none">
+                <option value="Professionnel">Investisseur professionnel</option>
+                <option value="Averti">Investisseur averti</option>
+                <option value="Institutionnel">Institutionnel</option>
+              </select>
+            </div>
           </div>
 
           <NavFooter onBack={() => setStep("portal")} onSkip={skip} onNext={() => setStep("usecases")} nextLabel="Suivant" step={1} totalSteps={4} />
@@ -373,7 +384,7 @@ export default function Onboarding({ onComplete, onLogin }) {
             ))}
           </div>
 
-          <NavFooter onBack={() => setStep("personalize")} onSkip={skip} onNext={finish} nextLabel="Commencer" step={2} totalSteps={4} />
+          <NavFooter onBack={() => setStep("personalize")} onSkip={skip} onNext={finish} nextLabel="Creer mon compte" step={2} totalSteps={4} />
         </div>
       </div>
     );
