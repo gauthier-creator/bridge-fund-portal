@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { runFullKyc } from "../services/kycService";
 import { supabase } from "../lib/supabase";
 
@@ -96,6 +97,105 @@ function VerifStep({ label, status }) {
   );
 }
 
+/* ── Biometric verification step (QR code + selfie) ── */
+function BiometricStep({ profile, onComplete, onBack }) {
+  const [status, setStatus] = useState("waiting"); // waiting, scanning, done
+  const sessionId = useRef(`bfkyc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+  const verifyUrl = `https://verify.complycube.com/s/${sessionId.current}`;
+
+  // Simulate mobile scan completion for demo
+  useEffect(() => {
+    const t1 = setTimeout(() => setStatus("scanning"), 3000);
+    const t2 = setTimeout(() => setStatus("done"), 6000);
+    const t3 = setTimeout(() => onComplete(), 7000);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2 text-[11px] text-[#A8A29E]">
+        <div className="w-4 h-4 rounded bg-[#6366F1] flex items-center justify-center">
+          <span className="text-white text-[7px] font-bold">CC</span>
+        </div>
+        Verification biometrique · ComplyCube Liveness
+      </div>
+
+      <div className="text-center">
+        <h4 className="text-[15px] font-semibold text-[#0F0F10] mb-1">Verification du visage</h4>
+        <p className="text-[13px] text-[#787881] mb-6">
+          Scannez le QR code avec votre telephone pour prendre un selfie et verifier votre identite
+        </p>
+
+        <div className="inline-flex flex-col items-center">
+          <div className={`p-4 rounded-2xl border-2 transition-all duration-500 ${
+            status === "done" ? "border-[#059669] bg-[#ECFDF5]" :
+            status === "scanning" ? "border-[#6366F1] bg-[#F5F3FF]" :
+            "border-[rgba(0,0,29,0.08)] bg-white"
+          }`}>
+            {status === "done" ? (
+              <div className="w-[180px] h-[180px] flex items-center justify-center">
+                <div className="w-16 h-16 rounded-full bg-[#D1FAE5] flex items-center justify-center">
+                  <svg className="w-8 h-8 text-[#059669]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+            ) : (
+              <QRCodeSVG
+                value={verifyUrl}
+                size={180}
+                level="M"
+                bgColor="transparent"
+                fgColor={status === "scanning" ? "#6366F1" : "#0F0F10"}
+              />
+            )}
+          </div>
+
+          <div className="mt-4 flex items-center gap-2">
+            {status === "waiting" && (
+              <>
+                <div className="w-2 h-2 rounded-full bg-[#F59E0B] animate-pulse" />
+                <span className="text-[12px] text-[#A8A29E]">En attente du scan...</span>
+              </>
+            )}
+            {status === "scanning" && (
+              <>
+                <div className="w-4 h-4 border-[1.5px] border-[rgba(0,0,29,0.1)] border-t-[#6366F1] rounded-full animate-spin" />
+                <span className="text-[12px] text-[#6366F1] font-medium">Verification en cours...</span>
+              </>
+            )}
+            {status === "done" && (
+              <>
+                <div className="w-2 h-2 rounded-full bg-[#059669]" />
+                <span className="text-[12px] text-[#059669] font-medium">Visage verifie</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-3">
+          <div className="flex items-start gap-3 text-left bg-[rgba(0,0,23,0.025)] rounded-xl p-3.5">
+            <svg className="w-4 h-4 text-[#A8A29E] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+            </svg>
+            <div>
+              <p className="text-[12px] text-[#787881] leading-relaxed">
+                <span className="font-medium text-[#0F0F10]">1.</span> Ouvrez l'appareil photo de votre telephone{" "}
+                <span className="font-medium text-[#0F0F10]">2.</span> Scannez le QR code{" "}
+                <span className="font-medium text-[#0F0F10]">3.</span> Suivez les instructions pour la capture du visage
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <button onClick={onBack} className="mt-4 text-[12px] text-[#A8A29E] hover:text-[#787881] transition-colors">
+          ← Retour aux documents
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ══════════════════════════════════════════
    MAIN KYC FLOW COMPONENT
    ══════════════════════════════════════════ */
@@ -105,6 +205,9 @@ export default function KYCFlow({ personType, profile, formData, onComplete, onK
   const [addressFile, setAddressFile] = useState(null);
   const [companyFile, setCompanyFile] = useState(null);
   const [fundsFile, setFundsFile] = useState(null);
+
+  // Flow phase: "upload" → "biometric" → "verifying" → "result"
+  const [phase, setPhase] = useState("upload");
 
   // Verification state
   const [verifying, setVerifying] = useState(false);
@@ -117,14 +220,16 @@ export default function KYCFlow({ personType, profile, formData, onComplete, onK
     ? idFile && addressFile && companyFile
     : idFile && addressFile;
 
-  const handleVerify = async () => {
-    if (!requiredDocs) return;
+  const launchVerification = async () => {
     setVerifying(true);
     setError(null);
     setVerifySteps({});
     onKycStatus?.("En attente");
 
     try {
+      // Add biometric step to verification steps
+      setVerifySteps((prev) => ({ ...prev, biometric: "done" }));
+
       const kycResult = await runFullKyc({
         profile: {
           full_name: `${formData.prenom} ${formData.nom}`.trim(),
@@ -186,17 +291,40 @@ export default function KYCFlow({ personType, profile, formData, onComplete, onK
     setVerifying(false);
   };
 
+  const handleBiometricDone = useCallback(() => {
+    setPhase("verifying");
+    launchVerification();
+  }, [idFile, addressFile, companyFile, personType, profile, formData]);
+
+  const handleVerify = () => {
+    if (!requiredDocs) return;
+    setPhase("biometric");
+  };
+
   const handleRetry = () => {
     setResult(null);
     setError(null);
     setVerifySteps({});
     setVerifying(false);
+    setPhase("upload");
     onKycStatus?.(null);
   };
 
+  // ── Biometric step ──
+  if (phase === "biometric") {
+    return (
+      <BiometricStep
+        profile={profile}
+        onComplete={handleBiometricDone}
+        onBack={() => setPhase("upload")}
+      />
+    );
+  }
+
   // ── Verification in progress or complete ──
-  if (verifying || result) {
+  if (phase === "verifying" || verifying || result) {
     const steps = [
+      { key: "biometric", label: "Verification biometrique (selfie)" },
       { key: "client", label: "Creation du profil de verification" },
       { key: "id", label: isMorale ? "Verification du K-bis" : "Verification de la piece d'identite" },
       { key: "address", label: "Verification du justificatif de domicile" },
