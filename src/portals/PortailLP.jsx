@@ -81,13 +81,6 @@ function Souscription({ toast, fund }) {
     toast(`Document uploadé — ${file.name}`);
   };
 
-  const handleKycSubmit = () => {
-    setKycStatus("En attente");
-    toast("Vérification d'identité en cours — screening AML/CFT lancé");
-    setTimeout(() => { setKycStatus("Validé"); toast("KYC validé — identité vérifiée, aucune alerte AML"); }, 1800);
-    setTimeout(() => { setAmlStatus("clear"); toast("Screening AML/CFT terminé — aucune correspondance PEP/sanctions"); }, 2800);
-  };
-
   const handleEligibility = async () => {
     if (!eligibilityAnswers.patrimoine || !eligibilityAnswers.experience || !eligibilityAnswers.horizon || !eligibilityAnswers.risque) {
       toast("Veuillez compléter toutes les questions d'éligibilité"); return;

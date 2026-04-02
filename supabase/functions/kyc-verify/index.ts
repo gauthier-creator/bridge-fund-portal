@@ -213,6 +213,78 @@ Deno.serve(async (req: Request) => {
         });
       }
 
+      /* ── 7. Create SDK token for Web SDK ── */
+      case "create-sdk-token": {
+        const { clientId, referrer } = payload;
+        if (!clientId) return err("Missing clientId");
+
+        const res = await cc("POST", "/tokens", {
+          clientId,
+          referrer: referrer || "*://*/*",
+        });
+        if (!res.ok) {
+          console.error("[create-sdk-token] ComplyCube error:", res.data);
+          return err(`ComplyCube: ${res.data?.message || "Failed to create SDK token"}`);
+        }
+
+        return json({ token: res.data.token, clientId });
+      }
+
+      /* ── 8. Run checks after SDK completion ── */
+      case "run-checks": {
+        const { clientId, documentId, livePhotoId } = payload;
+        if (!clientId) return err("Missing clientId");
+
+        const results: any = {};
+
+        // Document check (if document was uploaded via SDK)
+        if (documentId) {
+          const docCheck = await cc("POST", "/checks", {
+            clientId,
+            type: "document_check",
+            documentId,
+          });
+          if (docCheck.ok) results.documentCheck = { checkId: docCheck.data.id, status: docCheck.data.status };
+        }
+
+        // Identity check (if live photo + document exist)
+        if (documentId && livePhotoId) {
+          const idCheck = await cc("POST", "/checks", {
+            clientId,
+            type: "identity_check",
+            documentId,
+            livePhotoId,
+          });
+          if (idCheck.ok) results.identityCheck = { checkId: idCheck.data.id, status: idCheck.data.status };
+        }
+
+        // AML screening
+        const amlCheck = await cc("POST", "/checks", {
+          clientId,
+          type: "extensive_screening_check",
+        });
+        if (amlCheck.ok) results.amlCheck = { checkId: amlCheck.data.id, status: amlCheck.data.status };
+
+        return json({ clientId, checks: results });
+      }
+
+      /* ── 9. Get client details (documents, live photos) ── */
+      case "get-client-details": {
+        const { clientId } = payload;
+        if (!clientId) return err("Missing clientId");
+
+        // Get documents
+        const docs = await cc("GET", `/documents?clientId=${clientId}`);
+        // Get live photos
+        const photos = await cc("GET", `/livePhotos?clientId=${clientId}`);
+
+        return json({
+          clientId,
+          documents: docs.ok ? docs.data?.items || docs.data || [] : [],
+          livePhotos: photos.ok ? photos.data?.items || photos.data || [] : [],
+        });
+      }
+
       default:
         return err(`Unknown action: ${action}`);
     }

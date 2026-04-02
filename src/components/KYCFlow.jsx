@@ -1,73 +1,23 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { QRCodeSVG } from "qrcode.react";
-import { runFullKyc } from "../services/kycService";
 import { supabase } from "../lib/supabase";
 
 /* ═══════════════════════════════════════════════════════════════
-   KYCFlow — Multi-step document upload + ComplyCube verification
-   Replaces the fake setTimeout KYC in PortailLP subscription.
-   Steps: Upload docs → Verify via ComplyCube → AML screening
-   Style: ElevenLabs (clean, white bg, minimal borders)
+   KYCFlow — Real ComplyCube Web SDK Integration
+   No fake/simulated steps — all verification goes through ComplyCube.
+   Flow: Create client → SDK token → Launch Web SDK → Run checks → Poll results
    ═══════════════════════════════════════════════════════════════ */
 
-const CHECK = <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>;
+const EDGE_FN = "kyc-verify";
 
-function FileUploadZone({ label, hint, file, onSelect, accept = ".pdf,.jpg,.jpeg,.png" }) {
-  const ref = useRef(null);
-  const [dragOver, setDragOver] = useState(false);
-
-  const handleDrop = useCallback((e) => {
-    e.preventDefault();
-    setDragOver(false);
-    const f = e.dataTransfer?.files?.[0];
-    if (f) onSelect(f);
-  }, [onSelect]);
-
-  const handleChange = useCallback((e) => {
-    const f = e.target.files?.[0];
-    if (f) onSelect(f);
-  }, [onSelect]);
-
-  if (file) {
-    const size = file.size > 1024 * 1024
-      ? `${(file.size / (1024 * 1024)).toFixed(1)} Mo`
-      : `${(file.size / 1024).toFixed(0)} Ko`;
-    return (
-      <div className="flex items-center gap-3 bg-[#ECFDF5] border border-[rgba(5,150,105,0.12)] rounded-xl p-3.5">
-        <div className="w-8 h-8 rounded-lg bg-[#D1FAE5] flex items-center justify-center text-[#059669] flex-shrink-0">{CHECK}</div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-medium text-[#059669] truncate">{file.name}</p>
-          <p className="text-[11px] text-[#059669]/70">{size}</p>
-        </div>
-        <button onClick={() => onSelect(null)} className="text-[11px] text-[#059669] hover:text-[#047857] font-medium">Changer</button>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <input type="file" ref={ref} onChange={handleChange} accept={accept} className="hidden" />
-      <div
-        onClick={() => ref.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all duration-150 ${
-          dragOver
-            ? "border-[#6366F1] bg-[#F5F3FF]"
-            : "border-[rgba(0,0,29,0.1)] hover:border-[rgba(0,0,29,0.2)] hover:bg-[rgba(0,0,23,0.015)]"
-        }`}>
-        <div className="w-10 h-10 rounded-xl bg-[rgba(0,0,23,0.04)] flex items-center justify-center mx-auto mb-2.5">
-          <svg className="w-5 h-5 text-[#A8A29E]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-          </svg>
-        </div>
-        <p className="text-[13px] font-medium text-[#0F0F10]">{label}</p>
-        <p className="text-[11px] text-[#A8A29E] mt-0.5">{hint}</p>
-        <p className="text-[10px] text-[#D6D3D1] mt-1.5">Glisser-deposer ou cliquer · PDF, JPG, PNG · max 10 Mo</p>
-      </div>
-    </div>
-  );
+/* ── Helper: call Edge Function ── */
+async function callEdge(action, payload) {
+  if (!supabase) throw new Error("Supabase not configured");
+  const { data, error } = await supabase.functions.invoke(EDGE_FN, {
+    body: { action, ...payload },
+  });
+  if (error) throw new Error(error.message || `KYC action "${action}" failed`);
+  if (data?.error) throw new Error(data.error);
+  return data;
 }
 
 /* ── Verification progress step ── */
@@ -97,292 +47,377 @@ function VerifStep({ label, status }) {
   );
 }
 
-/* ── Generate a selfie-like image for ComplyCube live photo (>34KB PNG) ── */
-function generateSelfieBase64() {
-  const canvas = document.createElement("canvas");
-  canvas.width = 300;
-  canvas.height = 300;
-  const ctx = canvas.getContext("2d");
-
-  // Create a face-like gradient (simulating a selfie for sandbox testing)
-  const grad = ctx.createRadialGradient(150, 130, 30, 150, 150, 150);
-  grad.addColorStop(0, "#f5d0a9");
-  grad.addColorStop(0.5, "#d4a574");
-  grad.addColorStop(1, "#8b6f4e");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 300, 300);
-
-  // Add some noise for realism / file size
-  const imageData = ctx.getImageData(0, 0, 300, 300);
-  for (let i = 0; i < imageData.data.length; i += 4) {
-    const noise = Math.random() * 20 - 10;
-    imageData.data[i] = Math.min(255, Math.max(0, imageData.data[i] + noise));
-    imageData.data[i + 1] = Math.min(255, Math.max(0, imageData.data[i + 1] + noise));
-    imageData.data[i + 2] = Math.min(255, Math.max(0, imageData.data[i + 2] + noise));
-  }
-  ctx.putImageData(imageData, 0, 0);
-
-  // Return base64 without the data:image/png;base64, prefix
-  return canvas.toDataURL("image/jpeg", 0.95).split(",")[1];
-}
-
-/* ── Biometric verification step (QR code + selfie) ── */
-function BiometricStep({ profile, onComplete, onBack }) {
-  const [status, setStatus] = useState("waiting"); // waiting, scanning, done
-  const sessionId = useRef(`bfkyc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
-  const verifyUrl = `https://verify.complycube.com/s/${sessionId.current}`;
-
-  // Simulate mobile scan → capture selfie → complete
-  useEffect(() => {
-    const t1 = setTimeout(() => setStatus("scanning"), 3000);
-    const t2 = setTimeout(() => setStatus("done"), 6000);
-    const t3 = setTimeout(() => {
-      // Generate selfie base64 and pass to parent
-      const selfieBase64 = generateSelfieBase64();
-      onComplete(selfieBase64);
-    }, 7000);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, []);
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2 text-[11px] text-[#A8A29E]">
-        <div className="w-4 h-4 rounded bg-[#6366F1] flex items-center justify-center">
-          <span className="text-white text-[7px] font-bold">CC</span>
-        </div>
-        Verification biometrique · ComplyCube Liveness
-      </div>
-
-      <div className="text-center">
-        <h4 className="text-[15px] font-semibold text-[#0F0F10] mb-1">Verification du visage</h4>
-        <p className="text-[13px] text-[#787881] mb-6">
-          Scannez le QR code avec votre telephone pour prendre un selfie et verifier votre identite
-        </p>
-
-        <div className="inline-flex flex-col items-center">
-          <div className={`p-4 rounded-2xl border-2 transition-all duration-500 ${
-            status === "done" ? "border-[#059669] bg-[#ECFDF5]" :
-            status === "scanning" ? "border-[#6366F1] bg-[#F5F3FF]" :
-            "border-[rgba(0,0,29,0.08)] bg-white"
-          }`}>
-            {status === "done" ? (
-              <div className="w-[180px] h-[180px] flex items-center justify-center">
-                <div className="w-16 h-16 rounded-full bg-[#D1FAE5] flex items-center justify-center">
-                  <svg className="w-8 h-8 text-[#059669]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-              </div>
-            ) : (
-              <QRCodeSVG
-                value={verifyUrl}
-                size={180}
-                level="M"
-                bgColor="transparent"
-                fgColor={status === "scanning" ? "#6366F1" : "#0F0F10"}
-              />
-            )}
-          </div>
-
-          <div className="mt-4 flex items-center gap-2">
-            {status === "waiting" && (
-              <>
-                <div className="w-2 h-2 rounded-full bg-[#F59E0B] animate-pulse" />
-                <span className="text-[12px] text-[#A8A29E]">En attente du scan...</span>
-              </>
-            )}
-            {status === "scanning" && (
-              <>
-                <div className="w-4 h-4 border-[1.5px] border-[rgba(0,0,29,0.1)] border-t-[#6366F1] rounded-full animate-spin" />
-                <span className="text-[12px] text-[#6366F1] font-medium">Verification en cours...</span>
-              </>
-            )}
-            {status === "done" && (
-              <>
-                <div className="w-2 h-2 rounded-full bg-[#059669]" />
-                <span className="text-[12px] text-[#059669] font-medium">Visage verifie</span>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-6 space-y-3">
-          <div className="flex items-start gap-3 text-left bg-[rgba(0,0,23,0.025)] rounded-xl p-3.5">
-            <svg className="w-4 h-4 text-[#A8A29E] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
-            </svg>
-            <div>
-              <p className="text-[12px] text-[#787881] leading-relaxed">
-                <span className="font-medium text-[#0F0F10]">1.</span> Ouvrez l'appareil photo de votre telephone{" "}
-                <span className="font-medium text-[#0F0F10]">2.</span> Scannez le QR code{" "}
-                <span className="font-medium text-[#0F0F10]">3.</span> Suivez les instructions pour la capture du visage
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <button onClick={onBack} className="mt-4 text-[12px] text-[#A8A29E] hover:text-[#787881] transition-colors">
-          ← Retour aux documents
-        </button>
-      </div>
-    </div>
-  );
-}
-
 /* ══════════════════════════════════════════
    MAIN KYC FLOW COMPONENT
    ══════════════════════════════════════════ */
 export default function KYCFlow({ personType, profile, formData, onComplete, onKycStatus, toast }) {
-  // Document files
-  const [idFile, setIdFile] = useState(null);
-  const [addressFile, setAddressFile] = useState(null);
-  const [companyFile, setCompanyFile] = useState(null);
-  const [fundsFile, setFundsFile] = useState(null);
-
-  // Flow phase: "upload" → "biometric" → "verifying" → "result"
-  const [phase, setPhase] = useState("upload");
-
-  // Verification state
-  const [verifying, setVerifying] = useState(false);
-  const [verifySteps, setVerifySteps] = useState({});
-  const [result, setResult] = useState(null); // { success, results, clientId }
+  // Flow phase: "init" → "sdk" → "checks" → "result"
+  const [phase, setPhase] = useState("init");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [clientId, setClientId] = useState(null);
+  const [sdkToken, setSdkToken] = useState(null);
+  const [checkSteps, setCheckSteps] = useState({});
+  const [result, setResult] = useState(null);
+  const sdkContainerRef = useRef(null);
+  const sdkInstanceRef = useRef(null);
 
   const isMorale = personType === "morale";
-  const requiredDocs = isMorale
-    ? idFile && addressFile && companyFile
-    : idFile && addressFile;
 
-  // Store selfie from biometric step
-  const selfieRef = useRef(null);
-
-  const launchVerification = async () => {
-    setVerifying(true);
+  /* ── Step 1: Create ComplyCube client + get SDK token ── */
+  const initializeKyc = async () => {
+    setLoading(true);
     setError(null);
-    setVerifySteps({});
     onKycStatus?.("En attente");
 
     try {
-      // Biometric was already completed in the QR step
-      setVerifySteps((prev) => ({ ...prev, biometric: "done" }));
+      // Create client on ComplyCube
+      const names = (formData?.prenom && formData?.nom)
+        ? `${formData.prenom} ${formData.nom}`.trim()
+        : profile?.full_name || "Unknown";
 
-      const kycResult = await runFullKyc({
+      const { clientId: newClientId } = await callEdge("create-client", {
         profile: {
-          full_name: `${formData.prenom} ${formData.nom}`.trim(),
+          full_name: names,
           email: profile?.email,
-          date_of_birth: formData.dateNaissance,
-          nationality: formData.nationalite,
-          company: formData.societe,
+          date_of_birth: formData?.dateNaissance,
+          nationality: formData?.nationalite,
+          company: formData?.societe,
           person_type: personType,
-        },
-        idDocument: idFile,
-        proofOfAddress: addressFile,
-        companyDoc: isMorale ? companyFile : null,
-        personType,
-        selfieBase64: selfieRef.current || null,
-        onStep: (step, status) => {
-          setVerifySteps((prev) => ({ ...prev, [step]: status }));
         },
       });
 
+      setClientId(newClientId);
+      console.log("[KYC] Created ComplyCube client:", newClientId);
+
+      // Get SDK token
+      const { token } = await callEdge("create-sdk-token", {
+        clientId: newClientId,
+        referrer: "*://*/*",
+      });
+
+      setSdkToken(token);
+      setPhase("sdk");
+      console.log("[KYC] Got SDK token, launching Web SDK");
+    } catch (err) {
+      console.error("[KYC] Init error:", err);
+      setError(err.message || "Erreur lors de l'initialisation");
+      onKycStatus?.(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ── Step 2: Load and mount ComplyCube Web SDK ── */
+  useEffect(() => {
+    if (phase !== "sdk" || !sdkToken || !clientId) return;
+
+    // Load ComplyCube SDK script
+    const loadSdk = async () => {
+      // Check if already loaded
+      if (!window.ComplyCube) {
+        const script = document.createElement("script");
+        script.src = "https://assets.complycube.com/web-sdk/v1/complycube.min.js";
+        script.async = true;
+        await new Promise((resolve, reject) => {
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+
+        // Also load CSS
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = "https://assets.complycube.com/web-sdk/v1/style.css";
+        document.head.appendChild(link);
+      }
+
+      // Wait a tick for SDK to be available
+      await new Promise((r) => setTimeout(r, 200));
+
+      if (!window.ComplyCube) {
+        throw new Error("ComplyCube SDK failed to load");
+      }
+
+      // Mount the SDK
+      const complycube = window.ComplyCube.mount({
+        token: sdkToken,
+        containerId: "complycube-mount",
+        stages: [
+          "intro",
+          {
+            name: "documentCapture",
+            options: {
+              crossDeviceOnly: false,
+              ...(isMorale ? { documentTypes: { national_identity_card: true, passport: true, driving_license: true } } : {}),
+            },
+          },
+          "faceCapture",
+          "completion",
+        ],
+        onComplete: (data) => {
+          console.log("[KYC] SDK complete:", data);
+          sdkInstanceRef.current = null;
+          handleSdkComplete(data);
+        },
+        onModalClose: () => {
+          console.log("[KYC] SDK closed by user");
+        },
+        onError: (err) => {
+          console.error("[KYC] SDK error:", err);
+          setError("Erreur dans le SDK de verification: " + (err?.message || JSON.stringify(err)));
+          setPhase("init");
+        },
+      });
+
+      sdkInstanceRef.current = complycube;
+    };
+
+    loadSdk().catch((err) => {
+      console.error("[KYC] Failed to load SDK:", err);
+      setError("Impossible de charger le SDK ComplyCube. Verifiez votre connexion internet.");
+      setPhase("init");
+    });
+
+    return () => {
+      // Cleanup SDK on unmount
+      if (sdkInstanceRef.current && typeof sdkInstanceRef.current.unmount === "function") {
+        try { sdkInstanceRef.current.unmount(); } catch (e) { /* ignore */ }
+      }
+    };
+  }, [phase, sdkToken, clientId]);
+
+  /* ── Step 3: After SDK completes, run checks ── */
+  const handleSdkComplete = async (sdkData) => {
+    setPhase("checks");
+    setCheckSteps({});
+
+    try {
+      // Get client details to find uploaded documents and live photos
+      setCheckSteps((prev) => ({ ...prev, gathering: "processing" }));
+      const details = await callEdge("get-client-details", { clientId });
+      setCheckSteps((prev) => ({ ...prev, gathering: "done" }));
+
+      const documents = Array.isArray(details.documents) ? details.documents : [];
+      const livePhotos = Array.isArray(details.livePhotos) ? details.livePhotos : [];
+      const documentId = documents[0]?.id || null;
+      const livePhotoId = livePhotos[0]?.id || null;
+
+      console.log("[KYC] Client details:", { documents: documents.length, livePhotos: livePhotos.length, documentId, livePhotoId });
+
+      // Launch checks
+      setCheckSteps((prev) => ({ ...prev, checks: "processing" }));
+      const { checks } = await callEdge("run-checks", { clientId, documentId, livePhotoId });
+      setCheckSteps((prev) => ({ ...prev, checks: "done" }));
+
+      console.log("[KYC] Checks launched:", checks);
+
+      // Poll all checks until complete
+      setCheckSteps((prev) => ({ ...prev, polling: "processing" }));
+      const allCheckIds = Object.values(checks).map((c) => c.checkId).filter(Boolean);
+      const finalResults = {};
+      const maxAttempts = 20;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        await new Promise((r) => setTimeout(r, 2000));
+
+        let allDone = true;
+        for (const checkId of allCheckIds) {
+          if (finalResults[checkId]?.status === "complete") continue;
+          const res = await callEdge("get-check", { checkId });
+          finalResults[checkId] = res;
+          if (res.status !== "complete" && res.status !== "failed" && res.status !== "cancelled") {
+            allDone = false;
+          }
+        }
+        if (allDone) break;
+      }
+
+      setCheckSteps((prev) => ({ ...prev, polling: "done" }));
+
+      // Determine overall result
+      const allClear = Object.values(finalResults).every((r) => r.result === "clear");
+      const anyFailed = Object.values(finalResults).some((r) => r.result === "attention" || r.status === "failed");
+
+      const kycResult = {
+        success: allClear,
+        clientId,
+        results: finalResults,
+        checks,
+      };
+
       setResult(kycResult);
 
-      if (kycResult.success) {
+      if (allClear) {
         onKycStatus?.("Validé");
-        toast?.("KYC valide — identite verifiee, aucune alerte AML");
+        toast?.("KYC valide — identite verifiee par ComplyCube, aucune alerte AML");
 
         // Persist to Supabase
         if (supabase && profile?.id) {
           try {
             await supabase.from("profiles").update({
               kyc_status: "validated",
-              complycube_client_id: kycResult.clientId,
+              complycube_client_id: clientId,
               updated_at: new Date().toISOString(),
             }).eq("id", profile.id);
           } catch (e) {
             console.warn("Failed to persist KYC status:", e);
           }
         }
-
-        // Store funds doc in Supabase storage (not sent to ComplyCube)
-        if (supabase && fundsFile && kycResult.clientId) {
-          try {
-            const path = `kyc/${kycResult.clientId}/funds_${Date.now()}_${fundsFile.name}`;
-            await supabase.storage.from("documents").upload(path, fundsFile, { contentType: fundsFile.type });
-          } catch (e) {
-            console.warn("Funds doc storage failed:", e);
-          }
-        }
       } else {
         onKycStatus?.("Rejeté");
-        toast?.("Verification KYC echouee — veuillez verifier vos documents");
+        toast?.("Verification KYC echouee — veuillez reessayer avec des documents valides");
       }
     } catch (err) {
-      console.error("KYC verification error:", err);
-      setError(err.message || "Erreur lors de la verification");
-      onKycStatus?.(null);
-      setVerifying(false);
-      return;
+      console.error("[KYC] Check error:", err);
+      setError(err.message || "Erreur lors des verifications");
+      setCheckSteps((prev) => ({ ...prev, polling: "failed" }));
     }
-
-    setVerifying(false);
   };
 
-  const handleBiometricDone = useCallback((selfieBase64) => {
-    selfieRef.current = selfieBase64 || null;
-    setPhase("verifying");
-    launchVerification();
-  }, [idFile, addressFile, companyFile, personType, profile, formData]);
-
-  const handleVerify = () => {
-    if (!requiredDocs) return;
-    setPhase("biometric");
-  };
-
+  /* ── Retry ── */
   const handleRetry = () => {
+    setPhase("init");
     setResult(null);
     setError(null);
-    setVerifySteps({});
-    setVerifying(false);
-    setPhase("upload");
+    setCheckSteps({});
+    setClientId(null);
+    setSdkToken(null);
     onKycStatus?.(null);
   };
 
-  // ── Biometric step ──
-  if (phase === "biometric") {
+  /* ═══════════════════════════════════
+     RENDER
+     ═══════════════════════════════════ */
+
+  // ── Init: Start button ──
+  if (phase === "init") {
     return (
-      <BiometricStep
-        profile={profile}
-        onComplete={handleBiometricDone}
-        onBack={() => setPhase("upload")}
-      />
+      <div className="space-y-5">
+        {/* Provider badge */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[11px] text-[#A8A29E]">
+            <div className="w-4 h-4 rounded bg-[#6366F1] flex items-center justify-center">
+              <span className="text-white text-[7px] font-bold">CC</span>
+            </div>
+            Verification par ComplyCube · Conforme AMLD5
+          </div>
+          <span className="text-[10px] text-[#D6D3D1] bg-[rgba(0,0,23,0.03)] px-2 py-0.5 rounded-full">
+            {isMorale ? "KYB" : "KYC"} · {personType === "morale" ? "Personne morale" : "Personne physique"}
+          </span>
+        </div>
+
+        {/* Explanation */}
+        <div className="bg-[#EEF2FF] rounded-2xl p-5 border border-[rgba(99,102,241,0.1)]">
+          <h4 className="text-[14px] font-semibold text-[#0F0F10] mb-2">Verification d'identite en ligne</h4>
+          <p className="text-[13px] text-[#787881] leading-relaxed">
+            Vous allez etre guide a travers un processus de verification securise par <strong>ComplyCube</strong>.
+            Vous devrez :
+          </p>
+          <ul className="mt-3 space-y-2">
+            <li className="flex items-start gap-2 text-[13px] text-[#787881]">
+              <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[11px] font-semibold text-[#6366F1] flex-shrink-0 mt-0.5">1</span>
+              <span>Photographier votre <strong className="text-[#0F0F10]">piece d'identite</strong> (passeport, CNI ou permis de conduire)</span>
+            </li>
+            <li className="flex items-start gap-2 text-[13px] text-[#787881]">
+              <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[11px] font-semibold text-[#6366F1] flex-shrink-0 mt-0.5">2</span>
+              <span>Prendre un <strong className="text-[#0F0F10]">selfie</strong> pour la verification biometrique (liveness check)</span>
+            </li>
+            <li className="flex items-start gap-2 text-[13px] text-[#787881]">
+              <span className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-[11px] font-semibold text-[#6366F1] flex-shrink-0 mt-0.5">3</span>
+              <span>Nos systemes verifient automatiquement : <strong className="text-[#0F0F10]">authenticite du document, face match et screening AML/PEP</strong></span>
+            </li>
+          </ul>
+        </div>
+
+        {/* Requirements */}
+        <div className="bg-[rgba(0,0,23,0.025)] rounded-xl p-3.5 flex gap-3">
+          <svg className="w-4 h-4 text-[#A8A29E] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+          </svg>
+          <p className="text-[12px] text-[#787881] leading-relaxed">
+            Assurez-vous d'avoir une bonne luminosite et votre piece d'identite a portee de main.
+            La verification prend generalement <strong className="text-[#0F0F10]">moins de 2 minutes</strong>.
+          </p>
+        </div>
+
+        {error && (
+          <div className="bg-[#FEF2F2] border border-[rgba(220,38,38,0.1)] rounded-xl p-3.5">
+            <p className="text-[13px] text-[#DC2626]">{error}</p>
+          </div>
+        )}
+
+        {/* Launch button */}
+        <div className="flex items-center justify-end pt-2">
+          <button
+            onClick={initializeKyc}
+            disabled={loading}
+            className="px-6 py-2.5 bg-[#0F0F10] text-white text-[13px] font-medium rounded-xl hover:bg-[#292524] active:scale-[0.97] transition-all duration-100 disabled:opacity-50 flex items-center gap-2"
+          >
+            {loading ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Initialisation...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+                Demarrer la verification
+              </>
+            )}
+          </button>
+        </div>
+      </div>
     );
   }
 
-  // ── Verification in progress or complete ──
-  if (phase === "verifying" || verifying || result) {
+  // ── SDK: ComplyCube Web SDK mounted here ──
+  if (phase === "sdk") {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[11px] text-[#A8A29E]">
+            <div className="w-4 h-4 rounded bg-[#6366F1] flex items-center justify-center">
+              <span className="text-white text-[7px] font-bold">CC</span>
+            </div>
+            Session ComplyCube en cours · Client ID : {clientId?.slice(0, 8)}...
+          </div>
+        </div>
+
+        {/* SDK mount point */}
+        <div
+          id="complycube-mount"
+          ref={sdkContainerRef}
+          className="min-h-[500px] rounded-2xl overflow-hidden border border-[rgba(0,0,29,0.08)]"
+        />
+
+        <p className="text-[11px] text-[#A8A29E] text-center">
+          Suivez les instructions a l'ecran pour completer la verification. Vos donnees sont traitees de maniere securisee par ComplyCube.
+        </p>
+      </div>
+    );
+  }
+
+  // ── Checks: Running verification checks ──
+  if (phase === "checks") {
     const steps = [
-      { key: "biometric", label: "Verification biometrique (selfie)" },
-      { key: "client", label: "Creation du profil ComplyCube" },
-      { key: "id", label: isMorale ? "Verification du K-bis" : "Verification de la piece d'identite" },
-      { key: "address", label: "Verification du justificatif de domicile" },
-      ...(isMorale ? [{ key: "company", label: "Verification des documents societe" }] : []),
-      { key: "identity", label: "Comparaison biometrique (face match)" },
-      { key: "aml", label: "Screening AML / PEP / Sanctions" },
+      { key: "gathering", label: "Recuperation des documents soumis" },
+      { key: "checks", label: "Lancement des verifications ComplyCube" },
+      { key: "polling", label: "Attente des resultats (document check, identity check, AML)" },
     ];
 
     return (
       <div className="space-y-6">
-        {/* Provider badge */}
         <div className="flex items-center gap-2 text-[11px] text-[#A8A29E]">
           <div className="w-4 h-4 rounded bg-[#6366F1] flex items-center justify-center">
             <span className="text-white text-[7px] font-bold">CC</span>
           </div>
-          Verification par ComplyCube · Conforme AMLD5
+          Verifications en cours · ComplyCube
         </div>
 
         {result?.success ? (
-          /* ── Success state ── */
           <div className="text-center py-4">
             <div className="w-14 h-14 rounded-full bg-[#D1FAE5] flex items-center justify-center mx-auto mb-4">
               <svg className="w-7 h-7 text-[#059669]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -392,16 +427,14 @@ export default function KYCFlow({ personType, profile, formData, onComplete, onK
             <h4 className="text-[16px] font-semibold text-[#059669] mb-1">Verification reussie</h4>
             <p className="text-[13px] text-[#059669]/80 mb-1">Identite verifiee · Aucune alerte AML/PEP/Sanctions</p>
             <p className="text-[11px] text-[#A8A29E]">Ref. ComplyCube : {result.clientId}</p>
-
             <div className="mt-6">
               <button onClick={onComplete}
-                className="px-6 py-2.5 bg-[#0F0F10] text-white text-[13px] font-medium rounded-full hover:bg-[#292524] active:scale-[0.97] transition-all duration-100">
+                className="px-6 py-2.5 bg-[#0F0F10] text-white text-[13px] font-medium rounded-xl hover:bg-[#292524] active:scale-[0.97] transition-all duration-100">
                 Continuer →
               </button>
             </div>
           </div>
         ) : result && !result.success ? (
-          /* ── Failed state ── */
           <div className="text-center py-4">
             <div className="w-14 h-14 rounded-full bg-[#FEE2E2] flex items-center justify-center mx-auto mb-4">
               <svg className="w-7 h-7 text-[#DC2626]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -409,31 +442,29 @@ export default function KYCFlow({ personType, profile, formData, onComplete, onK
               </svg>
             </div>
             <h4 className="text-[16px] font-semibold text-[#DC2626] mb-1">Verification echouee</h4>
-            <p className="text-[13px] text-[#DC2626]/80 mb-4">Un ou plusieurs documents n'ont pas passe la verification. Veuillez re-soumettre des documents valides.</p>
+            <p className="text-[13px] text-[#DC2626]/80 mb-4">La verification n'a pas abouti. Veuillez reessayer avec des documents valides.</p>
             <button onClick={handleRetry}
-              className="px-6 py-2.5 bg-[#0F0F10] text-white text-[13px] font-medium rounded-full hover:bg-[#292524] active:scale-[0.97] transition-all duration-100">
+              className="px-6 py-2.5 bg-[#0F0F10] text-white text-[13px] font-medium rounded-xl hover:bg-[#292524] active:scale-[0.97] transition-all duration-100">
               Reessayer
             </button>
           </div>
         ) : (
-          /* ── In progress ── */
           <div>
-            <h4 className="text-[15px] font-semibold text-[#0F0F10] mb-4">Verification en cours</h4>
+            <h4 className="text-[15px] font-semibold text-[#0F0F10] mb-4">Analyse en cours...</h4>
             <div className="space-y-0.5">
               {steps.map((s) => (
-                <VerifStep key={s.key} label={s.label} status={verifySteps[s.key] || "pending"} />
+                <VerifStep key={s.key} label={s.label} status={checkSteps[s.key] || "pending"} />
               ))}
             </div>
           </div>
         )}
 
-        {/* Progress steps list (show even on success/fail for audit trail) */}
         {result && (
           <div className="border-t border-[rgba(0,0,29,0.06)] pt-4">
-            <p className="text-[11px] font-medium text-[#A8A29E] mb-2">Detail de la verification</p>
+            <p className="text-[11px] font-medium text-[#A8A29E] mb-2">Detail des verifications</p>
             <div className="space-y-0.5">
               {steps.map((s) => (
-                <VerifStep key={s.key} label={s.label} status={verifySteps[s.key] || "pending"} />
+                <VerifStep key={s.key} label={s.label} status={checkSteps[s.key] || "pending"} />
               ))}
             </div>
           </div>
@@ -449,80 +480,5 @@ export default function KYCFlow({ personType, profile, formData, onComplete, onK
     );
   }
 
-  // ── Document upload form ──
-  return (
-    <div className="space-y-5">
-      {/* Provider badge */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-[11px] text-[#A8A29E]">
-          <div className="w-4 h-4 rounded bg-[#6366F1] flex items-center justify-center">
-            <span className="text-white text-[7px] font-bold">CC</span>
-          </div>
-          Verification par ComplyCube · Conforme AMLD5
-        </div>
-        <span className="text-[10px] text-[#D6D3D1] bg-[rgba(0,0,23,0.03)] px-2 py-0.5 rounded-full">
-          {isMorale ? "KYB" : "KYC"} · {personType === "morale" ? "Personne morale" : "Personne physique"}
-        </span>
-      </div>
-
-      {/* Documents */}
-      <div className="space-y-3">
-        <FileUploadZone
-          label={isMorale ? "Extrait K-bis / Registre de commerce" : "Piece d'identite (passeport ou CNI)"}
-          hint={isMorale ? "Document officiel datant de moins de 3 mois" : "Recto-verso si carte d'identite"}
-          file={idFile}
-          onSelect={setIdFile}
-        />
-
-        <FileUploadZone
-          label="Justificatif de domicile"
-          hint="Facture energie, telephone, avis d'imposition (< 3 mois)"
-          file={addressFile}
-          onSelect={setAddressFile}
-        />
-
-        {isMorale && (
-          <FileUploadZone
-            label="Statuts de la societe"
-            hint="Statuts a jour signes + liste des beneficiaires effectifs"
-            file={companyFile}
-            onSelect={setCompanyFile}
-          />
-        )}
-
-        <FileUploadZone
-          label={<>Justificatif d'origine des fonds <span className="text-[#A8A29E] font-normal">(recommande)</span></>}
-          hint="Releve bancaire, acte de cession, attestation employeur"
-          file={fundsFile}
-          onSelect={setFundsFile}
-        />
-      </div>
-
-      {/* Info box */}
-      <div className="bg-[rgba(0,0,23,0.025)] rounded-xl p-3.5 flex gap-3">
-        <svg className="w-4 h-4 text-[#A8A29E] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-        </svg>
-        <div>
-          <p className="text-[12px] text-[#787881] leading-relaxed">
-            Vos documents sont verifies automatiquement par ComplyCube (OCR + IA) conformement a la directive AMLD5 et au reglement CSSF 12-02.
-            Un screening AML/PEP/Sanctions est effectue en temps reel.
-          </p>
-        </div>
-      </div>
-
-      {/* Submit */}
-      <div className="flex items-center justify-between pt-2">
-        <p className="text-[11px] text-[#D6D3D1]">
-          {isMorale ? "3 documents requis" : "2 documents requis"} · {[idFile, addressFile, isMorale && companyFile].filter(Boolean).length} / {isMorale ? 3 : 2} fournis
-        </p>
-        <button
-          onClick={handleVerify}
-          disabled={!requiredDocs}
-          className="px-6 py-2.5 bg-[#0F0F10] text-white text-[13px] font-medium rounded-full hover:bg-[#292524] active:scale-[0.97] transition-all duration-100 disabled:opacity-25 disabled:cursor-not-allowed">
-          Lancer la verification
-        </button>
-      </div>
-    </div>
-  );
+  return null;
 }
