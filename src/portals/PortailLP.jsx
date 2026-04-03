@@ -174,29 +174,38 @@ function Souscription({ toast, fund }) {
     window.open(URL.createObjectURL(blob), "_blank");
   };
 
+  const stepIcons = [
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>,
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" /></svg>,
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>,
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  ];
+  const stepColors = ["#6366F1", "#F59E0B", "#8B5CF6", "#059669"];
+  const stepBgs = ["#EEF2FF", "#FEF3C7", "#F5F3FF", "#ECFDF5"];
+
   return (
     <div className="animate-fade-in">
-      {/* ── Stepper ── */}
+      {/* ── Visual Stepper ── */}
       <div className="flex items-center justify-center mb-8 gap-0">
         {steps.map((s, i) => {
           const isDone = i < step;
           const isCurrent = i === step;
+          const color = isDone ? "#059669" : isCurrent ? stepColors[i] : "#D6D3D1";
+          const bg = isDone ? "#ECFDF5" : isCurrent ? stepBgs[i] : "rgba(0,0,23,0.03)";
           return (
             <div key={s} className="flex items-center">
               <div className="flex flex-col items-center" style={{ minWidth: 80 }}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-medium transition-all duration-300 ${
-                  isDone ? "bg-[#0F0F10] text-white" : isCurrent ? "bg-[#0F0F10] text-white" : "bg-[rgba(0,0,23,0.06)] text-[#A8A29E]"
-                }`}>
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-300" style={{ background: bg, color }}>
                   {isDone ? (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    <svg className="w-5 h-5" fill="none" stroke="#059669" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                   ) : (
-                    <span>{i + 1}</span>
+                    <span style={{ color }}>{stepIcons[i]}</span>
                   )}
                 </div>
-                <span className={`text-[11px] mt-2 font-medium text-center leading-tight ${isCurrent || isDone ? "text-[#0F0F10]" : "text-[#A8A29E]"}`}>{s}</span>
+                <span className={`text-[11px] mt-2 font-medium text-center leading-tight ${isCurrent ? "text-[#0F0F10]" : isDone ? "text-[#059669]" : "text-[#A8A29E]"}`}>{s}</span>
               </div>
               {i < 3 && (
-                <div className="w-12 h-px mx-1 mt-[-18px]" style={{ background: isDone ? "#0F0F10" : "rgba(0,0,29,0.1)" }} />
+                <div className="w-12 h-0.5 mx-1 mt-[-18px] rounded-full transition-all duration-500" style={{ background: isDone ? "#059669" : "rgba(0,0,29,0.08)" }} />
               )}
             </div>
           );
@@ -208,9 +217,14 @@ function Souscription({ toast, fund }) {
         {/* ── STEP 0: KYC/KYB ── */}
         {step === 0 && (
           <div className="animate-fade-in">
-            <div className="mb-5">
-              <h3 className="text-[16px] font-semibold text-[#0F0F10]">Verification d'identite</h3>
-              <p className="text-[12px] text-[#787881] mt-0.5">Conformement a la directive (UE) 2015/849 (AMLD5) et au reglement CSSF 12-02</p>
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, #EEF2FF, #C7D2FE)" }}>
+                <svg className="w-6 h-6 text-[#6366F1]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
+              </div>
+              <div>
+                <h3 className="text-[17px] font-bold text-[#0F0F10]">Verification d'identite</h3>
+                <p className="text-[12px] text-[#A8A29E]">Conformement a la directive (UE) 2015/849 (AMLD5) et au reglement CSSF 12-02</p>
+              </div>
             </div>
 
             {/* KYC already validated — skip */}
@@ -518,9 +532,14 @@ function Souscription({ toast, fund }) {
         {/* ── STEP 1: Virement ── */}
         {step === 1 && (
           <div className="animate-fade-in">
-            <div className="mb-5">
-              <h3 className="text-[16px] font-semibold text-[#0F0F10]">Instruction de paiement</h3>
-              <p className="text-[12px] text-[#787881] mt-0.5">Le virement doit provenir d'un compte au nom du souscripteur (AMLD5 art. 18)</p>
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, #FEF3C7, #FDE68A)" }}>
+                <svg className="w-6 h-6 text-[#F59E0B]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" /></svg>
+              </div>
+              <div>
+                <h3 className="text-[17px] font-bold text-[#0F0F10]">Instruction de paiement</h3>
+                <p className="text-[12px] text-[#A8A29E]">Le virement doit provenir d'un compte au nom du souscripteur (AMLD5 art. 18)</p>
+              </div>
             </div>
 
             <div className="flex bg-[rgba(0,0,23,0.03)] rounded-xl p-1 mb-6 max-w-xs mx-auto">
@@ -603,9 +622,14 @@ function Souscription({ toast, fund }) {
         {/* ── STEP 2: Signature ── */}
         {step === 2 && (
           <div className="animate-fade-in">
-            <div className="mb-5">
-              <h3 className="text-[16px] font-semibold text-[#0F0F10]">Bulletin de souscription</h3>
-              <p className="text-[12px] text-[#787881] mt-0.5">Signature electronique qualifiee au sens du reglement eIDAS (UE) 910/2014</p>
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, #F5F3FF, #DDD6FE)" }}>
+                <svg className="w-6 h-6 text-[#8B5CF6]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" /></svg>
+              </div>
+              <div>
+                <h3 className="text-[17px] font-bold text-[#0F0F10]">Bulletin de souscription</h3>
+                <p className="text-[12px] text-[#A8A29E]">Signature electronique qualifiee au sens du reglement eIDAS (UE) 910/2014</p>
+              </div>
             </div>
 
             <div className="flex items-center justify-between mb-5">
@@ -711,12 +735,20 @@ function Souscription({ toast, fund }) {
         {/* ── STEP 3: Confirmation ── */}
         {step === 3 && (
           <div className="animate-fade-in text-left">
-            <div className="text-center mb-8">
-              <div className="w-12 h-12 bg-[#0F0F10] rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            <div className="text-center mb-8 relative">
+              {/* Success illustration with gradient */}
+              <div className="w-full rounded-2xl p-8 mb-2 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 50%, #A7F3D0 100%)" }}>
+                <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-[#059669]/10 blur-2xl" />
+                <div className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full bg-[#6366F1]/10 blur-2xl" />
+                <svg className="w-16 h-16 mx-auto relative z-10" viewBox="0 0 64 64" fill="none">
+                  <circle cx="32" cy="32" r="28" fill="#059669" opacity="0.15"/>
+                  <circle cx="32" cy="32" r="20" fill="#059669" opacity="0.25"/>
+                  <circle cx="32" cy="32" r="14" fill="#059669"/>
+                  <path d="M24 32l5 5 11-11" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <h3 className="text-[18px] font-bold text-[#0F0F10] mt-4 relative z-10">Souscription confirmee !</h3>
+                <p className="text-[13px] text-[#059669] mt-1 relative z-10">Votre investissement est en cours de traitement</p>
               </div>
-              <h3 className="text-[18px] font-semibold text-[#0F0F10]">Souscription confirmee</h3>
-              <p className="text-[13px] text-[#787881] mt-1">Votre investissement est en cours de traitement</p>
             </div>
 
             <div className="bg-[rgba(0,0,23,0.02)] rounded-xl p-5 text-sm space-y-2 mb-6">
@@ -1629,7 +1661,7 @@ export default function PortailLP({ toast }) {
           onClick={() => setProfileOpen(true)}
           className="flex items-center gap-2.5 pl-3 pr-3 py-1.5 rounded-xl hover:bg-[rgba(0,0,23,0.03)] transition-all group"
         >
-          <div className="w-8 h-8 rounded-full bg-[rgba(0,0,23,0.06)] flex items-center justify-center text-[12px] font-semibold text-[#0F0F10]">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-violet-100 flex items-center justify-center text-[12px] font-bold text-[#6366F1] ring-2 ring-white shadow-sm">
             {(profile?.full_name || "U")[0].toUpperCase()}
           </div>
           <div className="hidden sm:block text-left">
