@@ -162,6 +162,16 @@ export default function KYCFlow({ personType, profile, formData, onComplete, onK
         },
         onModalClose: () => {
           console.log("[KYC] SDK closed by user");
+          // Unmount SDK and go back to init
+          if (sdkInstanceRef.current && typeof sdkInstanceRef.current.unmount === "function") {
+            try { sdkInstanceRef.current.unmount(); } catch (e) { /* ignore */ }
+          }
+          sdkInstanceRef.current = null;
+          setPhase("init");
+          setError(null);
+          setClientId(null);
+          setSdkToken(null);
+          onKycStatus?.(null);
         },
         onError: (err) => {
           console.error("[KYC] SDK error:", err);
